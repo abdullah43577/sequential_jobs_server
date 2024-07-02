@@ -1,0 +1,36 @@
+{
+  "name": "nodejs_server_boilerplate",
+  "version": "1.0.0",
+  "description": "This repository contains the source code for a comprehensive NodeJS Boilerplate code with Typescript",
+  "main": "dist/server.js",
+  "scripts": {
+    "dev": "tsc --watch",
+    "start": "nodemon dist/server.js"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "dependencies": {
+    "bcryptjs": "^2.4.3",
+    "cookie-parser": "^1.4.6",
+    "cors": "^2.8.5",
+    "dotenv": "^16.4.5",
+    "express": "^4.19.2",
+    "helmet": "^7.1.0",
+    "jsonwebtoken": "^9.0.2",
+    "mongoose": "^8.4.4",
+    "morgan": "^1.10.0",
+    "nodemon": "^3.1.4",
+    "typescript": "^5.5.3",
+    "validator": "^13.12.0"
+  },
+  "devDependencies": {
+    "@types/bcryptjs": "^2.4.6",
+    "@types/cookie-parser": "^1.4.7",
+    "@types/cors": "^2.8.17",
+    "@types/jsonwebtoken": "^9.0.6",
+    "@types/mongoose": "^5.11.97",
+    "@types/morgan": "^1.9.9",
+    "@types/validator": "^13.12.0"
+  }
+}
