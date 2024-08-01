@@ -1,6 +1,6 @@
 import { NextFunction, Request, Response } from 'express';
 import 'dotenv/config';
-const { ACCESS_TOKEN_SECRET } = process.env;
+const { ACCESS_TOKEN_SECRET, REFRESH_TOKEN_SECRET } = process.env;
 import jwt, { JwtPayload, Secret } from 'jsonwebtoken';
 
 export interface IUserRequest extends Request {
@@ -43,7 +43,7 @@ export const validateRefreshToken = function (req: IUserRequest, res: Response, 
   if (!refreshToken) return res.status(401).json({ message: 'Access Denied, Refresh token not provided!' });
 
   try {
-    const { id } = jwt.verify(refreshToken, ACCESS_TOKEN_SECRET as Secret) as CustomJwtPayload;
+    const { id } = jwt.verify(refreshToken, REFRESH_TOKEN_SECRET as Secret) as CustomJwtPayload;
     req.userId = id;
     req.refreshToken = refreshToken;
     next();
