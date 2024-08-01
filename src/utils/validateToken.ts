@@ -13,7 +13,7 @@ export const validateAccessToken = function (req: IUserRequest, res: Response, n
 
   // If token is not found in headers, try to find it in cookies
   if (!token && req.cookies) {
-    token = req.cookies['nexiaJWT'];
+    token = req.cookies['accessToken'];
   }
 
   if (!token) return res.status(401).json({ message: 'Access Denied, No token provided!' });
@@ -28,7 +28,13 @@ export const validateAccessToken = function (req: IUserRequest, res: Response, n
 };
 
 export const validateRefreshToken = function (req: IUserRequest, res: Response, next: NextFunction) {
-  let { refreshToken } = req.body;
+  let refreshToken;
+  refreshToken = req.body.refreshToken;
+
+  // if refreshToken is not sent in the body
+  if (!refreshToken) {
+    refreshToken = req.cookies['refreshToken'];
+  }
 
   if (!refreshToken) return res.status(401).json({ message: 'Access Denied, Refresh token not provided!' });
 
