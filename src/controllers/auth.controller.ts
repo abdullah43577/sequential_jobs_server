@@ -11,11 +11,13 @@ const generateNewToken = async (req: IUserRequest, res: Response) => {
   try {
     const { refreshToken, userId } = req;
 
-    const refreshTokens = await RefreshToken.find({});
-    if (!refreshTokens.includes(refreshToken)) return res.status(401).json({ message: '' });
+    const refreshTokens = await RefreshToken.findOne({ token: refreshToken });
+
+    if (!refreshTokens || refreshToken !== refreshTokens.token || userId !== refreshTokens.user.toString()) return res.status(401).json({ message: 'unauthorized' });
 
     const accessToken = generateAccessToken(userId as string);
-    res.status(200).json({ accessToken });
+    res.cookie('accessToken', accessToken, { secure: true, httpOnly: true, maxAge: 30 * 60 * 1000 });
+    res.status(200).json({ message: 'Access token generated successfully!' });
   } catch (error) {
     res.status(500).json({ message: 'Internal Server error', error });
   }
