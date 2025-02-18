@@ -1,50 +1,86 @@
-import { Schema, model } from 'mongoose';
-import validator from 'validator';
-
-interface IUser {
-  name: string;
-  username: string;
-  email: string;
-  password: string;
-}
+import { Schema, model } from "mongoose";
+import { IUser } from "../utils/types/modelTypes";
+import { roleBasedValidation } from "../utils/roleBasedValidation";
 
 const userSchema = new Schema<IUser>(
   {
-    name: {
-      type: String,
-      required: true,
+    first_name: { type: String, required: true },
+    last_name: { type: String, required: true },
+    username: { type: String, default: null },
+    email: { type: String, required: true, unique: true },
+    password: { type: String, default: null },
+    role: { type: String, enum: ["job-seeker", "company", "panelist", "medical-expert", "admin", "super-admin"], required: true },
+
+    phone_no: {
+      type: Number,
+      default: null,
+      validate: roleBasedValidation("job-seeker", "Phone Number"),
     },
 
-    username: {
-      type: String,
-      unique: true,
-      required: true,
+    official_phone: {
+      type: Number,
+      default: null,
+      validate: roleBasedValidation("company", "Official Phone Number"),
     },
 
-    email: {
+    organisation_name: {
       type: String,
-      unique: true,
-      required: true,
-      validate: {
-        validator: (value: string) => validator.isEmail(value),
-        message: 'Please provide a valid email address',
-      },
+      default: null,
+      validate: roleBasedValidation("company", "Organisation Name"),
     },
 
-    password: {
+    industry: {
       type: String,
-      required: true,
-
-      validate: {
-        validator: (value: string) => validator.isLength(value, { min: 6 }),
-        message: 'Password must be at least 6 characters long',
-      },
+      default: null,
+      validate: roleBasedValidation("company", "Industry"),
     },
 
+    street_1: {
+      type: String,
+      default: null,
+      validate: roleBasedValidation("company", "Street 1"),
+    },
+
+    street_2: { type: String, default: null },
+
+    country: {
+      type: String,
+      default: null,
+      validate: roleBasedValidation("company", "Country"),
+    },
+
+    state: {
+      type: String,
+      default: null,
+      validate: roleBasedValidation("company", "State"),
+    },
+
+    city: {
+      type: String,
+      default: null,
+      validate: roleBasedValidation("company", "City"),
+    },
+
+    postal_code: {
+      type: String,
+      default: null,
+      validate: roleBasedValidation("company", "Postal Code"),
+    },
+
+    subscription_tier: {
+      type: String,
+      enum: ["Sequential Standard", "Sequential Pro", "Sequential Super Pro"],
+      default: "Sequential Standard",
+    },
+
+    googleId: { type: String, default: null },
+    failedLoginAttempts: { type: Number, default: 0 },
+    isLocked: { type: Boolean, default: false },
+    lastLogin: { type: Date, default: Date.now },
   },
   { timestamps: true }
 );
 
-const User = model<IUser>('User', userSchema);
+const User = model<IUser>("User", userSchema);
 
 export default User;
