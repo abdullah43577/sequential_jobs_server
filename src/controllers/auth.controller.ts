@@ -74,9 +74,9 @@ const generateNewToken = async (req: IUserRequest, res: Response) => {
   try {
     const { refreshToken, userId, role } = req;
 
-    const refreshTokens = await RefreshToken.findOne({ token: refreshToken });
+    const session_ref = await RefreshToken.findOne({ token: refreshToken });
 
-    if (!refreshTokens || refreshToken !== refreshTokens.token || userId !== refreshTokens.user.toString()) return res.status(401).json({ message: "unauthorized" });
+    if (!session_ref || refreshToken !== session_ref.token || userId !== session_ref.user.toString()) return res.status(401).json({ message: "unauthorized" });
 
     const accessToken = generateAccessToken({ id: userId, role: role as string });
 

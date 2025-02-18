@@ -1,5 +1,4 @@
 import { Schema, model } from "mongoose";
-import { v4 as uuidv4 } from "uuid";
 import { INotification } from "../utils/types/modelTypes";
 
 const notificationSchema = new Schema<INotification>(

@@ -31,3 +31,40 @@ export interface INotification {
   message: string;
   isRead: boolean;
 }
+
+export interface IJob {
+  employer: Types.ObjectId;
+  job_title: string;
+  country: string;
+  state: string;
+  city: string;
+  job_type: "hybrid" | "on_site" | "remote";
+  employment_type: "full_time" | "part_time" | "contract";
+  salary: number;
+  currency_type: string;
+  years_of_exp: number;
+  generic_skills: string[];
+  technical_skills: string[];
+  description: string;
+  applicants: Types.ObjectId[];
+  is_live: boolean;
+  application_test: Types.ObjectId;
+  // job_test: Types.ObjectId;
+  cut_off_points: {
+    suitable: { min: string; max: string };
+    probable: { min: string; max: string };
+    not_suitable: { min: string; max: string };
+  };
+  stage: "job_post_creation" | "set_cv_sorting_question" | "set_cut_off_points";
+}
+
+export interface ITest {
+  job: Types.ObjectId;
+  employer: Types.ObjectId;
+  instruction: string;
+  questions: {
+    question_type: "multiple_choice" | "yes/no" | "text";
+    options: string[];
+    score: number;
+  }[];
+}
