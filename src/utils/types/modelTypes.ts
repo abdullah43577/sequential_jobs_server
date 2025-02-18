@@ -17,7 +17,7 @@ export interface IUser {
   state: string;
   city: string;
   postal_code: string;
-  subscription_tier: "Sequential Standard" | "Sequential Pro" | "Sequential Super Pro";
+  subscription_tier: "Sequential Freemium" | "Sequential Standard" | "Sequential Pro" | "Sequential Super Pro";
   googleId: string;
   linkedinId: string;
   failedLoginAttempts: number;
@@ -49,7 +49,6 @@ export interface IJob {
   applicants: Types.ObjectId[];
   is_live: boolean;
   application_test: Types.ObjectId;
-  // job_test: Types.ObjectId;
   cut_off_points: {
     suitable: { min: string; max: string };
     probable: { min: string; max: string };
@@ -66,5 +65,36 @@ export interface ITest {
     question_type: "multiple_choice" | "yes/no" | "text";
     options: string[];
     score: number;
+    correct_answer: string;
   }[];
+}
+
+export interface IJobTest {
+  job: Types.ObjectId;
+  employer: Types.ObjectId;
+  job_test: Types.ObjectId;
+  cut_off_points: {
+    suitable: { min: number; max: number };
+    probable: { min: number; max: number };
+    not_suitable: { min: number; max: number };
+  };
+  invitation: string;
+}
+
+export interface IInterview {
+  job: Types.ObjectId;
+  employer: Types.ObjectId;
+  rating_scale: {
+    [key: string]: string;
+  };
+  interview_time_slot: {
+    date: Date;
+    start_time: string | null;
+    end_time: string | null;
+    break_time: string;
+    interview_duration: string;
+    medical_duration: string;
+  };
+  panelists: string[];
+  invitation_letter: string;
 }

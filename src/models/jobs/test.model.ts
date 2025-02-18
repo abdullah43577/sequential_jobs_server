@@ -5,13 +5,14 @@ const testSchema = new Schema<ITest>(
   {
     job: { type: Schema.Types.ObjectId, ref: "Job", required: true },
     employer: { type: Schema.Types.ObjectId, ref: "User", required: true },
-    instruction: { type: String, required: true },
+    instruction: { type: String, required: true, trim: true },
     questions: [
       {
-        question: { type: String, required: true },
+        question: { type: String, required: true, trim: true },
         options: { type: [String], default: [] },
         question_type: { type: String, enum: ["multiple_choice", "yes/no", "text"], required: true },
         score: { type: Number, required: true },
+        correct_answer: { type: String, default: null },
       },
     ],
   },
@@ -26,7 +27,7 @@ testSchema.pre("validate", function (next) {
   // Validate each question
   for (const question of this.questions) {
     // For multiple choice questions, ensure options are provided
-    if (question.question_type === "multiple_choice" && (!question.options || question.options.length < 2)) {
+    if ((question.question_type === "multiple_choice" || question.question_type === "yes/no") && (!question.options || question.options.length < 2)) {
       return next(new Error("Multiple choice questions must have at least 2 options"));
     }
 

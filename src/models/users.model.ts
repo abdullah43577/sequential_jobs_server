@@ -69,8 +69,8 @@ const userSchema = new Schema<IUser>(
 
     subscription_tier: {
       type: String,
-      enum: ["Sequential Standard", "Sequential Pro", "Sequential Super Pro"],
-      default: "Sequential Standard",
+      enum: ["Sequential Freemium", "Sequential Standard", "Sequential Pro", "Sequential Super Pro"],
+      default: "Sequential Freemium",
     },
 
     googleId: { type: String, default: null },

@@ -113,10 +113,6 @@ jobSchema.pre("validate", function (next) {
   next();
 });
 
-// Add index for common queries
-// jobSchema.index({ is_live: 1, country: 1, state: 1, city: 1 });
-// jobSchema.index({ employer: 1 });
-
 const Job = model<IJob>("Job", jobSchema);
 
 export default Job;
