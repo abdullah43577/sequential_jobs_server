@@ -25,12 +25,12 @@ const jobSchema = new Schema<IJob>(
     applicants: [{ type: Schema.Types.ObjectId, ref: "User" }],
     application_test: { type: Schema.Types.ObjectId, ref: "Test" },
 
-    // Scoring criteria
-    cut_off_points: {
-      suitable: { min: Number, max: Number },
-      probable: { min: Number, max: Number },
-      not_suitable: { min: Number, max: Number },
-    },
+    // // Scoring criteria
+    // cut_off_points: {
+    //   suitable: { min: Number, max: Number },
+    //   probable: { min: Number, max: Number },
+    //   not_suitable: { min: Number, max: Number },
+    // },
 
     // Status fields
     is_live: { type: Boolean, default: false },

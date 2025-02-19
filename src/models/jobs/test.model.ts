@@ -15,6 +15,13 @@ const testSchema = new Schema<ITest>(
         correct_answer: { type: String, default: null },
       },
     ],
+
+    // Scoring criteria
+    cut_off_points: {
+      suitable: { min: Number, max: Number },
+      probable: { min: Number, max: Number },
+      not_suitable: { min: Number, max: Number },
+    },
   },
   { timestamps: true }
 );

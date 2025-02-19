@@ -6,6 +6,7 @@ import { loginValidationSchema, registerValidationSchema } from "../utils/types/
 import User from "../models/users.model";
 import { comparePassword, hashPassword } from "../utils/hashPassword";
 import { handleErrors } from "../utils/handleErrors";
+import { generateOTP } from "../utils/generateOTP";
 
 const testApi = async (req: Request, res: Response) => {
   res.status(200).json({ message: "SERVERS ARE LIVE!!!" });
@@ -32,7 +33,7 @@ const registerSeeker = async (req: Request, res: Response) => {
   }
 };
 
-const loginUser = async (req: IUserRequest, res: Response) => {
+const loginUser = async (req: Request, res: Response) => {
   try {
     const { email, password } = loginValidationSchema.parse(req.body);
 
@@ -70,6 +71,23 @@ const loginUser = async (req: IUserRequest, res: Response) => {
   }
 };
 
+const resetPassword = async (req: Request, res: Response) => {
+  try {
+    const { email } = req.body;
+
+    if (!email) return res.status(400).json({ message: "'Email', was not provided in the request body" });
+
+    const user = await User.findOne({ email });
+    if (!user) return res.status(404).json({ message: "User not found" });
+
+    const OTP = generateOTP();
+    //* send email with the OTP for resetting password
+    res.sendStatus(200);
+  } catch (error) {
+    handleErrors({ res, error });
+  }
+};
+
 const generateNewToken = async (req: IUserRequest, res: Response) => {
   try {
     const { refreshToken, userId, role } = req;
@@ -98,4 +116,4 @@ const logout = async (req: IUserRequest, res: Response) => {
   }
 };
 
-export { testApi, registerSeeker, loginUser, generateNewToken, logout };
+export { testApi, registerSeeker, loginUser, resetPassword, generateNewToken, logout };

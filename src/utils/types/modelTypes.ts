@@ -67,6 +67,11 @@ export interface ITest {
     score: number;
     correct_answer: string;
   }[];
+  cut_off_points: {
+    suitable: { min: number; max: number };
+    probable: { min: number; max: number };
+    not_suitable: { min: number; max: number };
+  };
 }
 
 export interface IJobTest {

@@ -44,4 +44,26 @@ const validateRefreshToken = function (req: IUserRequest, res: Response, next: N
   }
 };
 
+const validateSeekerSession = function (req: IUserRequest, res: Response, next: NextFunction) {
+  try {
+    const { userId, role } = req;
+    if (role !== "company") return res.status(401).json({ message: "Unauthorized" });
+
+    next();
+  } catch (error) {
+    handleErrors({ res, error });
+  }
+};
+
+const validateCompanySession = function (req: IUserRequest, res: Response, next: NextFunction) {
+  try {
+    const { userId, role } = req;
+    if (role !== "company") return res.status(401).json({ message: "Unauthorized" });
+
+    next();
+  } catch (error) {
+    handleErrors({ res, error });
+  }
+};
+
 export { validateAccessToken, validateRefreshToken };
