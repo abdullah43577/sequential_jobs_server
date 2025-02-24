@@ -22,6 +22,9 @@ const testSchema = new Schema<ITest>(
       probable: { min: Number, max: Number },
       not_suitable: { min: Number, max: Number },
     },
+
+    // invitation letter
+    invitation_letter: { type: String, default: "" },
   },
   { timestamps: true }
 );

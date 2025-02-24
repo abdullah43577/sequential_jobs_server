@@ -9,6 +9,7 @@ import cookieParser from "cookie-parser";
 import helmet from "helmet";
 import { authRouter } from "./routes/authRoutes";
 import { initializeSocket } from "./utils/socket";
+import { companyRouter } from "./routes/employer/routes.employer";
 
 const app = express();
 
@@ -34,6 +35,7 @@ initializeSocket(server);
 // routes
 app.use("/api", router);
 app.use("/api/auth", authRouter);
+app.use("/api/jobs", companyRouter);
 
 app.use("*", (req: Request, res: Response) => {
   res.status(404).json({

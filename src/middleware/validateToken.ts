@@ -47,7 +47,7 @@ const validateRefreshToken = function (req: IUserRequest, res: Response, next: N
 const validateSeekerSession = function (req: IUserRequest, res: Response, next: NextFunction) {
   try {
     const { userId, role } = req;
-    if (role !== "company") return res.status(401).json({ message: "Unauthorized" });
+    if (role !== "job-seeker") return res.status(401).json({ message: "Unauthorized" });
 
     next();
   } catch (error) {
@@ -66,4 +66,4 @@ const validateCompanySession = function (req: IUserRequest, res: Response, next:
   }
 };
 
-export { validateAccessToken, validateRefreshToken };
+export { validateAccessToken, validateRefreshToken, validateCompanySession, validateSeekerSession };

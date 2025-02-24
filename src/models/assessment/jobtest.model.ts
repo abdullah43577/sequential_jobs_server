@@ -9,10 +9,21 @@ const JobTestSchema = new Schema<IJobTest>(
 
     // Scoring criteria
     cut_off_points: {
-      suitable: { min: Number, max: Number, required: true },
-      probable: { min: Number, max: Number, required: true },
-      not_suitable: { min: Number, max: Number, required: true },
+      suitable: {
+        min: { type: Number, required: true },
+        max: { type: Number, required: true },
+      },
+      probable: {
+        min: { type: Number, required: true },
+        max: { type: Number, required: true },
+      },
+      not_suitable: {
+        min: { type: Number, required: true },
+        max: { type: Number, required: true },
+      },
     },
+
+    stage: { type: String, enum: ["set_test", "set_cutoff", "invitation_upload", "candidate_invite"], default: "set_test" },
 
     invitation: { type: String, required: true },
   },

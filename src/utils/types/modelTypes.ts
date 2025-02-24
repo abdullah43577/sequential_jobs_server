@@ -72,6 +72,7 @@ export interface ITest {
     probable: { min: number; max: number };
     not_suitable: { min: number; max: number };
   };
+  invitation_letter?: string;
 }
 
 export interface IJobTest {
@@ -83,6 +84,7 @@ export interface IJobTest {
     probable: { min: number; max: number };
     not_suitable: { min: number; max: number };
   };
+  stage: "set_test" | "set_cutoff" | "invitation_upload" | "candidate_invite";
   invitation: string;
 }
 
