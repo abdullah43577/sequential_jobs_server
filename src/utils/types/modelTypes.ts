@@ -23,6 +23,8 @@ export interface IUser {
   failedLoginAttempts: number;
   isLocked: boolean;
   lastLogin: Date;
+  isTemporary: boolean;
+  expiresAt: Date;
 }
 
 export interface INotification {
@@ -101,7 +103,21 @@ export interface IInterview {
     break_time: string;
     interview_duration: string;
     medical_duration: string;
-  };
+  }[];
+  available_date_time: {};
   panelists: string[];
   invitation_letter: string;
+  // stage: "set_rating_scale" | "set_interview" | "panelist_invite" | "panelist_letter_invitation" | "applicants_invite";
+}
+
+export interface ICalendar {
+  candidate: Types.ObjectId;
+  job: Types.ObjectId;
+  employer: Types.ObjectId;
+  type: "test" | "interview";
+  job_test?: Types.ObjectId;
+  interview?: Types.ObjectId;
+  status: "pending" | "accepted" | "rejected" | "completed" | "expired";
+  expiresAt: Date;
+  scheduled_date_time: Date;
 }

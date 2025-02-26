@@ -16,15 +16,12 @@ const interviewSchema = new Schema<IInterview>(
         medical_duration: { type: String, required: true },
       },
     ],
+    available_date_time: { type: String, default: null },
     panelists: [{ type: String, default: [] }],
     invitation_letter: { type: String, required: true },
   },
   { timestamps: true }
 );
-
-interviewSchema.pre("validate", function (next) {
-  next();
-});
 
 const InterviewMgmt = model<IInterview>("InterviewMgmt", interviewSchema);
 

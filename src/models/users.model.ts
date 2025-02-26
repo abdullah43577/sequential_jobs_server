@@ -77,6 +77,8 @@ const userSchema = new Schema<IUser>(
     failedLoginAttempts: { type: Number, default: 0 },
     isLocked: { type: Boolean, default: false },
     lastLogin: { type: Date, default: Date.now },
+    isTemporary: { type: Boolean, default: false },
+    expiresAt: { type: Date, default: null },
   },
   { timestamps: true }
 );

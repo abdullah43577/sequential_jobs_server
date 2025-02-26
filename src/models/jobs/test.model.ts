@@ -18,9 +18,18 @@ const testSchema = new Schema<ITest>(
 
     // Scoring criteria
     cut_off_points: {
-      suitable: { min: Number, max: Number },
-      probable: { min: Number, max: Number },
-      not_suitable: { min: Number, max: Number },
+      suitable: {
+        min: { type: Number, required: true },
+        max: { type: Number, required: true },
+      },
+      probable: {
+        min: { type: Number, required: true },
+        max: { type: Number, required: true },
+      },
+      not_suitable: {
+        min: { type: Number, required: true },
+        max: { type: Number, required: true },
+      },
     },
 
     // invitation letter
