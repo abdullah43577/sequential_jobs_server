@@ -10,13 +10,14 @@ import helmet from "helmet";
 import { authRouter } from "./routes/authRoutes";
 import { initializeSocket } from "./utils/socket";
 import { companyRouter } from "./routes/employer/routes.employer";
+import { seekerRouter } from "./routes/seeker/routes.seeker";
 
 const app = express();
 
 app.use(morgan("dev"));
 app.use(
   cors({
-    origin: ["http://localhost:3000", "https://sequentialjobs.com"],
+    origin: ["http://localhost:3000", "https://sequentialjobs.com", "https://sequential-jobs.vercel.app"],
     credentials: true,
   })
 );
@@ -35,7 +36,8 @@ initializeSocket(server);
 // routes
 app.use("/api", router);
 app.use("/api/auth", authRouter);
-app.use("/api/jobs", companyRouter);
+app.use("/api/employer", companyRouter);
+app.use("/api/seeker", seekerRouter);
 
 app.use("*", (req: Request, res: Response) => {
   res.status(404).json({

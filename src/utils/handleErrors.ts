@@ -12,15 +12,19 @@ interface IHandleErrors {
 export const handleErrors = function ({ res, error }: IHandleErrors) {
   // JWT Errors
   if (error instanceof jwt.JsonWebTokenError) {
-    return res.status(401).json({ message: "Invalid refresh token!", error });
+    return res.status(401).json({ message: "Invalid refresh token!" });
   }
   if (error instanceof jwt.TokenExpiredError) {
-    return res.status(401).json({ message: "Token has expired!", error });
+    return res.status(401).json({ message: "Token has expired!" });
   }
 
-  // Zod Validation Error
+  // Zod Validation Error (Refined)
   if (error instanceof ZodError) {
-    return res.status(400).json({ message: "Validation error", error: error.errors });
+    const errors = error.errors.map(err => ({
+      field: err.path.join("."), // Converts ['user', 'email'] to 'user.email'
+      message: err.message,
+    }));
+    return res.status(400).json({ message: "Validation error", errors });
   }
 
   // Mongoose Validation Error
@@ -29,10 +33,7 @@ export const handleErrors = function ({ res, error }: IHandleErrors) {
       field: err.path,
       message: err.message,
     }));
-    return res.status(400).json({
-      message: "Validation error",
-      errors,
-    });
+    return res.status(400).json({ message: "Validation error", errors });
   }
 
   // Mongoose Cast Error (invalid ObjectId, etc)
@@ -61,7 +62,7 @@ export const handleErrors = function ({ res, error }: IHandleErrors) {
 
   // Nodemailer Error
   if (error.responseCode === 535) {
-    return res.status(535).json({ message: "Nodemailer credentials invalid!", error });
+    return res.status(535).json({ message: "Nodemailer credentials invalid!" });
   }
 
   // Generic/Unknown Error

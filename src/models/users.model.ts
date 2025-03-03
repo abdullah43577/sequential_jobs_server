@@ -6,7 +6,7 @@ const userSchema = new Schema<IUser>(
   {
     first_name: { type: String, required: true },
     last_name: { type: String, required: true },
-    username: { type: String, default: null },
+    username: { type: String, validate: roleBasedValidation("company", "Username") },
     email: { type: String, required: true, unique: true },
     password: { type: String, default: null },
     role: { type: String, enum: ["job-seeker", "company", "panelist", "medical-expert", "admin", "super-admin"], required: true },
@@ -19,52 +19,49 @@ const userSchema = new Schema<IUser>(
 
     official_phone: {
       type: Number,
-      default: null,
       validate: roleBasedValidation("company", "Official Phone Number"),
     },
 
     organisation_name: {
       type: String,
-      default: null,
       validate: roleBasedValidation("company", "Organisation Name"),
     },
 
     industry: {
       type: String,
-      default: null,
       validate: roleBasedValidation("company", "Industry"),
     },
 
     street_1: {
       type: String,
-      default: null,
       validate: roleBasedValidation("company", "Street 1"),
     },
 
-    street_2: { type: String, default: null },
+    street_2: { type: String, validate: roleBasedValidation("company", "Street 2") },
 
     country: {
       type: String,
-      default: null,
       validate: roleBasedValidation("company", "Country"),
     },
 
     state: {
       type: String,
-      default: null,
       validate: roleBasedValidation("company", "State"),
     },
 
     city: {
       type: String,
-      default: null,
       validate: roleBasedValidation("company", "City"),
     },
 
     postal_code: {
       type: String,
-      default: null,
       validate: roleBasedValidation("company", "Postal Code"),
+    },
+
+    has_validated_email: {
+      type: Boolean,
+      default: false,
     },
 
     subscription_tier: {

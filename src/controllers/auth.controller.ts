@@ -12,7 +12,7 @@ const testApi = async (req: Request, res: Response) => {
   res.status(200).json({ message: "SERVERS ARE LIVE!!!" });
 };
 
-const registerSeeker = async (req: Request, res: Response) => {
+const createUser = async (req: Request, res: Response) => {
   try {
     const data = registerValidationSchema.parse(req.body);
 
@@ -27,7 +27,15 @@ const registerSeeker = async (req: Request, res: Response) => {
     const user = new User({ ...data, password: hashedPassword });
     await user.save();
 
-    res.status(201).json({ message: "User Accounted Created Successfully" });
+    res.status(201).json({ message: "User Account Created Successfully" });
+  } catch (error) {
+    handleErrors({ res, error });
+  }
+};
+
+const validateEmail = async (req: Request, res: Response) => {
+  try {
+    //*
   } catch (error) {
     handleErrors({ res, error });
   }
@@ -90,7 +98,10 @@ const resetPassword = async (req: Request, res: Response) => {
 
 const generateNewToken = async (req: IUserRequest, res: Response) => {
   try {
-    const { refreshToken, userId, role } = req;
+    const { userId, role } = req;
+    const { refreshToken } = req.body;
+
+    if (!refreshToken) return res.status(400).json({ message: "Refresh Token is required" });
 
     const session_ref = await RefreshToken.findOne({ token: refreshToken });
 
@@ -116,4 +127,4 @@ const logout = async (req: IUserRequest, res: Response) => {
   }
 };
 
-export { testApi, registerSeeker, loginUser, resetPassword, generateNewToken, logout };
+export { testApi, createUser, loginUser, resetPassword, generateNewToken, logout };

@@ -5,7 +5,6 @@ const jobSchema = new Schema<IJob>(
   {
     employer: { type: Schema.Types.ObjectId, ref: "User", required: true },
 
-    // Basic job details
     job_title: { type: String, trim: true },
     country: { type: String },
     state: { type: String },
@@ -16,14 +15,18 @@ const jobSchema = new Schema<IJob>(
     currency_type: { type: String },
     years_of_exp: { type: Number },
 
-    // Skills and description
     generic_skills: [{ type: String }],
     technical_skills: [{ type: String }],
     description: { type: String },
 
-    // Applications
-    applicants: [{ type: Schema.Types.ObjectId, ref: "User" }],
-    application_test: { type: Schema.Types.ObjectId, ref: "Test" },
+    applicants: [
+      {
+        user: { type: Schema.Types.ObjectId, ref: "User", required: true },
+        cv: { type: String, required: true },
+        applied_at: { type: Date, default: Date.now },
+      },
+    ],
+    application_test: { type: Schema.Types.ObjectId, ref: "Test", default: null },
 
     // Status fields
     is_live: { type: Boolean, default: false },
@@ -55,7 +58,7 @@ jobSchema.pre("validate", function (next) {
       { field: "currency_type", name: "Currency type" },
       { field: "years_of_exp", name: "Years of experience" },
       { field: "generic_skills", name: "Generic Skills" },
-      { field: "techincal_skills", name: "Technical Skills" },
+      { field: "technical_skills", name: "Technical Skills" },
       { field: "description", name: "Job Description" },
     ];
 

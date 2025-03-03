@@ -7,53 +7,13 @@ const JobTestSchema = new Schema<IJobTest>(
     employer: { type: Schema.Types.ObjectId, ref: "User", required: true },
     job_test: { type: Schema.Types.ObjectId, ref: "Test" },
 
-    // Scoring criteria
-    cut_off_points: {
-      suitable: {
-        min: { type: Number, required: true },
-        max: { type: Number, required: true },
-      },
-      probable: {
-        min: { type: Number, required: true },
-        max: { type: Number, required: true },
-      },
-      not_suitable: {
-        min: { type: Number, required: true },
-        max: { type: Number, required: true },
-      },
-    },
-
     stage: { type: String, enum: ["set_test", "set_cutoff", "invitation_upload", "candidate_invite"], default: "set_test" },
 
-    invitation: { type: String, required: true },
+    invitation_letter: { type: String, default: "" },
+    candidates_invited: [{ type: Schema.Types.ObjectId, ref: "User" }],
   },
   { timestamps: true }
 );
-
-JobTestSchema.pre("validate", function (next) {
-  const jobTest = this;
-
-  // Validate cut-off points
-  const { suitable, probable, not_suitable } = jobTest.cut_off_points;
-
-  // Validate ranges
-  if (suitable.min > suitable.max) {
-    return next(new Error("Suitable range: minimum cannot be greater than maximum"));
-  }
-  if (probable.min > probable.max) {
-    return next(new Error("Probable range: minimum cannot be greater than maximum"));
-  }
-  if (not_suitable.min > not_suitable.max) {
-    return next(new Error("Not suitable range: minimum cannot be greater than maximum"));
-  }
-
-  // Validate hierarchy
-  if (suitable.min <= probable.max || probable.min <= not_suitable.max) {
-    return next(new Error("Invalid cut-off point ranges. Ensure suitable > probable > not_suitable"));
-  }
-
-  next();
-});
 
 const JobTest = model<IJobTest>("JobTest", JobTestSchema);
 

@@ -1,5 +1,6 @@
 import { Schema, model } from "mongoose";
 import { ITest } from "../../utils/types/modelTypes";
+import { v4 as uuidv4 } from "uuid";
 
 const testSchema = new Schema<ITest>(
   {
@@ -8,6 +9,7 @@ const testSchema = new Schema<ITest>(
     instruction: { type: String, required: true, trim: true },
     questions: [
       {
+        _id: { type: String, default: uuidv4 },
         question: { type: String, required: true, trim: true },
         options: { type: [String], default: [] },
         question_type: { type: String, enum: ["multiple_choice", "yes/no", "text"], required: true },
@@ -16,19 +18,21 @@ const testSchema = new Schema<ITest>(
       },
     ],
 
+    type: { type: String, enum: ["application_test", "job_test"], required: true },
+
     // Scoring criteria
     cut_off_points: {
       suitable: {
-        min: { type: Number, required: true },
-        max: { type: Number, required: true },
+        min: { type: Number, default: null },
+        max: { type: Number, default: null },
       },
       probable: {
-        min: { type: Number, required: true },
-        max: { type: Number, required: true },
+        min: { type: Number, default: null },
+        max: { type: Number, default: null },
       },
       not_suitable: {
-        min: { type: Number, required: true },
-        max: { type: Number, required: true },
+        min: { type: Number, default: null },
+        max: { type: Number, default: null },
       },
     },
 

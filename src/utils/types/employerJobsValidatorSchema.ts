@@ -14,7 +14,6 @@ export const JobPostCreationSchema = z.object({
   generic_skills: z.array(z.string()),
   technical_skills: z.array(z.string()),
   description: z.string(),
-  stage: z.string(),
 });
 
 // Define the schema for questions

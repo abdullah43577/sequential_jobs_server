@@ -25,6 +25,7 @@ export interface IUser {
   lastLogin: Date;
   isTemporary: boolean;
   expiresAt: Date;
+  has_validated_email: boolean;
 }
 
 export interface INotification {
@@ -48,7 +49,7 @@ export interface IJob {
   generic_skills: string[];
   technical_skills: string[];
   description: string;
-  applicants: Types.ObjectId[];
+  applicants: { user: Types.ObjectId; cv: string; applied_at?: Date }[];
   is_live: boolean;
   application_test: Types.ObjectId;
   cut_off_points: {
@@ -64,11 +65,13 @@ export interface ITest {
   employer: Types.ObjectId;
   instruction: string;
   questions: {
+    _id: string;
     question_type: "multiple_choice" | "yes/no" | "text";
     options: string[];
     score: number;
     correct_answer: string;
   }[];
+  type: "application_test" | "job_test";
   cut_off_points: {
     suitable: { min: number; max: number };
     probable: { min: number; max: number };
@@ -81,13 +84,9 @@ export interface IJobTest {
   job: Types.ObjectId;
   employer: Types.ObjectId;
   job_test: Types.ObjectId;
-  cut_off_points: {
-    suitable: { min: number; max: number };
-    probable: { min: number; max: number };
-    not_suitable: { min: number; max: number };
-  };
   stage: "set_test" | "set_cutoff" | "invitation_upload" | "candidate_invite";
-  invitation: string;
+  invitation_letter: string;
+  candidates_invited: Types.ObjectId[];
 }
 
 export interface IInterview {
@@ -120,4 +119,14 @@ export interface ICalendar {
   status: "pending" | "accepted" | "rejected" | "completed" | "expired";
   expiresAt: Date;
   scheduled_date_time: Date;
+}
+
+export interface ITestSubmission {
+  test: Types.ObjectId;
+  job: Types.ObjectId;
+  applicant: Types.ObjectId;
+  employer: Types.ObjectId;
+  answers: { question_id: Types.ObjectId; selected_answer: string; is_correct: boolean }[];
+  score: number;
+  status: "suitable" | "not_suitable" | "probable";
 }
