@@ -1,13 +1,15 @@
 import { Router } from "express";
-import { generateNewToken, loginUser, logout, registerSeeker, testApi } from "../controllers/auth.controller";
-import { validateAccessToken, validateRefreshToken } from "../middleware/validateToken";
+import { generateNewToken, loginUser, createUser, forgotPassword, testApi, validateEmail, resetPassword } from "../controllers/auth.controller";
+import { validateRefreshToken } from "../middleware/validateToken";
 
 const authRouter = Router();
 
 authRouter.get("/", testApi);
-authRouter.post("/create-seeker", registerSeeker);
+authRouter.post("/create-user", createUser);
+authRouter.get("/verify-email", validateEmail);
 authRouter.post("/login", loginUser);
+authRouter.post("/forgot-password", forgotPassword);
+authRouter.post("/reset-password", resetPassword);
 authRouter.post("/token", validateRefreshToken, generateNewToken);
-authRouter.delete("/logout", validateAccessToken, logout);
 
 export { authRouter };

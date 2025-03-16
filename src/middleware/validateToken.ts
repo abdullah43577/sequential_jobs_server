@@ -44,4 +44,26 @@ const validateRefreshToken = function (req: IUserRequest, res: Response, next: N
   }
 };
 
-export { validateAccessToken, validateRefreshToken };
+const validateSeekerSession = function (req: IUserRequest, res: Response, next: NextFunction) {
+  try {
+    const { userId, role } = req;
+    if (role !== "job-seeker") return res.status(401).json({ message: "Unauthorized!, only a job-seeker is authorized to do this" });
+
+    next();
+  } catch (error) {
+    handleErrors({ res, error });
+  }
+};
+
+const validateCompanySession = function (req: IUserRequest, res: Response, next: NextFunction) {
+  try {
+    const { userId, role } = req;
+    if (role !== "company") return res.status(401).json({ message: "Unauthorized!, only a company is authorized to do this" });
+
+    next();
+  } catch (error) {
+    handleErrors({ res, error });
+  }
+};
+
+export { validateAccessToken, validateRefreshToken, validateCompanySession, validateSeekerSession };

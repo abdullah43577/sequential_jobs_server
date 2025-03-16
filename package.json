@@ -4,7 +4,8 @@
   "description": "This repository contains the source code for sequential jobs server side code",
   "scripts": {
     "dev": "tsc --watch",
-    "start": "nodemon dist/server.js"
+    "start": "nodemon dist/server.js",
+    "build": "node tsc"
   },
   "keywords": [],
   "author": "ReactMode",
@@ -18,13 +19,14 @@
     "express": "^4.19.2",
     "helmet": "^8.0.0",
     "jsonwebtoken": "^9.0.2",
+    "mjml": "^4.15.3",
     "mongoose": "^8.4.4",
     "morgan": "^1.10.0",
     "nodemailer": "^6.10.0",
     "nodemon": "^3.1.4",
     "socket.io": "^4.8.1",
     "typescript": "5.7.3",
-    "uuid": "^11.0.5",
+    "uuid": "^11.1.0",
     "validator": "^13.12.0",
     "zod": "^3.24.2"
   },
@@ -33,9 +35,11 @@
     "@types/cookie-parser": "^1.4.7",
     "@types/cors": "^2.8.17",
     "@types/jsonwebtoken": "^9.0.6",
+    "@types/mjml": "^4.7.4",
     "@types/mongoose": "^5.11.97",
     "@types/morgan": "^1.9.9",
     "@types/nodemailer": "^6.4.17",
-    "@types/validator": "^13.12.0"
+    "@types/validator": "^13.12.0",
+    "node-cache": "^5.1.2"
   }
 }

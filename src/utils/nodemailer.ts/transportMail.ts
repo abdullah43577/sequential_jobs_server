@@ -1,11 +1,16 @@
 import "dotenv/config";
 import nodemailer from "nodemailer";
-import { transportMail } from "../types/types";
 
-const { NODEMAILER_EMAIL, NODEMAILER_PASSWORD } = process.env;
+export interface transportMailType {
+  email: string;
+  subject: string;
+  message: any;
+}
+
+const { NODEMAILER_EMAIL, NODEMAILER_PASSWORD, NODEMAILER_REPLYTO_EMAIL } = process.env;
 
 const transporter = nodemailer.createTransport({
-  host: "smtp.gmail.com",
+  host: "smtp.ipage.com",
   port: 465,
   secure: true,
   auth: {
@@ -14,13 +19,14 @@ const transporter = nodemailer.createTransport({
   },
 });
 
-export async function transportMail(formData: transportMail) {
+export async function transportMail(formData: transportMailType) {
   try {
     const info = await transporter.sendMail({
       from: NODEMAILER_EMAIL,
       to: formData.email,
       subject: formData.subject,
       html: formData.message,
+      replyTo: NODEMAILER_REPLYTO_EMAIL,
     });
     return info;
   } catch (error) {
