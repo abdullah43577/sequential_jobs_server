@@ -1,4 +1,4 @@
-import { Schema, Types, model } from "mongoose";
+import { Schema, model } from "mongoose";
 import { ITestSubmission } from "../../utils/types/modelTypes";
 import Test from "./test.model";
 

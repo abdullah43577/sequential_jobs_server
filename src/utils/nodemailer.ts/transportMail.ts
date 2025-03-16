@@ -1,6 +1,11 @@
 import "dotenv/config";
 import nodemailer from "nodemailer";
-import { transportMail as transportMailType } from "../types/types";
+
+export interface transportMailType {
+  email: string;
+  subject: string;
+  message: any;
+}
 
 const { NODEMAILER_EMAIL, NODEMAILER_PASSWORD, NODEMAILER_REPLYTO_EMAIL } = process.env;
 

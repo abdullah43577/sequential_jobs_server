@@ -1,6 +1,6 @@
 import { Router } from "express";
 import { validateAccessToken, validateCompanySession } from "../../middleware/validateToken";
-import { applicationTest, jobPostCreation, applicationTestCutoff, jobTest, jobTestCutoff, jobTestInviteMsg, handleSetInterview, handleSetInterviewInvitePanelists, getJobsWithApplicants } from "../../controllers/employer/employer.controller";
+import { applicationTest, jobPostCreation, applicationTestCutoff, jobTest, jobTestCutoff, jobTestInviteMsg, handleSetInterview, handleSetInterviewInvitePanelists, getJobsWithApplicants } from "../../controllers/employer.controller";
 
 const companyRouter = Router();
 

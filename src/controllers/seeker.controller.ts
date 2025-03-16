@@ -1,12 +1,12 @@
 import { Response } from "express";
-import { IUserRequest } from "../../interface";
-import { handleErrors } from "../../utils/handleErrors";
-import Job from "../../models/jobs/jobs.model";
+import { IUserRequest } from "../interface";
+import { handleErrors } from "../utils/handleErrors";
+import Job from "../models/jobs/jobs.model";
 import { Types } from "mongoose";
-import cloudinary from "../../utils/cloudinaryConfig";
-import Test from "../../models/jobs/test.model";
-import TestSubmission from "../../models/jobs/testsubmission.model";
-import { ApplicationTestSubmissionSchema } from "../../utils/types/seekerValidatorSchema";
+import cloudinary from "../utils/cloudinaryConfig";
+import Test from "../models/jobs/test.model";
+import TestSubmission from "../models/jobs/testsubmission.model";
+import { ApplicationTestSubmissionSchema } from "../utils/types/seekerValidatorSchema";
 
 //* jobs screen
 const getAllJobs = async function (req: IUserRequest, res: Response) {
@@ -89,7 +89,7 @@ const submitApplicationTest = async function (req: IUserRequest, res: Response) 
       employer: test.employer,
       answers: gradedAnswers,
       score: totalScore,
-      status: "completed",
+      status: "suitable",
     });
 
     res.status(201).json({ message: "Test submitted successfully", submission });

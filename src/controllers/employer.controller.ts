@@ -1,16 +1,16 @@
 import { Response } from "express";
-import { IUserRequest } from "../../interface";
-import { handleErrors } from "../../utils/handleErrors";
-import { cutOffSchema, EmployerInterviewManagementSchema, JobPostCreationSchema, testSchema } from "../../utils/types/employerJobsValidatorSchema";
-import Job from "../../models/jobs/jobs.model";
-import Test from "../../models/jobs/test.model";
-import JobTest from "../../models/assessment/jobtest.model";
-import Calendar from "../../models/assessment/calendar.model";
+import { IUserRequest } from "../interface";
+import { handleErrors } from "../utils/handleErrors";
+import { cutOffSchema, EmployerInterviewManagementSchema, JobPostCreationSchema, testSchema } from "../utils/types/employerJobsValidatorSchema";
+import Job from "../models/jobs/jobs.model";
+import Test from "../models/jobs/test.model";
+import JobTest from "../models/assessment/jobtest.model";
+import Calendar from "../models/assessment/calendar.model";
 import { Types } from "mongoose";
-import InterviewMgmt from "../../models/interview/interview.model";
+import InterviewMgmt from "../models/interview/interview.model";
 import crypto from "crypto";
-import { hashPassword } from "../../utils/hashPassword";
-import User from "../../models/users.model";
+import { hashPassword } from "../utils/hashPassword";
+import User from "../models/users.model";
 
 import NodeCache from "node-cache";
 const cache = new NodeCache({ stdTTL: 600, checkperiod: 120 });

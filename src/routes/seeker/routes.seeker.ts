@@ -1,6 +1,6 @@
 import { Router } from "express";
 import { validateAccessToken, validateSeekerSession } from "../../middleware/validateToken";
-import { applyForJob, getAllJobs, getJobDetails, submitApplicationTest } from "../../controllers/employer/seeker.controller";
+import { applyForJob, getAllJobs, getJobDetails, submitApplicationTest } from "../../controllers/seeker.controller";
 
 const seekerRouter = Router();
 

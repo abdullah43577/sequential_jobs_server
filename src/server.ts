@@ -26,13 +26,6 @@ app.use(express.urlencoded({ extended: false, limit: "10mb" }));
 app.use(cookieParser());
 app.use(helmet());
 
-const server = app.listen(PORT, async () => {
-  await connectDB();
-  console.log(`server started on http://localhost:${PORT}`);
-});
-
-initializeSocket(server);
-
 // routes
 app.use("/api", router);
 app.use("/api/auth", authRouter);
@@ -49,3 +42,10 @@ app.use("*", (req: Request, res: Response) => {
     },
   });
 });
+
+const server = app.listen(PORT, async () => {
+  await connectDB();
+  console.log(`server started on http://localhost:${PORT}`);
+});
+
+initializeSocket(server);
