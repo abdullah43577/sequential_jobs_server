@@ -1,6 +1,6 @@
 import { Schema, model } from "mongoose";
 import { IUser } from "../utils/types/modelTypes";
-import { roleBasedValidation } from "../utils/roleBasedValidation";
+import { roleBasedValidation } from "../helper/roleBasedValidation";
 
 const userSchema = new Schema<IUser>(
   {

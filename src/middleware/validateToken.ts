@@ -2,7 +2,7 @@ import { NextFunction, Response } from "express";
 const { ACCESS_TOKEN_SECRET, REFRESH_TOKEN_SECRET } = process.env;
 import jwt, { Secret } from "jsonwebtoken";
 import { CustomJwtPayload, IUserRequest } from "../interface";
-import { handleErrors } from "../utils/handleErrors";
+import { handleErrors } from "../helper/handleErrors";
 
 const validateAccessToken = function (req: IUserRequest, res: Response, next: NextFunction) {
   let token = req.headers["authorization"]?.split(" ")[1];

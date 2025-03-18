@@ -9,6 +9,8 @@ export interface transportMailType {
 
 const { NODEMAILER_EMAIL, NODEMAILER_PASSWORD, NODEMAILER_REPLYTO_EMAIL } = process.env;
 
+console.log(NODEMAILER_EMAIL, NODEMAILER_PASSWORD, NODEMAILER_REPLYTO_EMAIL);
+
 const transporter = nodemailer.createTransport({
   host: "smtp.ipage.com",
   port: 465,

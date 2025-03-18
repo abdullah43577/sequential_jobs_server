@@ -1,10 +1,10 @@
 import { Request, Response } from "express";
-import { generateAccessToken, generateRefreshToken } from "../utils/generateToken";
+import { generateAccessToken, generateRefreshToken } from "../helper/generateToken";
 import { CustomJwtPayload, IUserRequest } from "../interface";
 import { loginValidationSchema, registerValidationSchema } from "../utils/types/authValidatorSchema";
 import User from "../models/users.model";
-import { comparePassword, hashPassword } from "../utils/hashPassword";
-import { handleErrors } from "../utils/handleErrors";
+import { comparePassword, hashPassword } from "../helper/hashPassword";
+import { handleErrors } from "../helper/handleErrors";
 import { registrationEmail } from "../utils/nodemailer.ts/email-templates/registration-email";
 import { transportMail } from "../utils/nodemailer.ts/transportMail";
 import jwt, { Secret } from "jsonwebtoken";
@@ -43,7 +43,7 @@ const createUser = async (req: Request, res: Response) => {
 
     const html = registrationEmail(emailTemplateData);
 
-    await transportMail({ email: user.email, subject: "Welcome to Sequential Jobs - Please Verify Your Email", message: html });
+    await transportMail({ email: user.email, subject: "Welcome to Sequential Jobs - Please Verify Your Email", message: html.html });
 
     res.status(201).json({ message: "User Account Created Successfully" });
   } catch (error) {

@@ -1,6 +1,6 @@
 import { Response } from "express";
 import { IUserRequest } from "../interface";
-import { handleErrors } from "../utils/handleErrors";
+import { handleErrors } from "../helper/handleErrors";
 import { cutOffSchema, EmployerInterviewManagementSchema, JobPostCreationSchema, testSchema } from "../utils/types/employerJobsValidatorSchema";
 import Job from "../models/jobs/jobs.model";
 import Test from "../models/jobs/test.model";
@@ -9,10 +9,11 @@ import Calendar from "../models/assessment/calendar.model";
 import { Types } from "mongoose";
 import InterviewMgmt from "../models/interview/interview.model";
 import crypto from "crypto";
-import { hashPassword } from "../utils/hashPassword";
+import { hashPassword } from "../helper/hashPassword";
 import User from "../models/users.model";
 
 import NodeCache from "node-cache";
+import Applicant from "../models/jobs/applicants.model";
 const cache = new NodeCache({ stdTTL: 600, checkperiod: 120 });
 
 //* get specified company jobs with applicants
@@ -20,17 +21,26 @@ const getJobsWithApplicants = async function (req: IUserRequest, res: Response) 
   try {
     const { userId } = req;
 
-    const cachedData = cache.get("applied_jobs");
-    if (cachedData) {
-      res.status(200).json(cachedData);
+    const cachedData = cache.get(`applied_jobs_for_${userId}`);
+    if (cachedData) return res.status(200).json(cachedData);
 
-      const jobs = await Job.find({ employer: userId, applicants: { $exists: true, $ne: [] } }).lean();
+    const jobs = await Job.find({ employer: userId }).select("job_title country state city job_type employment_type salary currency_type years_of_exp description").lean();
 
-      return cache.set("applied_jobs", jobs);
-    } else {
-      const jobs = await Job.find({ employer: userId, applicants: { $exists: true, $ne: [] } }).lean();
-      return res.status(200).json(jobs);
-    }
+    //* store job ids in an array
+    const jobIds = jobs.map(job => job._id);
+
+    //* find applicants who have applied to any of the jobs the company has posted
+    const applicants = await Applicant.find({ job_id: { $in: jobIds } })
+      .populate("user", "first_name last_name username email")
+      .lean();
+
+    const jobsWithApplicants = jobs.map(job => ({
+      ...job,
+      applicants: applicants.filter(applicant => applicant.job_id.toString() === job._id.toString()),
+    }));
+
+    cache.set(`applied_jobs_for_${userId}`, jobsWithApplicants);
+    return res.status(200).json(jobsWithApplicants);
   } catch (error) {
     handleErrors({ res, error });
   }
@@ -44,15 +54,21 @@ const jobPostCreation = async function (req: IUserRequest, res: Response) {
     const data = JobPostCreationSchema.parse(req.body);
 
     if (data.job_id) {
-      const job = await Job.findOneAndUpdate({ _id: data.job_id, employer: userId }, data, { new: true, runValidators: true });
+      const job = await Job.findByIdAndUpdate(data.job_id, data, { returnDocument: "after", runValidators: true }).lean();
 
       if (!job) return res.status(404).json({ message: "Job not found" });
+
+      // Invalidate related cache
+      cache.del(`applied_jobs_for_${userId}`);
 
       return res.status(200).json({ message: "Job Updated", job });
     }
 
-    const job = new Job({ ...data, employer: userId, stage: "job_post_creation" });
-    await job.save();
+    const job = await Job.create({ ...data, employer: userId, stage: "job_post_creation" });
+
+    // Invalidate related cache
+    cache.del(`applied_jobs_for_${userId}`);
+
     return res.status(201).json({ message: "Job Created", job });
   } catch (error) {
     handleErrors({ res, error });
@@ -63,30 +79,31 @@ const applicationTest = async function (req: IUserRequest, res: Response) {
   try {
     const { job_id, instruction, questions } = testSchema.parse(req.body);
 
-    const job = await Job.findById(job_id);
+    const job = await Job.findById(job_id).select("application_test, employer stage");
     if (!job) return res.status(404).json({ message: "Job with the specified ID not found" });
 
     let test;
 
     if (job.application_test) {
-      test = await Test.findByIdAndUpdate(job.application_test, { instruction, questions }, { new: true, runValidators: true });
+      test = await Test.findByIdAndUpdate(job.application_test, { instruction, questions }, { returnDocument: "after", runValidators: true });
 
       return res.status(200).json({ message: "Application test updated successfully", test });
-    } else {
-      test = await Test.create({
-        job: job._id,
-        employer: job.employer,
-        instruction,
-        questions,
-        type: "application_test",
-      });
-
-      // Update the job document to reference the new test
-      job.application_test = test._id;
-      job.stage = "set_cv_sorting_question";
-      await job.save();
     }
-    return res.status(200).json({ message: "Application test created successfully", test });
+
+    test = await Test.create({
+      job: job_id,
+      employer: job.employer,
+      instruction,
+      questions,
+      type: "application_test",
+    });
+
+    // Update the job document to reference the new test
+    job.application_test = test._id;
+    job.stage = "set_cv_sorting_question";
+    await job.save();
+
+    return res.status(200).json({ message: "Application test created successfully", application_test_id: test._id });
   } catch (error) {
     handleErrors({ res, error });
   }
@@ -97,7 +114,7 @@ const applicationTestCutoff = async function (req: IUserRequest, res: Response) 
     const { cut_off_points, test_id } = cutOffSchema.parse(req.body);
     const { suitable, probable, not_suitable } = cut_off_points;
 
-    const test = await Test.findById(test_id);
+    const test = await Test.findById(test_id).select("questions cut_off_points");
     if (!test) return res.status(404).json({ message: "Test not found" });
 
     const total_marks = test.questions.reduce((acc, q) => acc + q.score, 0);
@@ -128,6 +145,8 @@ const applicationTestCutoff = async function (req: IUserRequest, res: Response) 
   }
 };
 
+//* TO BE CONTINUED FROM HERE....
+
 //* job test management
 const jobTest = async function (req: IUserRequest, res: Response) {
   try {
@@ -139,7 +158,7 @@ const jobTest = async function (req: IUserRequest, res: Response) {
     let test;
 
     if (jobTest?.job_test) {
-      test = await Test.findByIdAndUpdate(jobTest.job_test, { instruction, questions }, { new: true, runValidators: true });
+      test = await Test.findByIdAndUpdate(jobTest.job_test, { instruction, questions }, { returnDocument: "after", runValidators: true });
     } else {
       test = await Test.create({
         job: job_id,
@@ -157,7 +176,7 @@ const jobTest = async function (req: IUserRequest, res: Response) {
       });
     }
 
-    return res.status(200).json({ message: "Application test updated successfully", test });
+    return res.status(200).json({ message: "Job test updated successfully", test });
   } catch (error) {
     handleErrors({ res, error });
   }

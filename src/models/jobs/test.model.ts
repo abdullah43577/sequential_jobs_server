@@ -37,7 +37,7 @@ const testSchema = new Schema<ITest>(
     },
 
     // invitation letter
-    invitation_letter: { type: String, default: "" },
+    // invitation_letter: { type: String, default: "" },
   },
   { timestamps: true }
 );
@@ -49,12 +49,14 @@ testSchema.pre("validate", function (next) {
 
   // Validate each question
   for (const question of this.questions) {
-    // For multiple choice questions, ensure options are provided
-    if ((question.question_type === "multiple_choice" || question.question_type === "yes/no") && (!question.options || question.options.length < 2)) {
+    if (question.question_type === "multiple_choice" && (!question.options || question.options.length < 2)) {
       return next(new Error("Multiple choice questions must have at least 2 options"));
     }
 
-    // Validate score is positive
+    if (question.question_type === "yes/no") {
+      question.options = ["Yes", "No"];
+    }
+
     if (question.score <= 0) {
       return next(new Error("Question score must be greater than 0"));
     }

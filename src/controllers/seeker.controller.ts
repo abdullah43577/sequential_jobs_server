@@ -1,6 +1,6 @@
 import { Response } from "express";
 import { IUserRequest } from "../interface";
-import { handleErrors } from "../utils/handleErrors";
+import { handleErrors } from "../helper/handleErrors";
 import Job from "../models/jobs/jobs.model";
 import { Types } from "mongoose";
 import cloudinary from "../utils/cloudinaryConfig";

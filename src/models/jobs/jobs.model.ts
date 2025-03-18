@@ -18,14 +18,6 @@ const jobSchema = new Schema<IJob>(
     generic_skills: [{ type: String }],
     technical_skills: [{ type: String }],
     description: { type: String },
-
-    applicants: [
-      {
-        user: { type: Schema.Types.ObjectId, ref: "User", required: true },
-        cv: { type: String, required: true },
-        applied_at: { type: Date, default: Date.now },
-      },
-    ],
     application_test: { type: Schema.Types.ObjectId, ref: "Test", default: null },
 
     // Status fields
