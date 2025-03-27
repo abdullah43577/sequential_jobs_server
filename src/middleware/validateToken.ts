@@ -35,6 +35,7 @@ const validateRefreshToken = function (req: IUserRequest, res: Response, next: N
 
     if (!refreshToken) return res.status(401).json({ message: "Access Denied, Refresh token not provided!" });
 
+    console.log(refreshToken);
     const { id, role } = jwt.verify(refreshToken, REFRESH_TOKEN_SECRET as Secret) as CustomJwtPayload;
     req.userId = id;
     req.role = role;

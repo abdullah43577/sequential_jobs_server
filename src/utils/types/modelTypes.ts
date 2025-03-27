@@ -26,6 +26,7 @@ export interface IUser {
   isTemporary: boolean;
   expiresAt: Date;
   has_validated_email: boolean;
+  resume: string;
 }
 
 export interface INotification {
@@ -44,12 +45,13 @@ export interface IJob {
   job_type: "hybrid" | "on_site" | "remote";
   employment_type: "full_time" | "part_time" | "contract";
   salary: number;
-  currency_type: string;
+  currency_type: "NGN" | "USD" | "EUR" | "CFA" | "GBP" | "AUD" | "CAD";
   years_of_exp: number;
+  payment_frequency: "yearly" | "monthly" | "weekly";
   generic_skills: string[];
   technical_skills: string[];
   description: string;
-  applicants: { user: Types.ObjectId; cv: string; applied_at?: Date }[];
+  applicants: { applicant: Types.ObjectId; date_of_application?: Date }[];
   is_live: boolean;
   application_test: Types.ObjectId;
   cut_off_points: {
@@ -77,7 +79,6 @@ export interface ITest {
     probable: { min: number; max: number };
     not_suitable: { min: number; max: number };
   };
-  invitation_letter?: string;
 }
 
 export interface IJobTest {

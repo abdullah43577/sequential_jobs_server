@@ -10,6 +10,7 @@ const userSchema = new Schema<IUser>(
     email: { type: String, required: true, unique: true },
     password: { type: String, default: null },
     role: { type: String, enum: ["job-seeker", "company", "panelist", "medical-expert", "admin", "super-admin"], required: true },
+    resume: { type: String, default: null },
 
     phone_no: {
       type: Number,

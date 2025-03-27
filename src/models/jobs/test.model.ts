@@ -35,9 +35,6 @@ const testSchema = new Schema<ITest>(
         max: { type: Number, default: null },
       },
     },
-
-    // invitation letter
-    // invitation_letter: { type: String, default: "" },
   },
   { timestamps: true }
 );

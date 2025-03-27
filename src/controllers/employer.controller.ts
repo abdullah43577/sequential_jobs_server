@@ -13,7 +13,6 @@ import { hashPassword } from "../helper/hashPassword";
 import User from "../models/users.model";
 
 import NodeCache from "node-cache";
-import Applicant from "../models/jobs/applicants.model";
 const cache = new NodeCache({ stdTTL: 600, checkperiod: 120 });
 
 //* get specified company jobs with applicants
@@ -30,17 +29,17 @@ const getJobsWithApplicants = async function (req: IUserRequest, res: Response) 
     const jobIds = jobs.map(job => job._id);
 
     //* find applicants who have applied to any of the jobs the company has posted
-    const applicants = await Applicant.find({ job_id: { $in: jobIds } })
-      .populate("user", "first_name last_name username email")
-      .lean();
+    // const applicants = await Applicant.find({ job_id: { $in: jobIds } })
+    //   .populate("user", "first_name last_name username email")
+    //   .lean();
 
-    const jobsWithApplicants = jobs.map(job => ({
-      ...job,
-      applicants: applicants.filter(applicant => applicant.job_id.toString() === job._id.toString()),
-    }));
+    // const jobsWithApplicants = jobs.map(job => ({
+    //   ...job,
+    //   applicants: applicants.filter(applicant => applicant.job_id.toString() === job._id.toString()),
+    // }));
 
-    cache.set(`applied_jobs_for_${userId}`, jobsWithApplicants);
-    return res.status(200).json(jobsWithApplicants);
+    // cache.set(`applied_jobs_for_${userId}`, jobsWithApplicants);
+    // return res.status(200).json(jobsWithApplicants);
   } catch (error) {
     handleErrors({ res, error });
   }
@@ -76,17 +75,23 @@ const jobPostCreation = async function (req: IUserRequest, res: Response) {
 };
 
 const applicationTest = async function (req: IUserRequest, res: Response) {
+  // const session = await mongoose.startSession();
+  // session.startTransaction();
+
   try {
     const { job_id, instruction, questions } = testSchema.parse(req.body);
 
     const job = await Job.findById(job_id).select("application_test, employer stage");
-    if (!job) return res.status(404).json({ message: "Job with the specified ID not found" });
+    if (!job) {
+      return res.status(404).json({ message: "Job with the specified ID not found" });
+    }
 
     let test;
 
     if (job.application_test) {
       test = await Test.findByIdAndUpdate(job.application_test, { instruction, questions }, { returnDocument: "after", runValidators: true });
 
+      // await session.commitTransaction();
       return res.status(200).json({ message: "Application test updated successfully", test });
     }
 
@@ -103,8 +108,10 @@ const applicationTest = async function (req: IUserRequest, res: Response) {
     job.stage = "set_cv_sorting_question";
     await job.save();
 
+    // await session.commitTransaction();
     return res.status(200).json({ message: "Application test created successfully", application_test_id: test._id });
   } catch (error) {
+    // await session.abortTransaction();
     handleErrors({ res, error });
   }
 };
@@ -118,7 +125,7 @@ const applicationTestCutoff = async function (req: IUserRequest, res: Response) 
     if (!test) return res.status(404).json({ message: "Test not found" });
 
     const total_marks = test.questions.reduce((acc, q) => acc + q.score, 0);
-    console.log(total_marks, "total marks");
+    // console.log(total_marks, "total marks");
 
     if (not_suitable.min !== 0) {
       return res.status(400).json({ message: "The minimum score for 'not_suitable' must be 0." });
@@ -136,8 +143,14 @@ const applicationTestCutoff = async function (req: IUserRequest, res: Response) 
       return res.status(400).json({ message: "'suitable.max' must be equal to the total obtainable marks." });
     }
 
+    //* upgrade properties and mark job as LIVE
     test.cut_off_points = cut_off_points;
+    const job = await Job.findById(test.job);
+    if (!job) return res.status(400).json({ message: "Job with corresponding test ID not found" });
+
+    job.is_live = true;
     await test.save();
+    await job.save();
 
     return res.status(200).json({ message: "Cut-off points updated successfully", test });
   } catch (error) {
@@ -145,13 +158,17 @@ const applicationTestCutoff = async function (req: IUserRequest, res: Response) 
   }
 };
 
-//* TO BE CONTINUED FROM HERE....
-
 //* job test management
 const jobTest = async function (req: IUserRequest, res: Response) {
   try {
     const { userId } = req;
     const { job_id, instruction, questions } = testSchema.parse(req.body);
+
+    //* check for existence of job
+    const job = await Job.findById(job_id);
+    if (!job) {
+      return res.status(404).json({ message: "Job with the specified ID not found" });
+    }
 
     const jobTest = await JobTest.findOne({ job: job_id, employer: userId });
 
@@ -190,6 +207,11 @@ const jobTestCutoff = async function (req: IUserRequest, res: Response) {
     const { suitable, probable, not_suitable } = cut_off_points;
 
     if (!job_id) return res.status(400).json({ message: "Job ID is required!" });
+
+    const job = await Job.findById(job_id);
+    if (!job) {
+      return res.status(404).json({ message: "Job with the specified ID not found" });
+    }
 
     const jobTest = await JobTest.findOne({ job: job_id, employer: userId });
     if (!jobTest) return res.status(404).json({ message: "Job with the specified ID not found" });
@@ -232,22 +254,27 @@ const jobTestInviteMsg = async function (req: IUserRequest, res: Response) {
     const { job_id } = req.query;
     const { invitation_letter, test_id } = req.body;
 
+    if (!job_id) return res.status(400).json({ message: "Job ID is required" });
+    if (!invitation_letter || !test_id) return res.status(400).json({ message: "Invitation Letter and Test ID is required" });
+
+    const job = await Job.findById(job_id);
+    if (!job) {
+      return res.status(404).json({ message: "Job with the specified ID not found" });
+    }
+
     const jobTest = await JobTest.findOne({ job: job_id, employer: userId });
-    if (!jobTest) return res.status(404).json({ message: "Job with the specified ID not found" });
+    if (!jobTest) return res.status(404).json({ message: "Job Test with the specified credentials not found" });
 
-    const test = await Test.findById(test_id);
-    if (!test) return res.status(404).json({ message: "Test not found" });
-
-    if (!invitation_letter) return res.status(400).json({ message: "Invitation Letter is required!" });
-
-    test.invitation_letter = invitation_letter;
-    await test.save();
+    jobTest.invitation_letter = invitation_letter;
+    await jobTest.save();
 
     return res.status(200).json({ message: "Job test invite created successfully!" });
   } catch (error) {
     handleErrors({ res, error });
   }
 };
+
+//* TO BE CONTINUED FROM HERE....
 
 const jobTestApplicantsInvite = async function (req: IUserRequest, res: Response) {
   try {

@@ -6,21 +6,52 @@ import { Types } from "mongoose";
 import cloudinary from "../utils/cloudinaryConfig";
 import Test from "../models/jobs/test.model";
 import TestSubmission from "../models/jobs/testsubmission.model";
-import { ApplicationTestSubmissionSchema } from "../utils/types/seekerValidatorSchema";
+import { ApplicationTestSubmissionSchema, UploadResumeSchema } from "../utils/types/seekerValidatorSchema";
+import NodeCache from "node-cache";
+import { IApplicationTest } from "../utils/types/controllerInterfaces";
+
+const cache = new NodeCache({ stdTTL: 600, checkperiod: 120 });
 
 //* jobs screen
 const getAllJobs = async function (req: IUserRequest, res: Response) {
   try {
     const { userId } = req;
+    const page = parseInt(req.query.page as string) || 1;
+    const limit = parseInt(req.query.limit as string) || 10;
+    const skip = (page - 1) * limit;
 
-    const jobs = await Job.find({ is_live: true }).lean();
+    const cacheKey = `cached_jobs__${userId}__page_${page}`;
 
-    const jobsWithAppliedStatus = jobs.map(job => {
-      const hasApplied = job.applicants.some(applicant => applicant.user.toString() === userId);
-      return { ...job, has_applied: hasApplied };
-    });
+    const cachedJobs = cache.get(cacheKey);
+    if (cachedJobs) {
+      return res.status(200).json(cachedJobs);
+    }
 
-    return res.status(200).json(jobsWithAppliedStatus);
+    // Get total job count
+    const totalJobs = await Job.countDocuments({ is_live: true });
+
+    const jobs = await Job.find({ is_live: true }).select("employer job_title state city employment_type salary payment_frequency technical_skills").populate("employer", "organisation_name").skip(skip).limit(limit).lean();
+
+    const jobsWithAppliedStatus = await Promise.all(
+      jobs.map(async job => {
+        const hasApplied = job.applicants?.some(data => data.applicant.toString() === userId);
+        return {
+          ...job,
+          has_applied: hasApplied,
+        };
+      })
+    );
+
+    const responseData = {
+      jobs: jobsWithAppliedStatus,
+      totalJobs,
+      totalPages: Math.ceil(totalJobs / limit),
+      currentPage: page,
+    };
+
+    cache.set(cacheKey, responseData);
+
+    return res.status(200).json(responseData);
   } catch (error) {
     handleErrors({ res, error });
   }
@@ -29,8 +60,15 @@ const getAllJobs = async function (req: IUserRequest, res: Response) {
 const getJobDetails = async function (req: IUserRequest, res: Response) {
   try {
     const { job_id } = req.params;
+
+    const cacheKey = `single_job_cache__${job_id}`;
+    const cachedJob = cache.get(cacheKey);
+    if (cachedJob) return res.status(200).json(cachedJob);
+
     const job = await Job.findById(job_id).populate("application_test");
     if (!job) return res.status(404).json({ message: "Job with specified ID, not found!" });
+
+    cache.set(cacheKey, job);
 
     res.status(200).json(job);
   } catch (error) {
@@ -40,24 +78,62 @@ const getJobDetails = async function (req: IUserRequest, res: Response) {
 
 const applyForJob = async function (req: IUserRequest, res: Response) {
   try {
-    const { userId, role } = req;
-    const { job_id } = req.params;
-    const { cv } = req.body;
+    const { userId } = req;
+    const { job_id } = req.body;
+
+    if (!job_id) return res.status(400).json({ message: "Job ID is required!" });
+
     const job = await Job.findById(job_id);
     if (!job) return res.status(404).json({ message: "Job with specified ID, not found!" });
 
-    const data = await cloudinary.uploader.upload(cv, {
-      folder: `users/${role}/${userId}/cv`,
-    });
+    //* check if user has applied already
+    const userExistInApplicantsPool = job.applicants.find(id => id.toString() === userId?.toString());
+
+    if (userExistInApplicantsPool) return res.status(400).json({ message: "You already applied for this job" });
+
+    // const data = await cloudinary.uploader.upload(cv, {
+    //   folder: `users/${role}/${userId}/cv`,
+    // });
 
     job.applicants.push({
-      user: userId as unknown as Types.ObjectId,
-      cv: data.secure_url,
-      applied_at: new Date(),
+      applicant: userId as unknown as Types.ObjectId,
     });
     await job.save();
 
     res.status(200).json({ message: "Application Created" });
+  } catch (error) {
+    handleErrors({ res, error });
+  }
+};
+
+const getApplicationTest = async function (req: IUserRequest, res: Response) {
+  try {
+    const { job_id } = req.params;
+
+    const cacheKey = `job_application_test__${job_id}`;
+
+    const cachedTest = cache.get(cacheKey);
+    if (cachedTest) return res.status(200).json({ application_test: cachedTest });
+
+    const job = await Job.findById(job_id).populate("application_test").lean();
+    if (!job) return res.status(404).json({ message: "Job with specified ID not found!" });
+
+    if (typeof job.application_test === "object") {
+      const { _id, instruction, questions, type } = job.application_test as unknown as IApplicationTest;
+
+      const filteredQuestions = questions.map(({ correct_answer, score, ...rest }) => rest);
+
+      const responseObject = {
+        application_test_id: _id,
+        instruction,
+        questions: filteredQuestions,
+        type,
+      };
+
+      cache.set(cacheKey, responseObject);
+
+      res.status(200).json(responseObject);
+    }
   } catch (error) {
     handleErrors({ res, error });
   }
@@ -89,7 +165,6 @@ const submitApplicationTest = async function (req: IUserRequest, res: Response) 
       employer: test.employer,
       answers: gradedAnswers,
       score: totalScore,
-      status: "suitable",
     });
 
     res.status(201).json({ message: "Test submitted successfully", submission });
@@ -98,4 +173,14 @@ const submitApplicationTest = async function (req: IUserRequest, res: Response) 
   }
 };
 
-export { getAllJobs, getJobDetails, applyForJob, submitApplicationTest };
+//* resume management
+const uploadResume = async function (req: IUserRequest, res: Response) {
+  try {
+    const { userId } = req;
+    const data = UploadResumeSchema.parse(req.body);
+  } catch (error) {
+    handleErrors({ res, error });
+  }
+};
+
+export { getAllJobs, getJobDetails, applyForJob, getApplicationTest, submitApplicationTest, uploadResume };

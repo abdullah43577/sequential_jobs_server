@@ -12,7 +12,7 @@ interface IHandleErrors {
 export const handleErrors = function ({ res, error }: IHandleErrors) {
   // JWT Errors
   if (error instanceof jwt.JsonWebTokenError) {
-    return res.status(401).json({ message: "Invalid refresh token!" });
+    return res.status(401).json({ message: "Invalid token!" });
   }
   if (error instanceof jwt.TokenExpiredError) {
     return res.status(401).json({ message: "Token has expired!" });

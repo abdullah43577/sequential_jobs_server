@@ -1,4 +1,4 @@
-import { Schema, model, Document } from "mongoose";
+import { Schema, model } from "mongoose";
 import { IJob } from "../../utils/types/modelTypes";
 
 const jobSchema = new Schema<IJob>(
@@ -12,12 +12,18 @@ const jobSchema = new Schema<IJob>(
     job_type: { type: String, enum: ["hybrid", "on_site", "remote"] },
     employment_type: { type: String, enum: ["full_time", "part_time", "contract"] },
     salary: { type: Number },
-    currency_type: { type: String },
+    currency_type: { type: String, enum: ["NGN", "USD", "EUR", "CFA", "GBP", "AUD", "CAD"] },
     years_of_exp: { type: Number },
-
+    payment_frequency: { type: String, enum: ["yearly", "monthly", "weekly"] },
     generic_skills: [{ type: String }],
     technical_skills: [{ type: String }],
     description: { type: String },
+    applicants: [
+      {
+        applicant: { type: Schema.Types.ObjectId, ref: "User", default: [] },
+        date_of_application: { type: Date, default: Date.now },
+      },
+    ],
     application_test: { type: Schema.Types.ObjectId, ref: "Test", default: null },
 
     // Status fields
