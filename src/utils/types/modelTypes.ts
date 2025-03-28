@@ -1,4 +1,5 @@
 import { Types } from "mongoose";
+import { NotificationStatus, NotificationType } from "../../models/notifications.model";
 
 export interface IUser {
   first_name: string;
@@ -30,10 +31,21 @@ export interface IUser {
 }
 
 export interface INotification {
-  user: Types.ObjectId;
-  type: "info" | "warning" | "important";
+  recipient: Types.ObjectId;
+  type: NotificationType;
   message: string;
-  isRead: boolean;
+  title?: string;
+  status: NotificationStatus;
+  sender?: Types.ObjectId;
+  relatedResource?: {
+    resourceType?: string;
+    resourceId?: Types.ObjectId;
+  };
+  isSystemGenerated?: boolean;
+  metadata?: Record<string, any>;
+  readAt?: Date;
+  createdAt?: Date;
+  updatedAt?: Date;
 }
 
 export interface IJob {
@@ -111,7 +123,7 @@ export interface IInterview {
 }
 
 export interface ICalendar {
-  candidate: Types.ObjectId;
+  user: Types.ObjectId;
   job: Types.ObjectId;
   employer: Types.ObjectId;
   type: "test" | "interview";

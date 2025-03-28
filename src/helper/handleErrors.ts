@@ -3,6 +3,7 @@ import { Response } from "express";
 import jwt from "jsonwebtoken";
 import { Error as MongooseError } from "mongoose";
 import { MongoError } from "mongodb";
+import multer from "multer";
 
 interface IHandleErrors {
   res: Response;
@@ -58,6 +59,10 @@ export const handleErrors = function ({ res, error }: IHandleErrors) {
         message: `${duplicatedField} already exists`,
       },
     });
+  }
+
+  if (error instanceof multer.MulterError) {
+    return res.status(500).json({ message: error.message, error: "Multer Error" });
   }
 
   // Nodemailer Error

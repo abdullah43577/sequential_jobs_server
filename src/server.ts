@@ -11,8 +11,6 @@ import { authRouter } from "./routes/authRoutes";
 import { initializeSocket } from "./helper/socket";
 import { companyRouter } from "./routes/employer/routes.employer";
 import { seekerRouter } from "./routes/seeker/routes.seeker";
-import Job from "./models/jobs/jobs.model";
-import User from "./models/users.model";
 
 const app = express();
 

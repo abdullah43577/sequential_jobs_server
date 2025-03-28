@@ -6,9 +6,12 @@ import { Types } from "mongoose";
 import cloudinary from "../utils/cloudinaryConfig";
 import Test from "../models/jobs/test.model";
 import TestSubmission from "../models/jobs/testsubmission.model";
-import { ApplicationTestSubmissionSchema, UploadResumeSchema } from "../utils/types/seekerValidatorSchema";
+import { ApplicationTestSubmissionSchema } from "../utils/types/seekerValidatorSchema";
 import NodeCache from "node-cache";
 import { IApplicationTest } from "../utils/types/controllerInterfaces";
+import fs from "fs";
+import path from "path";
+import User from "../models/users.model";
 
 const cache = new NodeCache({ stdTTL: 600, checkperiod: 120 });
 
@@ -91,10 +94,6 @@ const applyForJob = async function (req: IUserRequest, res: Response) {
 
     if (userExistInApplicantsPool) return res.status(400).json({ message: "You already applied for this job" });
 
-    // const data = await cloudinary.uploader.upload(cv, {
-    //   folder: `users/${role}/${userId}/cv`,
-    // });
-
     job.applicants.push({
       applicant: userId as unknown as Types.ObjectId,
     });
@@ -176,11 +175,48 @@ const submitApplicationTest = async function (req: IUserRequest, res: Response) 
 //* resume management
 const uploadResume = async function (req: IUserRequest, res: Response) {
   try {
-    const { userId } = req;
-    const data = UploadResumeSchema.parse(req.body);
+    const { userId, role } = req;
+    const resume = req.file;
+    if (!resume) return res.status(404).json({ message: "No File Uploaded" });
+
+    const user = await User.findById(userId);
+    if (!user) return res.status(404).json({ message: "User not found!" });
+
+    // Construct full file path
+    const filePath = path.join(__dirname, "../../uploads", resume.filename);
+
+    // Ensure file exists
+    if (!fs.existsSync(filePath)) {
+      return res.status(500).json({ error: "File not found after upload" });
+    }
+
+    const response = await cloudinary.uploader.upload(filePath, {
+      folder: `users/${role}/${userId}/resume`,
+      resource_type: "auto",
+    });
+
+    user.resume = response.secure_url;
+    await user.save();
+
+    // ✅ Delete local file after successful upload
+    fs.unlink(filePath, err => {
+      if (err) console.error("Error deleting file:", err);
+      else console.log("File deleted successfully:", filePath);
+    });
+
+    res.status(200).json({ message: "Resume Upload Success", url: response.secure_url });
   } catch (error) {
     handleErrors({ res, error });
   }
 };
 
-export { getAllJobs, getJobDetails, applyForJob, getApplicationTest, submitApplicationTest, uploadResume };
+//*  To be continued from here
+const getAllJobTests = async function (req: IUserRequest, res: Response) {
+  try {
+    const { userId } = req;
+  } catch (error) {
+    handleErrors({ res, error });
+  }
+};
+
+export { getAllJobs, getJobDetails, applyForJob, getApplicationTest, submitApplicationTest, uploadResume, getAllJobTests };

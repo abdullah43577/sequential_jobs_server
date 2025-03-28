@@ -13,33 +13,99 @@ import { hashPassword } from "../helper/hashPassword";
 import User from "../models/users.model";
 
 import NodeCache from "node-cache";
+import TestSubmission from "../models/jobs/testsubmission.model";
+import { transportMail } from "../utils/nodemailer.ts/transportMail";
+import { EmailTypes, generateProfessionalEmail } from "../utils/nodemailer.ts/email-templates/generateProfessionalEmail";
+import { getSocketIO } from "../helper/socket";
+import Notification, { NotificationStatus, NotificationType } from "../models/notifications.model";
 const cache = new NodeCache({ stdTTL: 600, checkperiod: 120 });
+
+//* extension
+const handleGetApplicantsForJobTest = async function (job_id: string, req: IUserRequest, res: Response) {
+  try {
+    const job = await Job.findById(job_id).select("_id applicants").lean();
+    if (!job) return res.status(404).json({ message: "Job not found!" });
+
+    // Fetch all test submissions for this job
+    const testSubmissions = await TestSubmission.find({ job: job_id })
+      .populate({
+        path: "applicant",
+        select: "first_name last_name email",
+      })
+      .lean();
+
+    if (!testSubmissions.length) {
+      return res.status(404).json({ message: "No test submissions found for this job." });
+    }
+
+    //* get corresponding test IDs
+    const testIds = testSubmissions.map(sub => sub.test);
+
+    // get all tests with corresponding ID
+    const tests = await Test.find({ _id: { $in: testIds } })
+      .select("questions type")
+      .lean();
+
+    // Match applicants who have taken the "application_test"
+    const applicantsWithTests = job.applicants.map(app => {
+      const testResult = testSubmissions.find(submission => {
+        //* find those who have submitted application test
+        const test = tests.find(t => t._id.toString() === submission.test?.toString());
+
+        return submission.applicant._id.toString() === app.applicant._id.toString() && test?.type === "application_test";
+      });
+
+      if (!testResult) return null;
+
+      //* get corresponding test detail
+      const testDetails = tests.find(t => t._id.toString() === testResult.test?.toString());
+
+      if (!testDetails) return null;
+
+      // Merge test questions with selected answers
+      const formattedQuestions = testDetails.questions.map(q => {
+        const selectedAnswer = testResult.answers?.find(ans => ans.question_id.toString() === q._id.toString());
+
+        return {
+          ...q,
+          selectedAnswer: selectedAnswer ? selectedAnswer.selected_answer : null, // Attach selected answer
+        };
+      });
+
+      return {
+        applicant: testResult.applicant,
+        test: {
+          ...testDetails,
+          questions: formattedQuestions,
+        },
+        status: testResult.status,
+      };
+    });
+
+    res.status(200).json(applicantsWithTests);
+  } catch (error) {
+    throw error;
+  }
+};
 
 //* get specified company jobs with applicants
 const getJobsWithApplicants = async function (req: IUserRequest, res: Response) {
   try {
     const { userId } = req;
+    const { req_type, job_id } = req.query;
 
-    const cachedData = cache.get(`applied_jobs_for_${userId}`);
-    if (cachedData) return res.status(200).json(cachedData);
+    const acceptedReqType = ["job_test", "interview", "documentation", "medical"];
 
-    const jobs = await Job.find({ employer: userId }).select("job_title country state city job_type employment_type salary currency_type years_of_exp description").lean();
+    if (req_type && !acceptedReqType.includes(req_type as string)) {
+      return res.status(400).json({ message: "Invalid Query Params" });
+    }
 
-    //* store job ids in an array
-    const jobIds = jobs.map(job => job._id);
+    if (req_type === "job_test") return handleGetApplicantsForJobTest(job_id as string, req, res);
 
-    //* find applicants who have applied to any of the jobs the company has posted
-    // const applicants = await Applicant.find({ job_id: { $in: jobIds } })
-    //   .populate("user", "first_name last_name username email")
-    //   .lean();
+    const job = await Job.find({ employer: userId }).select("job_title country state city job_type employment_type salary currency_type years_of_exp payment_frequency").lean();
+    if (!job) return res.status(404).json({ message: "Job not found" });
 
-    // const jobsWithApplicants = jobs.map(job => ({
-    //   ...job,
-    //   applicants: applicants.filter(applicant => applicant.job_id.toString() === job._id.toString()),
-    // }));
-
-    // cache.set(`applied_jobs_for_${userId}`, jobsWithApplicants);
-    // return res.status(200).json(jobsWithApplicants);
+    return res.status(200).json(job);
   } catch (error) {
     handleErrors({ res, error });
   }
@@ -280,24 +346,37 @@ const jobTestApplicantsInvite = async function (req: IUserRequest, res: Response
   try {
     const { userId } = req;
     const { job_id } = req.query;
-    const { applicant_ids, test_id } = req.body;
+    const { applicant_ids } = req.body;
 
-    const jobTest = await JobTest.findOne({ job: job_id, employer: userId });
-    if (!jobTest) return res.status(404).json({ message: "Job with the specified ID not found" });
+    if (!applicant_ids || !Array.isArray(applicant_ids)) {
+      return res.status(400).json({
+        message: "Applicant ID field is required and must be an array",
+      });
+    }
 
-    const test = await Test.findById(test_id);
+    const test = await Test.findOne({ job: job_id, type: "job_test" })
+      .select("_id employer job")
+      .populate({
+        path: "employer",
+        select: "first_name last_name",
+      })
+      .populate({
+        path: "job",
+        select: "job_title",
+      })
+      .lean();
     if (!test) return res.status(404).json({ message: "Test not found" });
-
-    //* invite candidates and send them invite to the test, also sending them emails to the provided test
 
     // Fetch existing invites to avoid duplicates
     const existingInvites = await Calendar.find({
       candidate: { $in: applicant_ids },
       job: job_id,
-      job_test: test_id,
+      job_test: test._id,
     }).distinct("candidate");
 
     // Filter out candidates who already have an invite
+    const expirationDate = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000);
+
     const newInvites = applicant_ids
       .filter((id: Types.ObjectId) => !existingInvites.includes(id))
       .map((id: Types.ObjectId) => ({
@@ -305,15 +384,81 @@ const jobTestApplicantsInvite = async function (req: IUserRequest, res: Response
         job: job_id,
         employer: userId,
         type: "test",
-        job_test: test_id,
-        expiresAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000), // Expires in 7 days
+        job_test: test._id,
+        expiresAt: expirationDate, // Expires in 7 days
       }));
 
     if (newInvites.length > 0) {
       await Calendar.insertMany(newInvites);
     }
 
-    return res.status(200).json({ message: "Applicants invited successfully!" });
+    // Send invitations
+    const emailPromises = newInvites.map(async invite => {
+      const user = await User.findById(invite.candidate);
+      if (!user) return null;
+
+      // Generate a unique test link (you might want to generate a more secure token)
+      const testLink = `http://localhost:8080/job-test/${test._id}`;
+
+      const emailTemplateData = {
+        type: "test" as EmailTypes,
+        title: "Job Assessment Invitation",
+        recipientName: `${user.first_name} ${user.last_name}`,
+        message: `You have been invited to complete a job assessment for the ${(test.job as any).job_title} position. 
+        Please click the button below to start the test. This invitation will expire on ${expirationDate.toLocaleDateString()}.`,
+        buttonText: "Start Assessment",
+        buttonAction: testLink,
+        additionalDetails: {
+          date: expirationDate.toLocaleDateString(),
+          time: "Open Until " + expirationDate.toLocaleTimeString(),
+          organizerName: `${(test.employer as any).first_name} ${(test.employer as any).last_name}`,
+        },
+      };
+
+      // Generate email HTML
+      const { html } = generateProfessionalEmail(emailTemplateData);
+
+      const subject = `Job Assessment Invitation - ${(test.job as any).job_title}`;
+
+      // Send email
+      transportMail({
+        email: user.email,
+        subject,
+        message: html,
+      });
+
+      const message = `${(test.employer as any).first_name} ${(test.employer as any).last_name} as invited you to take a job test.`;
+
+      //* notification
+      await Notification.create({
+        recipient: user._id,
+        sender: userId,
+        type: NotificationType.MESSAGE,
+        title: subject,
+        message,
+        status: NotificationStatus.UNREAD,
+      });
+
+      //* socket instance
+      const io = getSocketIO();
+
+      return io.to(`${user._id.toString()}`).emit("job_test_invite", {
+        type: "invite",
+        title: subject,
+        message,
+        jobTitle: (test.job as any).job_title,
+        testId: test._id,
+        expiresAt: expirationDate,
+      });
+    });
+
+    // Wait for all emails to be sent
+    await Promise.allSettled(emailPromises);
+
+    return res.status(200).json({
+      message: "Applicants invited successfully!",
+      invitedCount: newInvites.length,
+    });
   } catch (error) {
     handleErrors({ res, error });
   }
