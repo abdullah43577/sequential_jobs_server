@@ -114,12 +114,13 @@ export interface IInterview {
     end_time: string | null;
     break_time: string;
     interview_duration: string;
-    medical_duration: string;
+    available_date_time: {};
   }[];
-  available_date_time: {};
+  scheduled_date_time: {};
   panelists: string[];
   invitation_letter: string;
-  // stage: "set_rating_scale" | "set_interview" | "panelist_invite" | "panelist_letter_invitation" | "applicants_invite";
+  candidates: Types.ObjectId[];
+  // stage: "set_rating_scale" | "set_interview" | "panelist_invite" | "panelist_letter_invitation" | "panelist_invite_confirmation" | "applicants_invite";
 }
 
 export interface ICalendar {
@@ -142,4 +143,10 @@ export interface ITestSubmission {
   answers: { question_id: Types.ObjectId; selected_answer: string; is_correct: boolean }[];
   score: number;
   status: "suitable" | "not_suitable" | "probable";
+}
+
+export interface IDocumentation {
+  job: Types.ObjectId;
+  invitation_letter: string;
+  contact_agreement_file: string;
 }

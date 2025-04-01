@@ -18,15 +18,21 @@ import { transportMail } from "../utils/nodemailer.ts/transportMail";
 import { EmailTypes, generateProfessionalEmail } from "../utils/nodemailer.ts/email-templates/generateProfessionalEmail";
 import { getSocketIO } from "../helper/socket";
 import Notification, { NotificationStatus, NotificationType } from "../models/notifications.model";
+import { generateAvailableSlots } from "../utils/generateAvailableSlots";
 const cache = new NodeCache({ stdTTL: 600, checkperiod: 120 });
 
-//* extension
+//* JOB TESTS JOB TABLE
 const handleGetApplicantsForJobTest = async function (job_id: string, req: IUserRequest, res: Response) {
   try {
+    const { userId } = req;
+
     const job = await Job.findById(job_id).select("_id applicants").lean();
     if (!job) return res.status(404).json({ message: "Job not found!" });
 
-    // Fetch all test submissions for this job
+    // Fetch all application test submissions for this job
+    const jobTest = await JobTest.findOne({ job: job_id, employer: userId });
+    if (!jobTest) return res.status(404).json({ message: "Job Test not found" });
+
     const testSubmissions = await TestSubmission.find({ job: job_id })
       .populate({
         path: "applicant",
@@ -79,6 +85,7 @@ const handleGetApplicantsForJobTest = async function (job_id: string, req: IUser
           questions: formattedQuestions,
         },
         status: testResult.status,
+        has_been_invited: jobTest.candidates_invited.includes(app.applicant._id),
       };
     });
 
@@ -111,7 +118,7 @@ const getJobsWithApplicants = async function (req: IUserRequest, res: Response) 
   }
 };
 
-//* job post creation
+//* JOB POST CREATION
 const jobPostCreation = async function (req: IUserRequest, res: Response) {
   try {
     const { userId } = req;
@@ -224,7 +231,7 @@ const applicationTestCutoff = async function (req: IUserRequest, res: Response) 
   }
 };
 
-//* job test management
+//* JOB TEST MANAGEMENT
 const jobTest = async function (req: IUserRequest, res: Response) {
   try {
     const { userId } = req;
@@ -332,15 +339,14 @@ const jobTestInviteMsg = async function (req: IUserRequest, res: Response) {
     if (!jobTest) return res.status(404).json({ message: "Job Test with the specified credentials not found" });
 
     jobTest.invitation_letter = invitation_letter;
+    jobTest.stage = "invitation_upload";
     await jobTest.save();
 
-    return res.status(200).json({ message: "Job test invite created successfully!" });
+    return res.status(200).json({ message: "Job test invite message created successfully!" });
   } catch (error) {
     handleErrors({ res, error });
   }
 };
-
-//* TO BE CONTINUED FROM HERE....
 
 const jobTestApplicantsInvite = async function (req: IUserRequest, res: Response) {
   try {
@@ -354,39 +360,36 @@ const jobTestApplicantsInvite = async function (req: IUserRequest, res: Response
       });
     }
 
-    const test = await Test.findOne({ job: job_id, type: "job_test" })
+    const jobTest = await JobTest.findOne({ job: job_id, employer: userId });
+    if (!jobTest) return res.status(404).json({ message: "Job Test not found" });
+
+    const test = await Test.findById(jobTest.job_test)
       .select("_id employer job")
-      .populate({
+      .populate<{ employer: { first_name: string; last_name: string } | null }>({
         path: "employer",
         select: "first_name last_name",
       })
-      .populate({
+      .populate<{ job: { job_title: string } | null }>({
         path: "job",
         select: "job_title",
       })
       .lean();
     if (!test) return res.status(404).json({ message: "Test not found" });
 
-    // Fetch existing invites to avoid duplicates
-    const existingInvites = await Calendar.find({
-      candidate: { $in: applicant_ids },
-      job: job_id,
-      job_test: test._id,
-    }).distinct("candidate");
-
     // Filter out candidates who already have an invite
-    const expirationDate = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000);
+    const uniqueApplicants = applicant_ids.filter(id => !jobTest.candidates_invited.includes(id));
 
-    const newInvites = applicant_ids
-      .filter((id: Types.ObjectId) => !existingInvites.includes(id))
-      .map((id: Types.ObjectId) => ({
-        candidate: id,
-        job: job_id,
-        employer: userId,
-        type: "test",
-        job_test: test._id,
-        expiresAt: expirationDate, // Expires in 7 days
-      }));
+    const expirationDate = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000); // Expires in 7 days
+
+    const newInvites = uniqueApplicants.map(id => ({
+      user: id,
+      job: job_id,
+      employer: jobTest.employer,
+      type: "test",
+      job_test: jobTest._id,
+      status: "pending",
+      expiresAt: expirationDate,
+    }));
 
     if (newInvites.length > 0) {
       await Calendar.insertMany(newInvites);
@@ -394,7 +397,7 @@ const jobTestApplicantsInvite = async function (req: IUserRequest, res: Response
 
     // Send invitations
     const emailPromises = newInvites.map(async invite => {
-      const user = await User.findById(invite.candidate);
+      const user = await User.findById(invite.user);
       if (!user) return null;
 
       // Generate a unique test link (you might want to generate a more secure token)
@@ -404,14 +407,14 @@ const jobTestApplicantsInvite = async function (req: IUserRequest, res: Response
         type: "test" as EmailTypes,
         title: "Job Assessment Invitation",
         recipientName: `${user.first_name} ${user.last_name}`,
-        message: `You have been invited to complete a job assessment for the ${(test.job as any).job_title} position. 
-        Please click the button below to start the test. This invitation will expire on ${expirationDate.toLocaleDateString()}.`,
+        message: `You have been invited to complete a job assessment for the ${test.job?.job_title} position. 
+        Please click the button below to start the test. This invitation will expire on ${expirationDate.toLocaleDateString()}. \n\n ${jobTest.invitation_letter}`,
         buttonText: "Start Assessment",
         buttonAction: testLink,
         additionalDetails: {
           date: expirationDate.toLocaleDateString(),
           time: "Open Until " + expirationDate.toLocaleTimeString(),
-          organizerName: `${(test.employer as any).first_name} ${(test.employer as any).last_name}`,
+          organizerName: `${test.employer?.first_name} ${test.employer?.last_name}`,
         },
       };
 
@@ -421,13 +424,13 @@ const jobTestApplicantsInvite = async function (req: IUserRequest, res: Response
       const subject = `Job Assessment Invitation - ${(test.job as any).job_title}`;
 
       // Send email
-      transportMail({
+      await transportMail({
         email: user.email,
         subject,
         message: html,
       });
 
-      const message = `${(test.employer as any).first_name} ${(test.employer as any).last_name} as invited you to take a job test.`;
+      const message = `${test.employer?.first_name} ${test.employer?.last_name} as invited you to take a job test.`;
 
       //* notification
       await Notification.create({
@@ -442,7 +445,7 @@ const jobTestApplicantsInvite = async function (req: IUserRequest, res: Response
       //* socket instance
       const io = getSocketIO();
 
-      return io.to(`${user._id.toString()}`).emit("job_test_invite", {
+      io.to(`${user._id.toString()}`).emit("job_test_invite", {
         type: "invite",
         title: subject,
         message,
@@ -450,6 +453,11 @@ const jobTestApplicantsInvite = async function (req: IUserRequest, res: Response
         testId: test._id,
         expiresAt: expirationDate,
       });
+
+      jobTest.stage = "candidate_invite";
+      jobTest.candidates_invited.push(user._id);
+      await jobTest.save();
+      return;
     });
 
     // Wait for all emails to be sent
@@ -464,56 +472,57 @@ const jobTestApplicantsInvite = async function (req: IUserRequest, res: Response
   }
 };
 
-//* interview management
-const handleSetInterview = async function (req: IUserRequest, res: Response) {
+//* INTERVIEW MANAGEMENT
+const handleCreateInterview = async function (req: IUserRequest, res: Response) {
   try {
     const { userId } = req;
-    const { jobId } = req.query;
+    const { job_id } = req.query;
     const data = EmployerInterviewManagementSchema.parse(req.body);
 
-    const existingJob = await Job.findById(jobId);
+    const existingJob = await Job.findById(job_id);
     if (!existingJob) return res.status(404).json({ message: "Job not found!" });
 
+    // Process each interview_time_slot and generate available slots dynamically
+    const processedTimeSlots = data.interview_time_slot.map(slot => ({
+      ...slot,
+      available_date_time: generateAvailableSlots(slot.date, slot.start_time, slot.end_time, slot.break_time, slot.interview_duration),
+    }));
+
     const newInterview = await InterviewMgmt.create({
-      job: jobId,
+      job: job_id,
       employer: userId,
       rating_scale: data.rating_scale,
-      interview_time_slot: data.interview_time_slot,
-      available_date_time: {},
+      interview_time_slot: processedTimeSlots,
       invitation_letter: data.invitation_letter,
     });
 
-    return res.status(200).json({ message: "Interview records added", id: newInterview._id });
+    return res.status(200).json({ message: "Interview records added", interview_id: newInterview._id });
   } catch (error) {
     handleErrors({ res, error });
   }
 };
 
-const handleSetInterviewInvitePanelists = async function (req: IUserRequest, res: Response) {
+const handleInvitePanelists = async function (req: IUserRequest, res: Response) {
   try {
-    const { jobId, interview_id } = req.query;
-    const { panelists } = req.body;
+    const { interview_id } = req.params;
+    const panelists = req.body.panelists as string[];
 
-    const existingJob = await Job.findById(jobId);
-    if (!existingJob) return res.status(400).json({ message: "Job not found" });
+    if (!panelists || typeof panelists !== "object" || panelists.length === 0) return res.status(400).json({ message: "Panelist emails required!" });
 
-    const interview = await InterviewMgmt.findById(interview_id);
+    const interview = await InterviewMgmt.findById(interview_id).populate<{ job: { _id: string; job_title: string } }>("job", "job_title");
     if (!interview) return res.status(400).json({ message: "Interview not found!" });
 
-    interview.panelists = panelists;
-
+    const uniquePanelists = panelists.filter(email => !interview.panelists.includes(email));
     const createdPanelists = [];
 
-    if (!panelists || typeof panelists !== "object") return res.status(400).json({ message: "Panelist emails required!" });
+    for (const email of uniquePanelists) {
+      const existingPanelist = await User.findOne({ email }).lean();
 
-    for (const email of panelists) {
-      let panelist = await User.findOne({ email });
-
-      if (!panelist) {
+      if (!existingPanelist) {
         const tempPassword = crypto.randomBytes(8).toString("hex");
         const hashedPassword = await hashPassword(tempPassword);
 
-        panelist = await User.create({
+        const newPanelist = await User.create({
           email,
           password: hashedPassword,
           role: "panelist",
@@ -522,12 +531,40 @@ const handleSetInterviewInvitePanelists = async function (req: IUserRequest, res
         });
 
         //* send invite email with temporary credentials
-      }
+        const emailData = {
+          type: "invite" as const,
+          title: "You've Been Invited as an Interview Panelist",
+          recipientName: email,
+          message: `You have been selected as a panelist for an upcoming interview for the position of ${interview.job.job_title}. Please click the button below to access the interview panel and review candidate details.
+  ${newPanelist.isTemporary ? `\n\nTemporary Account Credentials:\nEmail: ${email}\nPassword: ${tempPassword}\n\nThis account will expire in 7 days. Please change your password after first login.` : ""}`,
+          buttonText: "Access Interview Panel",
+          buttonAction: `https://login?email=${encodeURIComponent(newPanelist.email)}${newPanelist.isTemporary ? "&temp=true" : ""}`,
+          additionalDetails: {
+            date: "formattedDate",
+            time: "formattedTime",
+            location: "Virtual Interview",
+            organizerName: "Sequential Jobs Team",
+          },
+        };
 
-      createdPanelists.push(panelist);
+        // Generate email HTML
+        const { html } = generateProfessionalEmail(emailData);
+
+        const subject = `Panelist Interview Invite - ${interview.job.job_title}`;
+
+        // Send email
+        await transportMail({
+          email: email,
+          subject,
+          message: html,
+        });
+
+        createdPanelists.push(newPanelist);
+      }
     }
 
     //* save panelists record to Interview documents only when the panelist invites has been succesfully sent out!
+    interview.panelists.push(...uniquePanelists);
     await interview.save();
 
     return res.status(200).json({ message: "Panelists Invited Successfully", panelists: createdPanelists.map(p => ({ email: p.email, expiresAt: p.expiresAt })) });
@@ -536,4 +573,118 @@ const handleSetInterviewInvitePanelists = async function (req: IUserRequest, res
   }
 };
 
-export { getJobsWithApplicants, jobPostCreation, applicationTest, applicationTestCutoff, jobTest, jobTestCutoff, jobTestInviteMsg, jobTestApplicantsInvite, handleSetInterview, handleSetInterviewInvitePanelists };
+const handleInviteCandidates = async function (req: IUserRequest, res: Response) {
+  try {
+    const { interview_id } = req.params;
+    const { candidate_ids } = req.body;
+
+    if (!candidate_ids || !Array.isArray(candidate_ids)) return res.status(400).json({ message: "Candidate IDs is required and must be of an array type" });
+
+    const interview = await InterviewMgmt.findById(interview_id).populate<{ job: { _id: string; job_title: string } }>("job", "job_title");
+    if (!interview) return res.status(400).json({ message: "Interview not found!" });
+
+    const uniqueCandidates = candidate_ids.filter(id => !interview.candidates.includes(id));
+    const invitedCandidates = [];
+
+    for (const id of uniqueCandidates) {
+      const existingUser = await User.findById(id);
+      if (!existingUser) return;
+
+      //* send invite email with temporary credentials
+      const emailData = {
+        type: "invite" as const,
+        title: "You've Been Invited as an Interview Panelist",
+        recipientName: `${existingUser.first_name} ${existingUser.last_name}`,
+        message: `You have been invited for an upcoming interview for the position of ${interview.job.job_title}. Please click the button below to access the interview panel and set your available date and time`,
+        buttonText: "Access Interview Panel",
+        buttonAction: `https://login?email=${encodeURIComponent(existingUser.email)}${existingUser.isTemporary ? "&temp=true" : ""}`,
+        additionalDetails: {
+          date: "formattedDate",
+          time: "formattedTime",
+          location: "Virtual Interview",
+          organizerName: "Sequential Jobs Team",
+        },
+      };
+
+      // Generate email HTML
+      const { html } = generateProfessionalEmail(emailData);
+
+      const subject = `Candidate Interview Invite - ${interview.job.job_title}`;
+
+      // Send email
+      await transportMail({
+        email: existingUser.email,
+        subject,
+        message: html,
+      });
+
+      invitedCandidates.push(id);
+    }
+
+    //* save candidates record
+    interview.candidates.push(...uniqueCandidates);
+    await interview.save();
+
+    return res.status(200).json({ message: "Candidates invited successfully", candidates: invitedCandidates });
+  } catch (error) {
+    handleErrors({ res, error });
+  }
+};
+
+//* DOCUMENTATION MANAGEMENT
+const getQualifiedCandidates = async function (req: IUserRequest, res: Response) {
+  try {
+    const { job_id } = req.query;
+
+    if (!job_id) return res.status(400).json({ message: "Job ID is required" });
+
+    //* get all qualified candidates
+    const submissions = await TestSubmission.find({ job: job_id, status: "suitable" })
+      .populate<{ applicant: { _id: string; first_name: string; last_name: string; resume: string } }>("applicant", "first_name last_name resume")
+      .populate<{ job: { applicants: { _id: string; applicant: string; date_of_application: string }[]; job_title: string } }>("job", "applicants job_title date_of_application")
+      .lean();
+
+    const qualifiedCandidates = submissions.map(submission => {
+      const candidateName = `${submission.applicant.first_name} ${submission.applicant.last_name}`;
+
+      const corresponding_job = submission.job.applicants.find(d => d.applicant.toString() === submission.applicant._id.toString());
+
+      const formattedDate = corresponding_job ? new Date(corresponding_job.date_of_application) : null;
+
+      const date_of_application = formattedDate?.toLocaleString("en-US", {
+        weekday: "long",
+        year: "numeric",
+        month: "long",
+        day: "numeric",
+        hour: "2-digit",
+        minute: "2-digit",
+        second: "2-digit",
+        timeZoneName: "short",
+      });
+
+      const role_applied_for = submission.job.job_title;
+      const resume = submission.applicant.resume;
+
+      return { candidateName, date_of_application, role_applied_for, resume };
+    });
+
+    res.status(200).json(qualifiedCandidates);
+  } catch (error) {
+    handleErrors({ res, error });
+  }
+};
+
+export {
+  getJobsWithApplicants,
+  jobPostCreation,
+  applicationTest,
+  applicationTestCutoff,
+  jobTest,
+  jobTestCutoff,
+  jobTestInviteMsg,
+  jobTestApplicantsInvite,
+  handleCreateInterview,
+  handleInvitePanelists,
+  handleInviteCandidates,
+  getQualifiedCandidates,
+};

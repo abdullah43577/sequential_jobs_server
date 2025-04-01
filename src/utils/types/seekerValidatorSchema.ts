@@ -10,3 +10,10 @@ export const ApplicationTestSubmissionSchema = z.object({
     })
   ),
 });
+
+export const JobTestSubmissionSchema = ApplicationTestSubmissionSchema.omit({
+  application_test_id: true,
+  job_id: true,
+}).extend({
+  job_test_id: z.string({ message: "Job ID is required" }),
+});

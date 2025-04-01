@@ -4,8 +4,20 @@ import { roleBasedValidation } from "../helper/roleBasedValidation";
 
 const userSchema = new Schema<IUser>(
   {
-    first_name: { type: String, required: true },
-    last_name: { type: String, required: true },
+    first_name: {
+      type: String,
+      required: function (this) {
+        return this.role !== "panelist";
+      },
+      default: null,
+    },
+    last_name: {
+      type: String,
+      required: function (this) {
+        return this.role !== "panelist";
+      },
+      default: null,
+    },
     username: { type: String, validate: roleBasedValidation("company", "Username") },
     email: { type: String, required: true, unique: true },
     password: { type: String, default: null },

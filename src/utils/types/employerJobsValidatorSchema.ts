@@ -42,18 +42,22 @@ export const cutOffSchema = z.object({
 });
 
 export const EmployerInterviewManagementSchema = z.object({
-  rating_scale: z.record(z.string(), z.string()),
+  rating_scale: z.record(z.string(), z.number()),
   interview_time_slot: z
-    .object({
-      date: z.date(),
-      start_time: z.string(),
-      end_time: z.string(),
-      break_time: z.string(),
-      interview_duration: z.string(),
-      medical_duration: z.string(),
-    })
-    .required(),
-  // panelists: z.array(z.string()),
+    .array(
+      z
+        .object({
+          date: z.string(),
+          start_time: z.string(),
+          end_time: z.string(),
+          break_time: z.string(),
+          interview_duration: z.string(),
+          medical_duration: z.string(),
+        })
+        .required()
+    )
+    .min(1, { message: "Interview time slot must have at least one property" }),
+  panelists: z.array(z.string().email()),
   invitation_letter: z.string(),
   // stage: z.enum(["set_rating_scale", "set_interview", "panelist_invite", "paneliset_letter_invitation", "applicants_invite"]),
 });

@@ -5,7 +5,7 @@ const JobTestSchema = new Schema<IJobTest>(
   {
     job: { type: Schema.Types.ObjectId, ref: "Job", required: true },
     employer: { type: Schema.Types.ObjectId, ref: "User", required: true },
-    job_test: { type: Schema.Types.ObjectId, ref: "Test" },
+    job_test: { type: Schema.Types.ObjectId, ref: "Test", required: true },
 
     stage: { type: String, enum: ["set_test", "set_cutoff", "invitation_upload", "candidate_invite"], default: "set_test" },
 
