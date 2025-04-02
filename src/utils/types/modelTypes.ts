@@ -63,7 +63,7 @@ export interface IJob {
   generic_skills: string[];
   technical_skills: string[];
   description: string;
-  applicants: { applicant: Types.ObjectId; date_of_application?: Date }[];
+  applicants: { applicant: Types.ObjectId; date_of_application?: Date; status: "applied" | "shortlisted" | "interview_scheduled" | "interview_completed" | "offer_sent" | "hired" | "rejected" }[];
   is_live: boolean;
   application_test: Types.ObjectId;
   cut_off_points: {

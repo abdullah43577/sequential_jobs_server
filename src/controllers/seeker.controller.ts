@@ -97,6 +97,7 @@ const applyForJob = async function (req: IUserRequest, res: Response) {
 
     job.applicants.push({
       applicant: userId as unknown as Types.ObjectId,
+      status: "applied",
     });
     await job.save();
 
