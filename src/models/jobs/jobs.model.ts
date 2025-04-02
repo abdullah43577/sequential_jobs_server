@@ -22,6 +22,7 @@ const jobSchema = new Schema<IJob>(
       {
         applicant: { type: Schema.Types.ObjectId, ref: "User", default: [] },
         date_of_application: { type: Date, default: Date.now },
+        hired: { type: Boolean, default: false },
       },
     ],
     application_test: { type: Schema.Types.ObjectId, ref: "Test", default: null },

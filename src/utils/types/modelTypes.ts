@@ -148,5 +148,6 @@ export interface ITestSubmission {
 export interface IDocumentation {
   job: Types.ObjectId;
   invitation_letter: string;
-  contact_agreement_file: string;
+  contract_agreement_file: string;
+  documents: { [key: string]: string };
 }

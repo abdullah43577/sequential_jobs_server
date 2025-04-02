@@ -13,7 +13,9 @@ import {
   jobTestApplicantsInvite,
   getQualifiedCandidates,
   handleInviteCandidates,
+  hireCandidate,
 } from "../../controllers/employer.controller";
+import { upload } from "../../utils/multerConfig";
 
 const companyRouter = Router();
 
@@ -37,5 +39,6 @@ companyRouter.put("/interview/invite_candidates/:interview_id", validateAccessTo
 
 //* DOCUMENTATION MANAGEMENT
 companyRouter.get("/documentation/get_qualified_candidates", validateAccessToken, validateCompanySession, getQualifiedCandidates);
+companyRouter.post("/documentation/hire_candidate", validateAccessToken, validateCompanySession, upload.single("contract_agreement_file"), hireCandidate);
 
 export { companyRouter };

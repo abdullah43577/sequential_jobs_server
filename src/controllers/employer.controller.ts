@@ -19,6 +19,10 @@ import { EmailTypes, generateProfessionalEmail } from "../utils/nodemailer.ts/em
 import { getSocketIO } from "../helper/socket";
 import Notification, { NotificationStatus, NotificationType } from "../models/notifications.model";
 import { generateAvailableSlots } from "../utils/generateAvailableSlots";
+import cloudinary from "../utils/cloudinaryConfig";
+import Documentation from "../models/documentation.model";
+import fs from "fs";
+import path from "path";
 const cache = new NodeCache({ stdTTL: 600, checkperiod: 120 });
 
 //* JOB TESTS JOB TABLE
@@ -445,7 +449,7 @@ const jobTestApplicantsInvite = async function (req: IUserRequest, res: Response
       //* socket instance
       const io = getSocketIO();
 
-      io.to(`${user._id.toString()}`).emit("job_test_invite", {
+      io.to(user._id.toString()).emit("job_test_invite", {
         type: "invite",
         title: subject,
         message,
@@ -638,37 +642,109 @@ const getQualifiedCandidates = async function (req: IUserRequest, res: Response)
 
     if (!job_id) return res.status(400).json({ message: "Job ID is required" });
 
-    //* get all qualified candidates
-    const submissions = await TestSubmission.find({ job: job_id, status: "suitable" })
-      .populate<{ applicant: { _id: string; first_name: string; last_name: string; resume: string } }>("applicant", "first_name last_name resume")
-      .populate<{ job: { applicants: { _id: string; applicant: string; date_of_application: string }[]; job_title: string } }>("job", "applicants job_title date_of_application")
+    const interview = await InterviewMgmt.findOne({ job: job_id })
+      .select("job candidates")
+      .populate<{
+        job: { applicants: { _id: string; applicant: string; date_of_application: string; hired: boolean }[]; job_title: string };
+        candidates: { _id: string; first_name: string; last_name: string; resume: string }[];
+      }>([
+        { path: "candidates", select: "first_name last_name resume" },
+        { path: "job", select: "job_title applicants" },
+      ])
       .lean();
 
-    const qualifiedCandidates = submissions.map(submission => {
-      const candidateName = `${submission.applicant.first_name} ${submission.applicant.last_name}`;
+    if (!interview) return res.status(404).json({ message: "No interview found for this job" });
 
-      const corresponding_job = submission.job.applicants.find(d => d.applicant.toString() === submission.applicant._id.toString());
+    const { job, candidates } = interview;
 
-      const formattedDate = corresponding_job ? new Date(corresponding_job.date_of_application) : null;
+    const qualifiedCandidates = candidates.map(candidate => {
+      const application = job.applicants.find(app => app.applicant.toString() === candidate._id.toString());
 
-      const date_of_application = formattedDate?.toLocaleString("en-US", {
-        weekday: "long",
-        year: "numeric",
-        month: "long",
-        day: "numeric",
-        hour: "2-digit",
-        minute: "2-digit",
-        second: "2-digit",
-        timeZoneName: "short",
-      });
-
-      const role_applied_for = submission.job.job_title;
-      const resume = submission.applicant.resume;
-
-      return { candidateName, date_of_application, role_applied_for, resume };
+      return {
+        full_name: `${candidate.first_name} ${candidate.last_name}`,
+        date_of_application: application ? application.date_of_application : null,
+        role_applied_for: job.job_title,
+        resume: candidate.resume || null,
+        hired: application ? application.hired : false,
+      };
     });
 
     res.status(200).json(qualifiedCandidates);
+  } catch (error) {
+    handleErrors({ res, error });
+  }
+};
+
+const hireCandidate = async function (req: IUserRequest, res: Response) {
+  try {
+    const { userId } = req;
+    const { job_id } = req.params;
+    const { invitation_letter, documents, candidate_ids } = req.body;
+    const documentFiles = req.file;
+
+    if (!invitation_letter || Object.keys(documents).length === 0) return res.status(400).json({ message: "Invitation Letter and Document Specifications are required" });
+
+    if (!Array.isArray(candidate_ids)) return res.status(400).json({ message: "Candidate IDs must be an array of valid user IDs" });
+
+    if (!documentFiles) return res.status(404).json({ message: "No File Uploaded!" });
+
+    const job = await Job.findById(job_id);
+    if (!job) return res.status(404).json({ message: "Job not found!" });
+
+    // Construct full file path
+    const filePath = path.join(__dirname, "../../uploads", documentFiles.filename);
+
+    // Ensure file exists
+    if (!fs.existsSync(filePath)) {
+      return res.status(500).json({ error: "File not found after upload" });
+    }
+
+    const response = await cloudinary.uploader.upload(filePath, {
+      folder: `jobs/${job_id}/contracts`,
+      resource_type: "auto",
+    });
+
+    // ✅ Delete local file after successful upload
+    fs.unlink(filePath, err => {
+      if (err) console.error("Error deleting file:", err);
+      else console.log("File deleted successfully:", filePath);
+    });
+
+    await Documentation.create({
+      job: job_id,
+      invitation_letter,
+      contract_agreement_file: response.secure_url,
+      documents,
+    });
+
+    //* send candidate email and notification
+    for (const id of candidate_ids) {
+      const existingUser = await User.findById(id);
+
+      if (existingUser) {
+        //* notification
+        const title = "You're Hired! Next Steps for Your New Role";
+        const subject = `Congratulations! You have been selected for the role associated with ${job.job_title}. An official invitation letter has been sent, and you are required to upload the specified documents to complete the hiring process. Please check your dashboard for further instructions.`;
+        const io = getSocketIO();
+
+        io.to(existingUser._id.toString()).emit("application_status", {
+          type: "status",
+          title,
+          message: subject,
+        });
+
+        await Notification.create({
+          recipient: existingUser._id,
+          sender: userId,
+          type: NotificationType.APPLICATION_STATUS,
+          title: subject,
+          message: subject,
+          status: NotificationStatus.UNREAD,
+        });
+      }
+    }
+
+    res.status(200).json({ message: "Invite Sent Successfully!" });
   } catch (error) {
     handleErrors({ res, error });
   }
@@ -687,4 +763,5 @@ export {
   handleInvitePanelists,
   handleInviteCandidates,
   getQualifiedCandidates,
+  hireCandidate,
 };
