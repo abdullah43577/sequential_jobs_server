@@ -1,18 +1,12 @@
 import { Response } from "express";
-import { IUserRequest } from "../interface";
-import { handleErrors } from "../helper/handleErrors";
-import Job from "../models/jobs/jobs.model";
-import { Types } from "mongoose";
-import cloudinary from "../utils/cloudinaryConfig";
-import Test from "../models/jobs/test.model";
-import TestSubmission from "../models/jobs/testsubmission.model";
-import { ApplicationTestSubmissionSchema, JobTestSubmissionSchema } from "../utils/types/seekerValidatorSchema";
+import { IUserRequest } from "../../interface";
 import NodeCache from "node-cache";
-import { IApplicationTest } from "../utils/types/controllerInterfaces";
-import fs from "fs";
-import path from "path";
-import User from "../models/users.model";
-import JobTest from "../models/assessment/jobtest.model";
+import Job from "../../models/jobs/jobs.model";
+import { handleErrors } from "../../helper/handleErrors";
+import { ApplicationTestSubmissionSchema } from "../../utils/types/seekerValidatorSchema";
+import Test from "../../models/jobs/test.model";
+import TestSubmission from "../../models/jobs/testsubmission.model";
+import { Types } from "mongoose";
 
 const cache = new NodeCache({ stdTTL: 600, checkperiod: 120 });
 
@@ -116,11 +110,26 @@ const getApplicationTest = async function (req: IUserRequest, res: Response) {
     const cachedTest = cache.get(cacheKey);
     if (cachedTest) return res.status(200).json({ application_test: cachedTest });
 
-    const job = await Job.findById(job_id).populate("application_test").lean();
+    const job = await Job.findById(job_id)
+      .populate<{
+        application_test: {
+          _id: string;
+          instruction: string;
+          questions: {
+            _id: string;
+            question_type: "multiple_choice" | "yes/no" | "text";
+            options: string[];
+            score: number;
+            correct_answer: string;
+          }[];
+          type: "application_test" | "job_test";
+        };
+      }>("application_test")
+      .lean();
     if (!job) return res.status(404).json({ message: "Job with specified ID not found!" });
 
     if (typeof job.application_test === "object") {
-      const { _id, instruction, questions, type } = job.application_test as unknown as IApplicationTest;
+      const { _id, instruction, questions, type } = job.application_test;
 
       const filteredQuestions = questions.map(({ correct_answer, score, ...rest }) => rest);
 
@@ -174,118 +183,4 @@ const submitApplicationTest = async function (req: IUserRequest, res: Response) 
   }
 };
 
-//* RESUME MANAGEMENT
-const uploadResume = async function (req: IUserRequest, res: Response) {
-  try {
-    const { userId, role } = req;
-    const resume = req.file;
-    if (!resume) return res.status(404).json({ message: "No File Uploaded" });
-
-    const user = await User.findById(userId);
-    if (!user) return res.status(404).json({ message: "User not found!" });
-
-    // Construct full file path
-    const filePath = path.join(__dirname, "../../uploads", resume.filename);
-
-    // Ensure file exists
-    if (!fs.existsSync(filePath)) {
-      return res.status(500).json({ error: "File not found after upload" });
-    }
-
-    const response = await cloudinary.uploader.upload(filePath, {
-      folder: `users/${role}/${userId}/resume`,
-      resource_type: "auto",
-    });
-
-    user.resume = response.secure_url;
-    await user.save();
-
-    // ✅ Delete local file after successful upload
-    fs.unlink(filePath, err => {
-      if (err) console.error("Error deleting file:", err);
-      else console.log("File deleted successfully:", filePath);
-    });
-
-    res.status(200).json({ message: "Resume Upload Success", url: response.secure_url });
-  } catch (error) {
-    handleErrors({ res, error });
-  }
-};
-
-//*  TEST MANAGEMENT
-const getAllJobTests = async function (req: IUserRequest, res: Response) {
-  try {
-    const { userId } = req;
-    const cacheKey = `candidate_job_test_${userId}`;
-    const cachedTests = cache.get(cacheKey);
-    if (cachedTests) return res.status(200).json(cachedTests);
-
-    const jobTests = await JobTest.find({ candidates_invited: { $in: userId } })
-      .populate("job_test")
-      .lean();
-
-    const formattedResponse = jobTests.map(test => {
-      if (typeof test.job_test === "object") {
-        const { _id, instruction, questions, type } = test.job_test as unknown as IApplicationTest;
-
-        const filteredQuestions = questions.map(({ correct_answer, score, ...rest }) => rest);
-
-        return {
-          job_test_id: _id,
-          instruction,
-          questions: filteredQuestions,
-          type,
-        };
-      }
-    });
-
-    cache.set(cacheKey, formattedResponse);
-    return res.status(200).json(formattedResponse);
-  } catch (error) {
-    handleErrors({ res, error });
-  }
-};
-
-const submitJobTest = async function (req: IUserRequest, res: Response) {
-  try {
-    const { userId } = req;
-    const { job_test_id, answers } = JobTestSubmissionSchema.parse(req.body);
-
-    const test = await Test.findById(job_test_id);
-    if (!test) return res.status(404).json({ message: "Test not found!" });
-
-    let totalScore = 0;
-    const gradedAnswers = answers.map(answer => {
-      const question = test.questions.find(q => q._id.toString() === answer.question_id);
-
-      const isCorrect = question?.correct_answer === answer.selected_answer;
-      if (isCorrect) totalScore += question?.score || 0;
-
-      return { ...answer, is_correct: isCorrect };
-    });
-
-    const submission = await TestSubmission.create({
-      test: job_test_id,
-      job: test.job,
-      applicant: userId,
-      employer: test.employer,
-      answers: gradedAnswers,
-      score: totalScore,
-    });
-
-    return res.status(200).json({ message: "Test submitted successfully", submission });
-  } catch (error) {
-    handleErrors({ res, error });
-  }
-};
-
-//* INTERVIEW MANAGEMENT
-const getJobsWithoutScheduledInterview = async function (req: IUserRequest, res: Response) {
-  try {
-    const { userId } = req;
-  } catch (error) {
-    handleErrors({ res, error });
-  }
-};
-
-export { getAllJobs, getJobDetails, applyForJob, getApplicationTest, submitApplicationTest, uploadResume, getAllJobTests, submitJobTest };
+export { getAllJobs, getJobDetails, applyForJob, getApplicationTest, submitApplicationTest };

@@ -105,9 +105,7 @@ export interface IJobTest {
 export interface IInterview {
   job: Types.ObjectId;
   employer: Types.ObjectId;
-  rating_scale: {
-    [key: string]: string;
-  };
+  rating_scale: Map<string, string>;
   interview_time_slot: {
     date: Date;
     start_time: string | null;
@@ -116,10 +114,9 @@ export interface IInterview {
     interview_duration: string;
     available_date_time: {};
   }[];
-  scheduled_date_time: {};
   panelists: string[];
   invitation_letter: string;
-  candidates: Types.ObjectId[];
+  candidates: { candidate: Types.ObjectId; scheduled_date_time?: { date: Date; start_time: string; end_time: string }; status?: "pending" | "confirmed" | "completed" | "canceled"; rating_scale?: Map<string, number> }[];
   // stage: "set_rating_scale" | "set_interview" | "panelist_invite" | "panelist_letter_invitation" | "panelist_invite_confirmation" | "applicants_invite";
 }
 
@@ -149,5 +146,5 @@ export interface IDocumentation {
   job: Types.ObjectId;
   invitation_letter: string;
   contract_agreement_file: string;
-  documents: { [key: string]: string };
+  documents: Map<string, string>;
 }
