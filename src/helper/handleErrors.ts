@@ -3,6 +3,7 @@ import { Response } from "express";
 import jwt from "jsonwebtoken";
 import { Error as MongooseError } from "mongoose";
 import { MongoError } from "mongodb";
+import multer from "multer";
 
 interface IHandleErrors {
   res: Response;
@@ -12,7 +13,7 @@ interface IHandleErrors {
 export const handleErrors = function ({ res, error }: IHandleErrors) {
   // JWT Errors
   if (error instanceof jwt.JsonWebTokenError) {
-    return res.status(401).json({ message: "Invalid refresh token!" });
+    return res.status(401).json({ message: "Invalid token!" });
   }
   if (error instanceof jwt.TokenExpiredError) {
     return res.status(401).json({ message: "Token has expired!" });
@@ -58,6 +59,10 @@ export const handleErrors = function ({ res, error }: IHandleErrors) {
         message: `${duplicatedField} already exists`,
       },
     });
+  }
+
+  if (error instanceof multer.MulterError) {
+    return res.status(500).json({ message: error.message, error: "Multer Error" });
   }
 
   // Nodemailer Error

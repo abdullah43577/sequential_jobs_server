@@ -1,4 +1,4 @@
-import { IUser } from "./types/modelTypes";
+import { IUser } from "../utils/types/modelTypes";
 
 type Roles = "job-seeker" | "company" | "panelist" | "medical-expert" | "admin" | "super-admin";
 

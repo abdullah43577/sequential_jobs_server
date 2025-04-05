@@ -4,11 +4,11 @@ import morgan from "morgan";
 import cors from "cors";
 const { PORT } = process.env;
 import { router } from "./routes/router";
-import { connectDB } from "./utils/connectDB";
+import { connectDB } from "./helper/connectDB";
 import cookieParser from "cookie-parser";
 import helmet from "helmet";
 import { authRouter } from "./routes/authRoutes";
-import { initializeSocket } from "./utils/socket";
+import { initializeSocket } from "./helper/socket";
 import { companyRouter } from "./routes/employer/routes.employer";
 import { seekerRouter } from "./routes/seeker/routes.seeker";
 
@@ -46,6 +46,9 @@ app.use("*", (req: Request, res: Response) => {
 const server = app.listen(PORT, async () => {
   await connectDB();
   console.log(`server started on http://localhost:${PORT}`);
+
+  // const d = await User.updateMany({ resume: { $exists: false } }, { $set: { resume: null } });
+  // console.log("I ran");
 });
 
 initializeSocket(server);

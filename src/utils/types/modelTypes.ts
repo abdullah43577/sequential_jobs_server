@@ -1,4 +1,5 @@
 import { Types } from "mongoose";
+import { NotificationStatus, NotificationType } from "../../models/notifications.model";
 
 export interface IUser {
   first_name: string;
@@ -26,13 +27,25 @@ export interface IUser {
   isTemporary: boolean;
   expiresAt: Date;
   has_validated_email: boolean;
+  resume: string;
 }
 
 export interface INotification {
-  user: Types.ObjectId;
-  type: "info" | "warning" | "important";
+  recipient: Types.ObjectId;
+  type: NotificationType;
   message: string;
-  isRead: boolean;
+  title?: string;
+  status: NotificationStatus;
+  sender?: Types.ObjectId;
+  relatedResource?: {
+    resourceType?: string;
+    resourceId?: Types.ObjectId;
+  };
+  isSystemGenerated?: boolean;
+  metadata?: Record<string, any>;
+  readAt?: Date;
+  createdAt?: Date;
+  updatedAt?: Date;
 }
 
 export interface IJob {
@@ -44,12 +57,13 @@ export interface IJob {
   job_type: "hybrid" | "on_site" | "remote";
   employment_type: "full_time" | "part_time" | "contract";
   salary: number;
-  currency_type: string;
+  currency_type: "NGN" | "USD" | "EUR" | "CFA" | "GBP" | "AUD" | "CAD";
   years_of_exp: number;
+  payment_frequency: "yearly" | "monthly" | "weekly";
   generic_skills: string[];
   technical_skills: string[];
   description: string;
-  applicants: { user: Types.ObjectId; cv: string; applied_at?: Date }[];
+  applicants: { applicant: Types.ObjectId; date_of_application?: Date; status: "applied" | "shortlisted" | "interview_scheduled" | "interview_completed" | "offer_sent" | "hired" | "rejected" }[];
   is_live: boolean;
   application_test: Types.ObjectId;
   cut_off_points: {
@@ -77,7 +91,6 @@ export interface ITest {
     probable: { min: number; max: number };
     not_suitable: { min: number; max: number };
   };
-  invitation_letter?: string;
 }
 
 export interface IJobTest {
@@ -92,25 +105,23 @@ export interface IJobTest {
 export interface IInterview {
   job: Types.ObjectId;
   employer: Types.ObjectId;
-  rating_scale: {
-    [key: string]: string;
-  };
+  rating_scale: Map<string, string>;
   interview_time_slot: {
     date: Date;
     start_time: string | null;
     end_time: string | null;
     break_time: string;
     interview_duration: string;
-    medical_duration: string;
+    available_date_time: {};
   }[];
-  available_date_time: {};
   panelists: string[];
   invitation_letter: string;
-  // stage: "set_rating_scale" | "set_interview" | "panelist_invite" | "panelist_letter_invitation" | "applicants_invite";
+  candidates: { candidate: Types.ObjectId; scheduled_date_time?: { date: Date; start_time: string; end_time: string }; status?: "pending" | "confirmed" | "completed" | "canceled"; rating_scale?: Map<string, number> }[];
+  // stage: "set_rating_scale" | "set_interview" | "panelist_invite" | "panelist_letter_invitation" | "panelist_invite_confirmation" | "applicants_invite";
 }
 
 export interface ICalendar {
-  candidate: Types.ObjectId;
+  user: Types.ObjectId;
   job: Types.ObjectId;
   employer: Types.ObjectId;
   type: "test" | "interview";
@@ -129,4 +140,11 @@ export interface ITestSubmission {
   answers: { question_id: Types.ObjectId; selected_answer: string; is_correct: boolean }[];
   score: number;
   status: "suitable" | "not_suitable" | "probable";
+}
+
+export interface IDocumentation {
+  job: Types.ObjectId;
+  invitation_letter: string;
+  contract_agreement_file: string;
+  documents: Map<string, string>;
 }

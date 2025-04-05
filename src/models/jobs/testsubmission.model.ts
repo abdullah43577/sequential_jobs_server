@@ -11,7 +11,7 @@ const testSubmissionSchema = new Schema<ITestSubmission>(
 
     answers: [
       {
-        question_id: { type: Schema.Types.ObjectId, required: true },
+        question_id: { type: String, required: true },
         selected_answer: { type: String, required: true },
         is_correct: { type: Boolean, default: false },
       },

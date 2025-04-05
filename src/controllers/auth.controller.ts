@@ -1,10 +1,10 @@
 import { Request, Response } from "express";
-import { generateAccessToken, generateRefreshToken } from "../utils/generateToken";
+import { generateAccessToken, generateRefreshToken } from "../helper/generateToken";
 import { CustomJwtPayload, IUserRequest } from "../interface";
 import { loginValidationSchema, registerValidationSchema } from "../utils/types/authValidatorSchema";
 import User from "../models/users.model";
-import { comparePassword, hashPassword } from "../utils/hashPassword";
-import { handleErrors } from "../utils/handleErrors";
+import { comparePassword, hashPassword } from "../helper/hashPassword";
+import { handleErrors } from "../helper/handleErrors";
 import { registrationEmail } from "../utils/nodemailer.ts/email-templates/registration-email";
 import { transportMail } from "../utils/nodemailer.ts/transportMail";
 import jwt, { Secret } from "jsonwebtoken";
@@ -43,7 +43,7 @@ const createUser = async (req: Request, res: Response) => {
 
     const html = registrationEmail(emailTemplateData);
 
-    await transportMail({ email: user.email, subject: "Welcome to Sequential Jobs - Please Verify Your Email", message: html });
+    await transportMail({ email: user.email, subject: "Welcome to Sequential Jobs - Please Verify Your Email", message: html.html });
 
     res.status(201).json({ message: "User Account Created Successfully" });
   } catch (error) {
@@ -73,7 +73,7 @@ const validateEmail = async (req: Request, res: Response) => {
 
     const html = registrationEmail(emailTemplateData);
 
-    await transportMail({ email: user.email, subject: "Welcome to Sequential Jobs", message: html });
+    await transportMail({ email: user.email, subject: "Welcome to Sequential Jobs", message: html.html });
 
     res.status(200).json({ message: "Email activated successfully" });
   } catch (error) {
@@ -130,16 +130,16 @@ const forgotPassword = async (req: Request, res: Response) => {
     const emailTemplateData = {
       title: "Reset Your Password",
       name: user.first_name,
-      message: "We received a request to reset your password for your Sequential Jobs account. Click the button below to set a new password. \n\n Reset token expires in 10minutes \n\n If you didn’t request this, you can safely ignore this email.",
+      message: "We received a request to reset your password for your Sequential Jobs account. Click the button below to set a new password. \n\n Reset token expires in 10 minutes \n\n If you didn’t request this, you can safely ignore this email.",
       btnTxt: "Reset Password",
       btnAction: `http://localhost:8080/api/auth/reset-password?token=${resetToken}`,
     };
 
     const html = registrationEmail(emailTemplateData);
 
-    await transportMail({ email: user.email, subject: "Reset Your Password", message: html });
+    await transportMail({ email: user.email, subject: "Reset Your Password", message: html.html });
 
-    res.status(200).json({ message: "Reset Link sent" });
+    res.status(200).json({ message: "Reset Link sent to provided email address" });
   } catch (error) {
     handleErrors({ res, error });
   }
@@ -147,11 +147,12 @@ const forgotPassword = async (req: Request, res: Response) => {
 
 const resetPassword = async (req: Request, res: Response) => {
   try {
-    const { token } = req.params;
+    const { token } = req.query;
     const { password } = req.body;
+
     if (!token || !password) return res.status(400).json({ message: "Token or password invalid!" });
 
-    const { id } = jwt.verify(token, EMAIL_VERIFICATION_TOKEN as Secret) as CustomJwtPayload;
+    const { id } = jwt.verify(token as string, EMAIL_VERIFICATION_TOKEN as Secret) as CustomJwtPayload;
 
     const hashedPassword = await hashPassword(password);
     const user = await User.findByIdAndUpdate(id, { password: hashedPassword }, { returnDocument: "after" });
@@ -170,7 +171,7 @@ const resetPassword = async (req: Request, res: Response) => {
 
     const html = registrationEmail(emailTemplateData);
 
-    await transportMail({ email: user.email, subject: "Your Password Has Been Reset", message: html });
+    await transportMail({ email: user.email, subject: "Your Password Has Been Reset", message: html.html });
 
     res.status(200).json({ message: "Password reset successfully" });
   } catch (error) {

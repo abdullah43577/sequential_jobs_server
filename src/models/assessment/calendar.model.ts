@@ -3,7 +3,7 @@ import { ICalendar } from "../../utils/types/modelTypes";
 
 const CalendarSchema = new Schema<ICalendar>(
   {
-    candidate: { type: Schema.Types.ObjectId, ref: "User", required: true },
+    user: { type: Schema.Types.ObjectId, ref: "User", required: true }, //* candidate ID
     job: { type: Schema.Types.ObjectId, ref: "Job", required: true },
     employer: { type: Schema.Types.ObjectId, ref: "User", required: true },
     type: {
