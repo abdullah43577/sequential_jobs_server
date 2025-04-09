@@ -38,7 +38,7 @@ const createUser = async (req: Request, res: Response) => {
       message:
         "Thank you for creating an account with Sequential Jobs. We're excited to help you find your next opportunity in the tech industry.\n\nTo get started, please verify your email address by clicking the button below. This helps us ensure the security of your account.",
       btnTxt: "Verify Email Address",
-      btnAction: `http://localhost:8080/api/auth/verify-email?token=${verificationToken}`,
+      btnAction: `https://sequential-jobs-server.onrender.com/api/auth/verify-email?token=${verificationToken}`,
     };
 
     const html = registrationEmail(emailTemplateData);
@@ -89,6 +89,9 @@ const loginUser = async (req: Request, res: Response) => {
     const user = await User.findOne({ email });
     if (!user) return res.status(404).json({ message: "Invalid email or password" });
 
+    //* if user is verified
+    if (!user.has_validated_email) return res.status(400).json({ message: "Please validate your email address" });
+
     //* if user account is locked
     if (user.isLocked) return res.status(403).json({ message: "Account is locked due to multiple failed attempts, please contact the administrator" });
 
@@ -132,7 +135,7 @@ const forgotPassword = async (req: Request, res: Response) => {
       name: user.first_name,
       message: "We received a request to reset your password for your Sequential Jobs account. Click the button below to set a new password. \n\n Reset token expires in 10 minutes \n\n If you didn’t request this, you can safely ignore this email.",
       btnTxt: "Reset Password",
-      btnAction: `http://localhost:8080/api/auth/reset-password?token=${resetToken}`,
+      btnAction: `http://localhost:3000/auth/reset-password?token=${resetToken}`,
     };
 
     const html = registrationEmail(emailTemplateData);
