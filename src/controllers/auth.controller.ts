@@ -206,4 +206,4 @@ const generateNewToken = async (req: IUserRequest, res: Response) => {
   }
 };
 
-export { testApi, createUser, validateEmail, loginUser, forgotPassword, resetPassword, generateNewToken };
+export { testApi, createUser, validateEmail, loginUser, forgotPassword, resetPassword, generateNewToken, getProfile };
