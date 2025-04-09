@@ -68,7 +68,7 @@ const validateEmail = async (req: Request, res: Response) => {
       name: user?.first_name,
       message: "Your email has been successfully verified. You can now log in to your account and start exploring.",
       btnTxt: "Login",
-      btnAction: "http://localhost:3000/login",
+      btnAction: "http://localhost:3000/auth/login",
     };
 
     const html = registrationEmail(emailTemplateData);
@@ -177,6 +177,18 @@ const resetPassword = async (req: Request, res: Response) => {
     await transportMail({ email: user.email, subject: "Your Password Has Been Reset", message: html.html });
 
     res.status(200).json({ message: "Password reset successfully" });
+  } catch (error) {
+    handleErrors({ res, error });
+  }
+};
+
+const getProfile = async (req: IUserRequest, res: Response) => {
+  try {
+    const { userId } = req;
+    const user = await User.findById(userId).select("first_name last_name username email role phone_no official_phone organisation_name industry subscription_tier").lean();
+    if (!user) return res.status(404).json({ message: "User record not found!" });
+
+    res.status(200).json(user);
   } catch (error) {
     handleErrors({ res, error });
   }
