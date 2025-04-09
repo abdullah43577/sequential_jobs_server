@@ -12,7 +12,7 @@ const cache = new NodeCache({ stdTTL: 600, checkperiod: 120 });
 const getJobs = async function (req: IUserRequest, res: Response) {
   try {
     const { userId } = req;
-    const jobs = await Job.find({ employer: userId }).select("job_title createdAt country job_type employment_type salary stage is_live").lean();
+    const jobs = await Job.find({ employer: userId }).select("job_title createdAt country job_type employment_type salary currency_type application_test stage is_live").lean();
 
     res.status(200).json(jobs);
   } catch (error) {
@@ -23,11 +23,26 @@ const getJobs = async function (req: IUserRequest, res: Response) {
 const deleteJob = async function (req: IUserRequest, res: Response) {
   try {
     const { job_id } = req.query;
-    if (!job_id) return res.status(400).json({ message: "Job ID is required!" });
+    if (!job_id) return res.status(404).json({ message: "Job ID is required!" });
 
     await Job.findByIdAndDelete(job_id);
     // await Test.deleteMany({ job: job_id });
     res.status(200).json({ message: "Job Deleted Successfully!" });
+  } catch (error) {
+    handleErrors({ res, error });
+  }
+};
+
+const toggleJobState = async function (req: IUserRequest, res: Response) {
+  try {
+    const { job_id } = req.query;
+    const { status } = req.body;
+
+    if (!job_id) return res.status(404).json({ message: "Job ID is required" });
+
+    const job = await Job.findByIdAndUpdate(job_id, { is_live: status });
+
+    res.status(200).json({ message: "Job Updated Successfully!" });
   } catch (error) {
     handleErrors({ res, error });
   }
@@ -146,4 +161,4 @@ const applicationTestCutoff = async function (req: IUserRequest, res: Response) 
   }
 };
 
-export { getJobs, deleteJob, jobPostCreation, applicationTest, applicationTestCutoff };
+export { getJobs, deleteJob, toggleJobState, jobPostCreation, applicationTest, applicationTestCutoff };
