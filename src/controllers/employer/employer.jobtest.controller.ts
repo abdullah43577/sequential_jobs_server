@@ -17,7 +17,7 @@ const getJobsForJobTest = async function (req: IUserRequest, res: Response) {
   try {
     const { userId } = req;
     // Fetch jobs for the employer
-    const jobs = await Job.find({ employer: userId, is_live: true }).select("job_title createdAt country job_type employment_type salary currency_type stage").lean();
+    const jobs = await Job.find({ employer: userId, is_live: true }).select("job_title createdAt country job_type employment_type salary currency_type stage applicants").lean();
 
     const jobTests = await JobTest.find({ employer: userId }).select("job stage").lean();
 
@@ -27,6 +27,7 @@ const getJobsForJobTest = async function (req: IUserRequest, res: Response) {
 
     const jobsWithStage = jobs.map(job => ({
       ...job,
+      applicants: job.applicants.length,
       stage: jobTestStages.get(job._id.toString()) || "set_test",
       action: jobTestActions.get(job._id.toString()) || "Create Job Test",
     }));
