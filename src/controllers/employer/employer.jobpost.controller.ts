@@ -12,13 +12,27 @@ const cache = new NodeCache({ stdTTL: 600, checkperiod: 120 });
 const getJobs = async function (req: IUserRequest, res: Response) {
   try {
     const { userId } = req;
-    const jobs = await Job.find({ employer: userId }).select("job_title created_at country job_type employment_type salary stage is_live").lean();
+    const jobs = await Job.find({ employer: userId }).select("job_title createdAt country job_type employment_type salary stage is_live").lean();
 
     res.status(200).json(jobs);
   } catch (error) {
     handleErrors({ res, error });
   }
 };
+
+const deleteJob = async function (req: IUserRequest, res: Response) {
+  try {
+    const { job_id } = req.query;
+    if (!job_id) return res.status(400).json({ message: "Job ID is required!" });
+
+    await Job.findByIdAndDelete(job_id);
+    // await Test.deleteMany({ job: job_id });
+    res.status(200).json({ message: "Job Deleted Successfully!" });
+  } catch (error) {
+    handleErrors({ res, error });
+  }
+};
+
 const jobPostCreation = async function (req: IUserRequest, res: Response) {
   try {
     const { userId } = req;
@@ -132,4 +146,4 @@ const applicationTestCutoff = async function (req: IUserRequest, res: Response) 
   }
 };
 
-export { getJobs, jobPostCreation, applicationTest, applicationTestCutoff };
+export { getJobs, deleteJob, jobPostCreation, applicationTest, applicationTestCutoff };
