@@ -9,6 +9,16 @@ import { handleErrors } from "../../helper/handleErrors";
 const cache = new NodeCache({ stdTTL: 600, checkperiod: 120 });
 
 //* JOB POST CREATION
+const getJobs = async function (req: IUserRequest, res: Response) {
+  try {
+    const { userId } = req;
+    const jobs = await Job.find({ employer: userId }).select("job_title created_at country job_type employment_type salary stage is_live").lean();
+
+    res.status(200).json(jobs);
+  } catch (error) {
+    handleErrors({ res, error });
+  }
+};
 const jobPostCreation = async function (req: IUserRequest, res: Response) {
   try {
     const { userId } = req;
@@ -21,7 +31,7 @@ const jobPostCreation = async function (req: IUserRequest, res: Response) {
       if (!job) return res.status(404).json({ message: "Job not found" });
 
       // Invalidate related cache
-      cache.del(`applied_jobs_for_${userId}`);
+      // cache.del(`applied_jobs_for_${userId}`);
 
       return res.status(200).json({ message: "Job Updated", job });
     }
@@ -29,7 +39,7 @@ const jobPostCreation = async function (req: IUserRequest, res: Response) {
     const job = await Job.create({ ...data, employer: userId, stage: "job_post_creation" });
 
     // Invalidate related cache
-    cache.del(`applied_jobs_for_${userId}`);
+    // cache.del(`applied_jobs_for_${userId}`);
 
     return res.status(201).json({ message: "Job Created", job });
   } catch (error) {
@@ -112,6 +122,7 @@ const applicationTestCutoff = async function (req: IUserRequest, res: Response) 
     if (!job) return res.status(400).json({ message: "Job with corresponding test ID not found" });
 
     job.is_live = true;
+    job.stage = "set_cut_off_points";
     await test.save();
     await job.save();
 
@@ -121,4 +132,4 @@ const applicationTestCutoff = async function (req: IUserRequest, res: Response) 
   }
 };
 
-export { jobPostCreation, applicationTest, applicationTestCutoff };
+export { getJobs, jobPostCreation, applicationTest, applicationTestCutoff };

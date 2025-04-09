@@ -2,7 +2,7 @@ import { Router } from "express";
 import { validateAccessToken, validateCompanySession } from "../../middleware/validateToken";
 import { upload } from "../../utils/multerConfig";
 import { getJobsWithApplicants } from "../../controllers/employer.controller";
-import { applicationTest, applicationTestCutoff, jobPostCreation } from "../../controllers/employer/employer.jobpost.controller";
+import { applicationTest, applicationTestCutoff, getJobs, jobPostCreation } from "../../controllers/employer/employer.jobpost.controller";
 import { jobTest, jobTestApplicantsInvite, jobTestCutoff, jobTestInviteMsg } from "../../controllers/employer/employer.jobtest.controller";
 import { handleCreateInterview, handleGradeCandidates, handleInviteCandidates, handleInvitePanelists } from "../../controllers/employer/employer.interview.controller";
 import { getQualifiedCandidates, hireCandidate } from "../../controllers/employer/employer.documentation.controller";
@@ -12,6 +12,7 @@ const companyRouter = Router();
 companyRouter.get("/has-applicants", validateAccessToken, validateCompanySession, getJobsWithApplicants);
 
 //* JOB POST CREATION
+companyRouter.get("/get_employer_jobs", validateAccessToken, validateCompanySession, getJobs);
 companyRouter.put("/create", validateAccessToken, validateCompanySession, jobPostCreation);
 companyRouter.put("/application-test", validateAccessToken, validateCompanySession, applicationTest);
 companyRouter.put("/application-test-cutoff", validateAccessToken, validateCompanySession, applicationTestCutoff);
