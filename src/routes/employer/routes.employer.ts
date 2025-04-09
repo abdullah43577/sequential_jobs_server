@@ -3,7 +3,7 @@ import { validateAccessToken, validateCompanySession } from "../../middleware/va
 import { upload } from "../../utils/multerConfig";
 import { getJobsWithApplicants } from "../../controllers/employer.controller";
 import { applicationTest, applicationTestCutoff, deleteJob, getApplicationTest, getApplicationTestCutoff, getJob, getJobs, jobPostCreation, toggleJobState } from "../../controllers/employer/employer.jobpost.controller";
-import { jobTest, jobTestApplicantsInvite, jobTestCutoff, jobTestInviteMsg } from "../../controllers/employer/employer.jobtest.controller";
+import { getJobsForJobTest, jobTest, jobTestApplicantsInvite, jobTestCutoff, jobTestInviteMsg } from "../../controllers/employer/employer.jobtest.controller";
 import { handleCreateInterview, handleGradeCandidates, handleInviteCandidates, handleInvitePanelists } from "../../controllers/employer/employer.interview.controller";
 import { getQualifiedCandidates, hireCandidate } from "../../controllers/employer/employer.documentation.controller";
 
@@ -23,6 +23,7 @@ companyRouter.put("/application-test-cutoff", validateAccessToken, validateCompa
 companyRouter.get("/get_application_test_cutoff", validateAccessToken, validateCompanySession, getApplicationTestCutoff);
 
 //* JOB TEST MANAGEMENT
+companyRouter.get("/job_test/jobs", validateAccessToken, validateCompanySession, getJobsForJobTest);
 companyRouter.put("/job-test", validateAccessToken, validateCompanySession, jobTest);
 companyRouter.patch("/job-test/cutoff", validateAccessToken, validateCompanySession, jobTestCutoff);
 companyRouter.patch("/job-test/create-message", validateAccessToken, validateCompanySession, jobTestInviteMsg);

@@ -13,6 +13,28 @@ import Notification, { NotificationStatus, NotificationType } from "../../models
 import { getSocketIO } from "../../helper/socket";
 
 //* JOB TEST MANAGEMENT
+const getJobsForJobTest = async function (req: IUserRequest, res: Response) {
+  try {
+    const { userId } = req;
+    // Fetch jobs for the employer
+    const jobs = await Job.find({ employer: userId, is_live: true }).select("job_title createdAt country job_type employment_type salary currency_type stage").lean();
+
+    const jobTests = await JobTest.find({ employer: userId }).select("job stage").lean();
+
+    // Create a map of job IDs to their test stages
+    const jobTestStages = new Map(jobTests.map(jt => [jt.job.toString(), jt.stage]));
+
+    const jobsWithStage = jobs.map(job => ({
+      ...job,
+      stage: jobTestStages.get(job._id.toString()) || "set_test",
+    }));
+
+    res.status(200).json(jobsWithStage);
+  } catch (error) {
+    handleErrors({ res, error });
+  }
+};
+
 const jobTest = async function (req: IUserRequest, res: Response) {
   try {
     const { userId } = req;
@@ -253,4 +275,4 @@ const jobTestApplicantsInvite = async function (req: IUserRequest, res: Response
   }
 };
 
-export { jobTest, jobTestCutoff, jobTestInviteMsg, jobTestApplicantsInvite };
+export { getJobsForJobTest, jobTest, jobTestCutoff, jobTestInviteMsg, jobTestApplicantsInvite };

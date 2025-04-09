@@ -38,6 +38,10 @@ const toggleJobState = async function (req: IUserRequest, res: Response) {
     const { job_id } = req.query;
     const { status } = req.body;
 
+    if (!job_id) return res.status(400).json({ message: "Job ID is required!" });
+
+    if (!status) return res.status(400).json({ message: "Status is required" });
+
     if (!job_id) return res.status(404).json({ message: "Job ID is required" });
 
     const job = await Job.findByIdAndUpdate(job_id, { is_live: status });
