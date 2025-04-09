@@ -23,10 +23,12 @@ const getJobsForJobTest = async function (req: IUserRequest, res: Response) {
 
     // Create a map of job IDs to their test stages
     const jobTestStages = new Map(jobTests.map(jt => [jt.job.toString(), jt.stage]));
+    const jobTestActions = new Map(jobTests.map(jobTest => [jobTest.job.toString(), jobTest.stage === "set_test" ? "Create Job Test" : "continue creating test"]));
 
     const jobsWithStage = jobs.map(job => ({
       ...job,
       stage: jobTestStages.get(job._id.toString()) || "set_test",
+      action: jobTestActions.get(job._id.toString()) || "Create Job Test",
     }));
 
     res.status(200).json(jobsWithStage);
