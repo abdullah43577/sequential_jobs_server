@@ -76,6 +76,20 @@ const jobPostCreation = async function (req: IUserRequest, res: Response) {
   }
 };
 
+const getJob = async function (req: IUserRequest, res: Response) {
+  try {
+    const { job_id } = req.query;
+    if (!job_id) return res.status(400).json({ message: "Job ID is required" });
+
+    const job = await Job.findById(job_id).lean();
+    if (!job) return res.status(404).json({ message: "Job not found" });
+
+    res.status(200).json(job);
+  } catch (error) {
+    handleErrors({ res, error });
+  }
+};
+
 const applicationTest = async function (req: IUserRequest, res: Response) {
   // const session = await mongoose.startSession();
   // session.startTransaction();
@@ -114,6 +128,20 @@ const applicationTest = async function (req: IUserRequest, res: Response) {
     return res.status(200).json({ message: "Application test created successfully", application_test_id: test._id });
   } catch (error) {
     // await session.abortTransaction();
+    handleErrors({ res, error });
+  }
+};
+
+const getApplicationTest = async function (req: IUserRequest, res: Response) {
+  try {
+    const { job_id } = req.query;
+    if (!job_id) return res.status(400).json({ message: "Job ID is required" });
+
+    const application_test = await Test.findOne({ job: job_id }).select("instruction questions type").lean();
+    if (!application_test) return res.status(404).json({ message: "Application Test not found" });
+
+    res.status(200).json(application_test);
+  } catch (error) {
     handleErrors({ res, error });
   }
 };
@@ -161,4 +189,18 @@ const applicationTestCutoff = async function (req: IUserRequest, res: Response) 
   }
 };
 
-export { getJobs, deleteJob, toggleJobState, jobPostCreation, applicationTest, applicationTestCutoff };
+const getApplicationTestCutoff = async function (req: IUserRequest, res: Response) {
+  try {
+    const { job_id } = req.query;
+    if (!job_id) return res.status(400).json({ message: "Job ID is required" });
+
+    const cut_off_points = await Test.findOne({ job: job_id }).select("cut_off_points").lean();
+    if (!cut_off_points) return res.status(404).json({ message: "Application Test not found" });
+
+    res.status(200).json(cut_off_points);
+  } catch (error) {
+    handleErrors({ res, error });
+  }
+};
+
+export { getJobs, deleteJob, toggleJobState, jobPostCreation, getJob, applicationTest, getApplicationTest, applicationTestCutoff, getApplicationTestCutoff };
