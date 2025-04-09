@@ -151,7 +151,7 @@ const applicationTestCutoff = async function (req: IUserRequest, res: Response) 
     const { cut_off_points, test_id } = cutOffSchema.parse(req.body);
     const { suitable, probable, not_suitable } = cut_off_points;
 
-    const test = await Test.findById(test_id).select("questions cut_off_points");
+    const test = await Test.findById(test_id).select("job questions cut_off_points");
     if (!test) return res.status(404).json({ message: "Test not found" });
 
     const total_marks = test.questions.reduce((acc, q) => acc + q.score, 0);
