@@ -98,7 +98,7 @@ const jobTestCutoff = async function (req: IUserRequest, res: Response) {
   try {
     const { userId } = req;
     const { job_id } = req.query;
-    const { cut_off_points, test_id } = cutOffSchema.parse(req.body);
+    const { cut_off_points } = cutOffSchema.parse(req.body);
     const { suitable, probable, not_suitable } = cut_off_points;
 
     if (!job_id) return res.status(400).json({ message: "Job ID is required!" });
@@ -111,7 +111,7 @@ const jobTestCutoff = async function (req: IUserRequest, res: Response) {
     const jobTest = await JobTest.findOne({ job: job_id, employer: userId });
     if (!jobTest) return res.status(404).json({ message: "Job with the specified ID not found" });
 
-    const test = await Test.findById(test_id);
+    const test = await Test.findOne({ job: job_id, type: "job_test" });
     if (!test) return res.status(404).json({ message: "Test not found" });
 
     const total_marks = test.questions.reduce((acc, q) => acc + q.score, 0);
@@ -163,10 +163,10 @@ const jobTestInviteMsg = async function (req: IUserRequest, res: Response) {
   try {
     const { userId } = req;
     const { job_id } = req.query;
-    const { invitation_letter, test_id } = req.body;
+    const { invitation_letter } = req.body;
 
     if (!job_id) return res.status(400).json({ message: "Job ID is required" });
-    if (!invitation_letter || !test_id) return res.status(400).json({ message: "Invitation Letter and Test ID is required" });
+    if (!invitation_letter) return res.status(400).json({ message: "Invitation Letter is required" });
 
     const job = await Job.findById(job_id);
     if (!job) {
