@@ -38,7 +38,6 @@ export const cutOffSchema = z.object({
     probable: z.object({ min: z.number(), max: z.number() }),
     not_suitable: z.object({ min: z.number(), max: z.number() }),
   }),
-  test_id: z.string(),
 });
 
 export const EmployerInterviewManagementSchema = z.object({
