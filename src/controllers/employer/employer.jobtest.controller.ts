@@ -152,6 +152,8 @@ const getDraftCutOff = async function (req: IUserRequest, res: Response) {
     const jobTest = await JobTest.findOne({ job: job_id }).select("job_test").populate<{ job_test: { cut_off_points: Record<string, any> } }>({ path: "job_test", select: "cut_off_points" }).lean();
 
     if (!jobTest) return res.status(404).json({ message: "Job Test Cutoff record not found!" });
+
+    res.status(200).json(jobTest);
   } catch (error) {
     handleErrors({ res, error });
   }
