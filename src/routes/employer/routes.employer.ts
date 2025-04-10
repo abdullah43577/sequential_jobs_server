@@ -3,7 +3,7 @@ import { validateAccessToken, validateCompanySession } from "../../middleware/va
 import { upload } from "../../utils/multerConfig";
 import { getJobsWithApplicants } from "../../controllers/employer.controller";
 import { applicationTest, applicationTestCutoff, deleteJob, getApplicationTest, getApplicationTestCutoff, getJob, getJobs, jobPostCreation, toggleJobState } from "../../controllers/employer/employer.jobpost.controller";
-import { getJobsForJobTest, jobTest, jobTestApplicantsInvite, jobTestCutoff, jobTestInviteMsg } from "../../controllers/employer/employer.jobtest.controller";
+import { getDraftCutOff, getDraftQuestion, getInviteMsgDraft, getJobsForJobTest, jobTest, jobTestApplicantsInvite, jobTestCutoff, jobTestInviteMsg } from "../../controllers/employer/employer.jobtest.controller";
 import { handleCreateInterview, handleGradeCandidates, handleInviteCandidates, handleInvitePanelists } from "../../controllers/employer/employer.interview.controller";
 import { getQualifiedCandidates, hireCandidate } from "../../controllers/employer/employer.documentation.controller";
 
@@ -25,8 +25,11 @@ companyRouter.get("/get_application_test_cutoff", validateAccessToken, validateC
 //* JOB TEST MANAGEMENT
 companyRouter.get("/job_test/jobs", validateAccessToken, validateCompanySession, getJobsForJobTest);
 companyRouter.put("/job-test", validateAccessToken, validateCompanySession, jobTest);
+companyRouter.get("/job-test/draft-questions", validateAccessToken, validateCompanySession, getDraftQuestion);
 companyRouter.patch("/job-test/cutoff", validateAccessToken, validateCompanySession, jobTestCutoff);
+companyRouter.get("/job-test/draft-cutoff", validateAccessToken, validateCompanySession, getDraftCutOff);
 companyRouter.patch("/job-test/create-message", validateAccessToken, validateCompanySession, jobTestInviteMsg);
+companyRouter.get("/job-test/draft-msg", validateAccessToken, validateCompanySession, getInviteMsgDraft);
 companyRouter.patch("/job-test/applicant-invite", validateAccessToken, jobTestApplicantsInvite);
 
 //* INTERVIEW MANAGEMENT

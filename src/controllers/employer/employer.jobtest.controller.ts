@@ -78,6 +78,22 @@ const jobTest = async function (req: IUserRequest, res: Response) {
   }
 };
 
+const getDraftQuestion = async function (req: IUserRequest, res: Response) {
+  try {
+    const { job_id } = req.query;
+
+    if (!job_id) return res.status(400).json({ message: "Job ID is required" });
+
+    const jobTest = await JobTest.findOne({ job: job_id }).select("job_test").populate<{ job_test: { instruction: string; questions: any[] } }>({ path: "job_test", select: "instruction questions" }).lean();
+
+    if (!jobTest) return res.status(404).json({ message: "Job Test record not found" });
+
+    res.status(200).json({ instruction: jobTest.job_test.instruction, questions: jobTest.job_test.questions });
+  } catch (error) {
+    handleErrors({ res, error });
+  }
+};
+
 const jobTestCutoff = async function (req: IUserRequest, res: Response) {
   try {
     const { userId } = req;
@@ -127,6 +143,20 @@ const jobTestCutoff = async function (req: IUserRequest, res: Response) {
   }
 };
 
+const getDraftCutOff = async function (req: IUserRequest, res: Response) {
+  try {
+    const { job_id } = req.query;
+
+    if (!job_id) return res.status(400).json({ message: "Job ID is required" });
+
+    const jobTest = await JobTest.findOne({ job: job_id }).select("job_test").populate<{ job_test: { cut_off_points: Record<string, any> } }>({ path: "job_test", select: "cut_off_points" }).lean();
+
+    if (!jobTest) return res.status(404).json({ message: "Job Test Cutoff record not found!" });
+  } catch (error) {
+    handleErrors({ res, error });
+  }
+};
+
 const jobTestInviteMsg = async function (req: IUserRequest, res: Response) {
   try {
     const { userId } = req;
@@ -149,6 +179,21 @@ const jobTestInviteMsg = async function (req: IUserRequest, res: Response) {
     await jobTest.save();
 
     return res.status(200).json({ message: "Job test invite message created successfully!" });
+  } catch (error) {
+    handleErrors({ res, error });
+  }
+};
+
+const getInviteMsgDraft = async function (req: IUserRequest, res: Response) {
+  try {
+    const { job_id } = req.query;
+    if (!job_id) return res.status(400).json({ message: "Job ID is required" });
+
+    const jobTest = await JobTest.findOne({ job: job_id }).select("invitation_letter").lean();
+
+    if (!jobTest) return res.status(404).json({ message: "Job Test Invitation Letter not found" });
+
+    res.status(200).json(jobTest);
   } catch (error) {
     handleErrors({ res, error });
   }
@@ -278,4 +323,4 @@ const jobTestApplicantsInvite = async function (req: IUserRequest, res: Response
   }
 };
 
-export { getJobsForJobTest, jobTest, jobTestCutoff, jobTestInviteMsg, jobTestApplicantsInvite };
+export { getJobsForJobTest, jobTest, getDraftQuestion, jobTestCutoff, getDraftCutOff, jobTestInviteMsg, getInviteMsgDraft, jobTestApplicantsInvite };
