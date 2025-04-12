@@ -29,12 +29,7 @@ const getAllJobs = async function (req: IUserRequest, res: Response) {
     // Get total job count
     const totalJobs = await Job.countDocuments({ is_live: true });
 
-    const jobs = await Job.find({ is_live: true })
-      .select("employer job_title state city employment_type salary payment_frequency currency_type technical_skills applicants")
-      .populate("employer", "organisation_name has_taken_application_test")
-      .skip(skip)
-      .limit(limit)
-      .lean();
+    const jobs = await Job.find({ is_live: true }).select("employer job_title state city employment_type salary payment_frequency currency_type technical_skills applicants").populate("employer", "organisation_name").skip(skip).limit(limit).lean();
 
     const jobsWithAppliedStatus = await Promise.all(
       jobs.map(async job => {
@@ -199,7 +194,14 @@ const submitApplicationTest = async function (req: IUserRequest, res: Response) 
     });
 
     //* update property
-    await Job.findByIdAndUpdate(job_id, { has_taken_application_test: true });
+    await Job.findOneAndUpdate(
+      { _id: job_id, "applicants.applicant": userId },
+      {
+        $set: {
+          "applicants.$.has_taken_application_test": true,
+        },
+      }
+    );
 
     res.status(201).json({ message: "Test submitted successfully", submission });
   } catch (error) {

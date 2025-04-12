@@ -22,11 +22,11 @@ const jobSchema = new Schema<IJob>(
       {
         applicant: { type: Schema.Types.ObjectId, ref: "User", default: [] },
         date_of_application: { type: Date, default: Date.now },
+        has_taken_application_test: { type: Boolean, default: false },
         status: { type: String, enum: ["applied", "shortlisted", "interview_scheduled", "interview_completed", "offer_sent", "hired", "rejected"], default: "applied" },
       },
     ],
     application_test: { type: Schema.Types.ObjectId, ref: "Test", default: null },
-    has_taken_application_test: { type: Boolean, default: false },
 
     // Status fields
     is_live: { type: Boolean, default: false },

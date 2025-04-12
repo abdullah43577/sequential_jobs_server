@@ -48,7 +48,7 @@ const server = app.listen(PORT, async () => {
   await connectDB();
   console.log(`server started on http://localhost:${PORT}`);
 
-  // const d = await Job.updateMany({ has_taken_application_test: { $exists: false } }, { $set: { has_taken_application_test: false } });
+  // const d = await Job.updateMany({ "applicants.applicant.has_taken_application_test": { $exists: false } }, { $set: { "applicants.$.has_taken_application_test": false } });
   // console.log("I ran");
 });
 

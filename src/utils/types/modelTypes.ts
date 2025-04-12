@@ -63,10 +63,9 @@ export interface IJob {
   generic_skills: string[];
   technical_skills: string[];
   description: string;
-  applicants: { applicant: Types.ObjectId; date_of_application?: Date; status: "applied" | "shortlisted" | "interview_scheduled" | "interview_completed" | "offer_sent" | "hired" | "rejected" }[];
+  applicants: { applicant: Types.ObjectId; date_of_application?: Date; has_taken_application_test?: boolean; status: "applied" | "shortlisted" | "interview_scheduled" | "interview_completed" | "offer_sent" | "hired" | "rejected" }[];
   is_live: boolean;
   application_test: Types.ObjectId;
-  has_taken_application_test: boolean;
   cut_off_points: {
     suitable: { min: string; max: string };
     probable: { min: string; max: string };
