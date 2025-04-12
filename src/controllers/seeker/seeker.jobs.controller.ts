@@ -63,6 +63,7 @@ const getAllJobs = async function (req: IUserRequest, res: Response) {
 
 const getJobDetails = async function (req: IUserRequest, res: Response) {
   try {
+    const { userId } = req;
     const { job_id } = req.params;
 
     // const cacheKey = `single_job_cache__${job_id}`;
@@ -75,9 +76,18 @@ const getJobDetails = async function (req: IUserRequest, res: Response) {
       .populate({ path: "employer", select: "organisation_name" });
     if (!job) return res.status(404).json({ message: "Job with specified ID, not found!" });
 
-    // cache.set(cacheKey, job);
+    // Convert Mongoose document to plain JavaScript object so we can add properties
+    const jobObject = job.toObject();
 
-    res.status(200).json(job);
+    // Check if the current user has applied for this job
+    const hasApplied = job.applicants?.some(data => data.applicant.toString() === userId);
+
+    // Add has_applied property to the job object
+    (jobObject as unknown as Record<string, any>).has_applied = hasApplied || false;
+
+    // cache.set(cacheKey, jobObject);
+
+    res.status(200).json(jobObject);
   } catch (error) {
     handleErrors({ res, error });
   }
