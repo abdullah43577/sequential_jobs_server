@@ -7,6 +7,7 @@ import { ApplicationTestSubmissionSchema } from "../../utils/types/seekerValidat
 import Test from "../../models/jobs/test.model";
 import TestSubmission from "../../models/jobs/testsubmission.model";
 import { Types } from "mongoose";
+import User from "../../models/users.model";
 
 const cache = new NodeCache({ stdTTL: 600, checkperiod: 120 });
 
@@ -83,6 +84,10 @@ const applyForJob = async function (req: IUserRequest, res: Response) {
 
     const job = await Job.findById(job_id);
     if (!job) return res.status(404).json({ message: "Job with specified ID, not found!" });
+
+    //* check if user has a resume
+    const user = await User.findById(userId).select("resume");
+    if (!user?.resume) return res.status(400).json({ message: "You need to upload a resume before applying for a job" });
 
     //* check if user has applied already
     const userExistInApplicantsPool = job.applicants.find(id => id.toString() === userId?.toString());
