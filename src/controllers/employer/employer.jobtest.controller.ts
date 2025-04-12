@@ -11,8 +11,34 @@ import { EmailTypes, generateProfessionalEmail } from "../../utils/nodemailer.ts
 import { transportMail } from "../../utils/nodemailer.ts/transportMail";
 import Notification, { NotificationStatus, NotificationType } from "../../models/notifications.model";
 import { getSocketIO } from "../../helper/socket";
+import TestSubmission from "../../models/jobs/testsubmission.model";
 
 //* JOB TEST MANAGEMENT
+const getJobsForJobTest = async function (req: IUserRequest, res: Response) {
+  try {
+    const { userId } = req;
+    // Fetch jobs for the employer
+    const jobs = await Job.find({ employer: userId, is_live: true }).select("job_title createdAt country job_type employment_type salary currency_type stage applicants").lean();
+
+    const jobTests = await JobTest.find({ employer: userId }).select("job stage").lean();
+
+    // Create a map of job IDs to their test stages
+    const jobTestStages = new Map(jobTests.map(jt => [jt.job.toString(), jt.stage]));
+    const jobTestActions = new Map(jobTests.map(jobTest => [jobTest.job.toString(), jobTest.stage === "set_test" ? "Create Job Test" : "continue creating test"]));
+
+    const jobsWithStage = jobs.map(job => ({
+      ...job,
+      applicants: job.applicants.length,
+      stage: jobTestStages.get(job._id.toString()) || "set_test",
+      action: jobTestActions.get(job._id.toString()) || "Create Job Test",
+    }));
+
+    res.status(200).json(jobsWithStage);
+  } catch (error) {
+    handleErrors({ res, error });
+  }
+};
+
 const jobTest = async function (req: IUserRequest, res: Response) {
   try {
     const { userId } = req;
@@ -53,11 +79,27 @@ const jobTest = async function (req: IUserRequest, res: Response) {
   }
 };
 
+const getDraftQuestion = async function (req: IUserRequest, res: Response) {
+  try {
+    const { job_id } = req.query;
+
+    if (!job_id) return res.status(400).json({ message: "Job ID is required" });
+
+    const jobTest = await JobTest.findOne({ job: job_id }).select("job_test").populate<{ job_test: { instruction: string; questions: any[] } }>({ path: "job_test", select: "instruction questions" }).lean();
+
+    if (!jobTest) return res.status(404).json({ message: "Job Test record not found" });
+
+    res.status(200).json({ instruction: jobTest.job_test.instruction, questions: jobTest.job_test.questions });
+  } catch (error) {
+    handleErrors({ res, error });
+  }
+};
+
 const jobTestCutoff = async function (req: IUserRequest, res: Response) {
   try {
     const { userId } = req;
     const { job_id } = req.query;
-    const { cut_off_points, test_id } = cutOffSchema.parse(req.body);
+    const { cut_off_points } = cutOffSchema.parse(req.body);
     const { suitable, probable, not_suitable } = cut_off_points;
 
     if (!job_id) return res.status(400).json({ message: "Job ID is required!" });
@@ -70,7 +112,7 @@ const jobTestCutoff = async function (req: IUserRequest, res: Response) {
     const jobTest = await JobTest.findOne({ job: job_id, employer: userId });
     if (!jobTest) return res.status(404).json({ message: "Job with the specified ID not found" });
 
-    const test = await Test.findById(test_id);
+    const test = await Test.findOne({ job: job_id, type: "job_test" });
     if (!test) return res.status(404).json({ message: "Test not found" });
 
     const total_marks = test.questions.reduce((acc, q) => acc + q.score, 0);
@@ -102,14 +144,30 @@ const jobTestCutoff = async function (req: IUserRequest, res: Response) {
   }
 };
 
+const getDraftCutOff = async function (req: IUserRequest, res: Response) {
+  try {
+    const { job_id } = req.query;
+
+    if (!job_id) return res.status(400).json({ message: "Job ID is required" });
+
+    const jobTest = await JobTest.findOne({ job: job_id }).select("job_test").populate<{ job_test: { cut_off_points: Record<string, any> } }>({ path: "job_test", select: "cut_off_points" }).lean();
+
+    if (!jobTest) return res.status(404).json({ message: "Job Test Cutoff record not found!" });
+
+    res.status(200).json(jobTest);
+  } catch (error) {
+    handleErrors({ res, error });
+  }
+};
+
 const jobTestInviteMsg = async function (req: IUserRequest, res: Response) {
   try {
     const { userId } = req;
     const { job_id } = req.query;
-    const { invitation_letter, test_id } = req.body;
+    const { invitation_letter } = req.body;
 
     if (!job_id) return res.status(400).json({ message: "Job ID is required" });
-    if (!invitation_letter || !test_id) return res.status(400).json({ message: "Invitation Letter and Test ID is required" });
+    if (!invitation_letter) return res.status(400).json({ message: "Invitation Letter is required" });
 
     const job = await Job.findById(job_id);
     if (!job) {
@@ -124,6 +182,97 @@ const jobTestInviteMsg = async function (req: IUserRequest, res: Response) {
     await jobTest.save();
 
     return res.status(200).json({ message: "Job test invite message created successfully!" });
+  } catch (error) {
+    handleErrors({ res, error });
+  }
+};
+
+const getInviteMsgDraft = async function (req: IUserRequest, res: Response) {
+  try {
+    const { job_id } = req.query;
+    if (!job_id) return res.status(400).json({ message: "Job ID is required" });
+
+    const jobTest = await JobTest.findOne({ job: job_id }).select("invitation_letter").lean();
+
+    if (!jobTest) return res.status(404).json({ message: "Job Test Invitation Letter not found" });
+
+    res.status(200).json(jobTest);
+  } catch (error) {
+    handleErrors({ res, error });
+  }
+};
+
+const getApplicantsForJobTest = async function (req: IUserRequest, res: Response) {
+  try {
+    const { userId } = req;
+    const { job_id } = req.params;
+
+    const job = await Job.findById(job_id).select("_id applicants").lean();
+    if (!job) return res.status(404).json({ message: "Job not found!" });
+
+    // Fetch all application test submissions for this job
+    const jobTest = await JobTest.findOne({ job: job_id, employer: userId });
+    if (!jobTest) return res.status(404).json({ message: "Job Test not found" });
+
+    const testSubmissions = await TestSubmission.find({ job: job_id })
+      .populate({
+        path: "applicant",
+        select: "first_name last_name email",
+      })
+      .lean();
+
+    if (!testSubmissions) {
+      return res.status(404).json({ message: "No test submissions found for this job." });
+    }
+
+    if (testSubmissions.length === 0) return res.status(200).json([]);
+
+    //* get corresponding test IDs
+    const testIds = testSubmissions.map(sub => sub.test);
+
+    // get all tests with corresponding ID
+    const tests = await Test.find({ _id: { $in: testIds } })
+      .select("questions type")
+      .lean();
+
+    // Match applicants who have taken the "application_test"
+    const applicantsWithTests = job.applicants.map(app => {
+      const testResult = testSubmissions.find(submission => {
+        //* find those who have submitted application test
+        const test = tests.find(t => t._id.toString() === submission.test?.toString());
+
+        return submission.applicant._id.toString() === app.applicant._id.toString() && test?.type === "application_test";
+      });
+
+      if (!testResult) return null;
+
+      //* get corresponding test detail
+      const testDetails = tests.find(t => t._id.toString() === testResult.test?.toString());
+
+      if (!testDetails) return null;
+
+      // Merge test questions with selected answers
+      const formattedQuestions = testDetails.questions.map(q => {
+        const selectedAnswer = testResult.answers?.find(ans => ans.question_id.toString() === q._id.toString());
+
+        return {
+          ...q,
+          selectedAnswer: selectedAnswer ? selectedAnswer.selected_answer : null, // Attach selected answer
+        };
+      });
+
+      return {
+        applicant: testResult.applicant,
+        test: {
+          ...testDetails,
+          questions: formattedQuestions,
+        },
+        status: testResult.status,
+        has_been_invited: jobTest.candidates_invited.includes(app.applicant._id),
+      };
+    });
+
+    res.status(200).json(applicantsWithTests);
   } catch (error) {
     handleErrors({ res, error });
   }
@@ -253,4 +402,4 @@ const jobTestApplicantsInvite = async function (req: IUserRequest, res: Response
   }
 };
 
-export { jobTest, jobTestCutoff, jobTestInviteMsg, jobTestApplicantsInvite };
+export { getJobsForJobTest, jobTest, getDraftQuestion, jobTestCutoff, getDraftCutOff, jobTestInviteMsg, getInviteMsgDraft, getApplicantsForJobTest, jobTestApplicantsInvite };
