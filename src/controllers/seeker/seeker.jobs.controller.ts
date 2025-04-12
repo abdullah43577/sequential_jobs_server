@@ -66,7 +66,7 @@ const getJobDetails = async function (req: IUserRequest, res: Response) {
     // if (cachedJob) return res.status(200).json(cachedJob);
 
     const job = await Job.findById(job_id)
-      .select("employer job_title country state city job_type salary currency_type years_of_exp description application_test applicants has_taken_application_test createdAt")
+      .select("employer job_title country state city job_type salary currency_type years_of_exp description application_test applicants createdAt")
       .populate({ path: "application_test", select: "instruction questions type" })
       .populate({ path: "employer", select: "organisation_name" })
       .lean();
@@ -76,7 +76,18 @@ const getJobDetails = async function (req: IUserRequest, res: Response) {
     const hasApplied = job.applicants?.some(data => data.applicant.toString() === userId);
 
     // Add has_applied property to the job object
-    (job as unknown as Record<string, any>).has_applied = hasApplied || false;
+    (job as any).has_applied = hasApplied || false;
+
+    //* check if user has taken application test
+    const testSubmission = await TestSubmission.findOne({ job: job_id, applicant: userId })
+      .populate({
+        path: "test",
+        select: "type",
+        match: { type: "application_test" },
+      })
+      .lean();
+
+    (job as any).has_taken_application_test = !!testSubmission;
 
     // cache.set(cacheKey, jobObject);
 
@@ -192,16 +203,6 @@ const submitApplicationTest = async function (req: IUserRequest, res: Response) 
       answers: gradedAnswers,
       score: totalScore,
     });
-
-    //* update property
-    await Job.findOneAndUpdate(
-      { _id: job_id, "applicants.applicant": userId },
-      {
-        $set: {
-          "applicants.$.has_taken_application_test": true,
-        },
-      }
-    );
 
     res.status(201).json({ message: "Test submitted successfully", submission });
   } catch (error) {

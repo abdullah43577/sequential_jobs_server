@@ -201,7 +201,7 @@ const getApplicantsForJobTest = async function (req: IUserRequest, res: Response
     const { userId } = req;
     const { job_id } = req.params;
 
-    const job = await Job.findById(job_id).select("_id applicants").lean();
+    const job = await Job.findById(job_id).select("_id job_title applicants").lean();
     if (!job) return res.status(404).json({ message: "Job not found!" });
 
     // Fetch all application test submissions for this job
@@ -209,9 +209,9 @@ const getApplicantsForJobTest = async function (req: IUserRequest, res: Response
     if (!jobTest) return res.status(404).json({ message: "Job Test not found" });
 
     const testSubmissions = await TestSubmission.find({ job: job_id })
-      .populate({
+      .populate<{ applicant: { _id: string; first_name: string; last_name: string; email: string; resume: string } }>({
         path: "applicant",
-        select: "first_name last_name email",
+        select: "first_name last_name email resume",
       })
       .lean();
 
@@ -225,7 +225,7 @@ const getApplicantsForJobTest = async function (req: IUserRequest, res: Response
     const testIds = testSubmissions.map(sub => sub.test);
 
     // get all tests with corresponding ID
-    const tests = await Test.find({ _id: { $in: testIds } })
+    const tests = await Test.find({ _id: { $in: testIds }, type: "application_test" })
       .select("questions type")
       .lean();
 
@@ -256,6 +256,7 @@ const getApplicantsForJobTest = async function (req: IUserRequest, res: Response
       });
 
       return {
+        job_title: job.job_title,
         applicant: testResult.applicant,
         test: {
           ...testDetails,
