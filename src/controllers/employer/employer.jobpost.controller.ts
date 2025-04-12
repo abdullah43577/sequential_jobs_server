@@ -152,10 +152,11 @@ const getApplicationTest = async function (req: IUserRequest, res: Response) {
 
 const applicationTestCutoff = async function (req: IUserRequest, res: Response) {
   try {
-    const { cut_off_points, test_id } = cutOffSchema.parse(req.body);
+    const { job_id } = req.query;
+    const { cut_off_points } = cutOffSchema.parse(req.body);
     const { suitable, probable, not_suitable } = cut_off_points;
 
-    const test = await Test.findById(test_id).select("job questions cut_off_points");
+    const test = await Test.findOne({ job: job_id, type: "application_test" }).select("job questions cut_off_points");
     if (!test) return res.status(404).json({ message: "Test not found" });
 
     const total_marks = test.questions.reduce((acc, q) => acc + q.score, 0);
@@ -179,7 +180,7 @@ const applicationTestCutoff = async function (req: IUserRequest, res: Response) 
 
     //* upgrade properties and mark job as LIVE
     test.cut_off_points = cut_off_points;
-    const job = await Job.findById(test.job);
+    const job = await Job.findById(job_id);
     if (!job) return res.status(400).json({ message: "Job with corresponding test ID not found" });
 
     job.is_live = true;
