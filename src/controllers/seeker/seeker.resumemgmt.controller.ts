@@ -17,8 +17,7 @@ const uploadResume = async function (req: IUserRequest, res: Response) {
     if (!user) return res.status(404).json({ message: "User not found!" });
 
     // Construct full file path
-    const uploadDir = path.resolve(__dirname, "../../../uploads");
-    const filePath = path.join(uploadDir, resume.filename);
+    const filePath = path.join(__dirname, "../../../uploads", resume.filename);
 
     // Ensure file exists
     if (!fs.existsSync(filePath)) {
