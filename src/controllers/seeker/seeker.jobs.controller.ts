@@ -29,7 +29,12 @@ const getAllJobs = async function (req: IUserRequest, res: Response) {
     // Get total job count
     const totalJobs = await Job.countDocuments({ is_live: true });
 
-    const jobs = await Job.find({ is_live: true }).select("employer job_title state city employment_type salary payment_frequency currency_type technical_skills applicants").populate("employer", "organisation_name").skip(skip).limit(limit).lean();
+    const jobs = await Job.find({ is_live: true })
+      .select("employer job_title state city employment_type salary payment_frequency currency_type technical_skills applicants")
+      .populate("employer", "organisation_name has_taken_application_test")
+      .skip(skip)
+      .limit(limit)
+      .lean();
 
     const jobsWithAppliedStatus = await Promise.all(
       jobs.map(async job => {
@@ -65,7 +70,7 @@ const getJobDetails = async function (req: IUserRequest, res: Response) {
     // if (cachedJob) return res.status(200).json(cachedJob);
 
     const job = await Job.findById(job_id)
-      .select("employer job_title country state city job_type salary currency_type years_of_exp description application_test")
+      .select("employer job_title country state city job_type salary currency_type years_of_exp description application_test has_taken_application_test createdAt")
       .populate({ path: "application_test", select: "instruction questions type" })
       .populate({ path: "employer", select: "organisation_name" });
     if (!job) return res.status(404).json({ message: "Job with specified ID, not found!" });
@@ -184,6 +189,9 @@ const submitApplicationTest = async function (req: IUserRequest, res: Response) 
       answers: gradedAnswers,
       score: totalScore,
     });
+
+    //* update property
+    await Job.findByIdAndUpdate(job_id, { has_taken_application_test: true });
 
     res.status(201).json({ message: "Test submitted successfully", submission });
   } catch (error) {

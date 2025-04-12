@@ -26,6 +26,7 @@ const jobSchema = new Schema<IJob>(
       },
     ],
     application_test: { type: Schema.Types.ObjectId, ref: "Test", default: null },
+    has_taken_application_test: { type: Boolean, default: false },
 
     // Status fields
     is_live: { type: Boolean, default: false },
