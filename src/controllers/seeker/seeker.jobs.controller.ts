@@ -18,17 +18,17 @@ const getAllJobs = async function (req: IUserRequest, res: Response) {
     const limit = parseInt(req.query.limit as string) || 10;
     const skip = (page - 1) * limit;
 
-    const cacheKey = `cached_jobs__${userId}__page_${page}`;
+    // const cacheKey = `cached_jobs__${userId}__page_${page}`;
 
-    const cachedJobs = cache.get(cacheKey);
-    if (cachedJobs) {
-      return res.status(200).json(cachedJobs);
-    }
+    // const cachedJobs = cache.get(cacheKey);
+    // if (cachedJobs) {
+    //   return res.status(200).json(cachedJobs);
+    // }
 
     // Get total job count
     const totalJobs = await Job.countDocuments({ is_live: true });
 
-    const jobs = await Job.find({ is_live: true }).select("employer job_title state city employment_type salary payment_frequency technical_skills").populate("employer", "organisation_name").skip(skip).limit(limit).lean();
+    const jobs = await Job.find({ is_live: true }).select("employer job_title state city employment_type salary payment_frequency technical_skills applicants").populate("employer", "organisation_name").skip(skip).limit(limit).lean();
 
     const jobsWithAppliedStatus = await Promise.all(
       jobs.map(async job => {
@@ -47,7 +47,7 @@ const getAllJobs = async function (req: IUserRequest, res: Response) {
       currentPage: page,
     };
 
-    cache.set(cacheKey, responseData);
+    // cache.set(cacheKey, responseData);
 
     return res.status(200).json(responseData);
   } catch (error) {
@@ -59,14 +59,14 @@ const getJobDetails = async function (req: IUserRequest, res: Response) {
   try {
     const { job_id } = req.params;
 
-    const cacheKey = `single_job_cache__${job_id}`;
-    const cachedJob = cache.get(cacheKey);
-    if (cachedJob) return res.status(200).json(cachedJob);
+    // const cacheKey = `single_job_cache__${job_id}`;
+    // const cachedJob = cache.get(cacheKey);
+    // if (cachedJob) return res.status(200).json(cachedJob);
 
-    const job = await Job.findById(job_id).populate("application_test");
+    const job = await Job.findById(job_id).populate("employer application_test");
     if (!job) return res.status(404).json({ message: "Job with specified ID, not found!" });
 
-    cache.set(cacheKey, job);
+    // cache.set(cacheKey, job);
 
     res.status(200).json(job);
   } catch (error) {

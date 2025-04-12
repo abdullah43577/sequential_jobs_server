@@ -221,9 +221,11 @@ const getApplicantsForJobTest = async function (req: IUserRequest, res: Response
       })
       .lean();
 
-    if (!testSubmissions.length) {
+    if (!testSubmissions) {
       return res.status(404).json({ message: "No test submissions found for this job." });
     }
+
+    if (testSubmissions.length === 0) return res.status(200).json([]);
 
     //* get corresponding test IDs
     const testIds = testSubmissions.map(sub => sub.test);
