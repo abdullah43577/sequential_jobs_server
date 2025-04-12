@@ -11,6 +11,7 @@ import { authRouter } from "./routes/authRoutes";
 import { initializeSocket } from "./helper/socket";
 import { companyRouter } from "./routes/employer/routes.employer";
 import { seekerRouter } from "./routes/seeker/routes.seeker";
+import Job from "./models/jobs/jobs.model";
 
 const app = express();
 
@@ -47,7 +48,7 @@ const server = app.listen(PORT, async () => {
   await connectDB();
   console.log(`server started on http://localhost:${PORT}`);
 
-  // const d = await User.updateMany({ resume: { $exists: false } }, { $set: { resume: null } });
+  // const d = await Job.updateMany({ has_taken_application_test: { $exists: false } }, { $set: { has_taken_application_test: false } });
   // console.log("I ran");
 });
 
