@@ -28,7 +28,7 @@ const getAllJobs = async function (req: IUserRequest, res: Response) {
     // Get total job count
     const totalJobs = await Job.countDocuments({ is_live: true });
 
-    const jobs = await Job.find({ is_live: true }).select("employer job_title state city employment_type salary payment_frequency technical_skills applicants").populate("employer", "organisation_name").skip(skip).limit(limit).lean();
+    const jobs = await Job.find({ is_live: true }).select("employer job_title state city employment_type salary payment_frequency currency_type technical_skills applicants").populate("employer", "organisation_name").skip(skip).limit(limit).lean();
 
     const jobsWithAppliedStatus = await Promise.all(
       jobs.map(async job => {
@@ -63,7 +63,7 @@ const getJobDetails = async function (req: IUserRequest, res: Response) {
     // const cachedJob = cache.get(cacheKey);
     // if (cachedJob) return res.status(200).json(cachedJob);
 
-    const job = await Job.findById(job_id).populate("employer application_test");
+    const job = await Job.findById(job_id).select("employer job_title country state city job_type salary currency_type years_of_exp description application_test").populate("employer application_test");
     if (!job) return res.status(404).json({ message: "Job with specified ID, not found!" });
 
     // cache.set(cacheKey, job);
