@@ -64,7 +64,10 @@ const getJobDetails = async function (req: IUserRequest, res: Response) {
     // const cachedJob = cache.get(cacheKey);
     // if (cachedJob) return res.status(200).json(cachedJob);
 
-    const job = await Job.findById(job_id).select("employer job_title country state city job_type salary currency_type years_of_exp description application_test").populate("employer application_test");
+    const job = await Job.findById(job_id)
+      .select("employer job_title country state city job_type salary currency_type years_of_exp description application_test")
+      .populate({ path: "application_test", select: "instruction questions type" })
+      .populate({ path: "employer", select: "organisation_name" });
     if (!job) return res.status(404).json({ message: "Job with specified ID, not found!" });
 
     // cache.set(cacheKey, job);
@@ -110,10 +113,10 @@ const getApplicationTest = async function (req: IUserRequest, res: Response) {
   try {
     const { job_id } = req.params;
 
-    const cacheKey = `job_application_test__${job_id}`;
+    // const cacheKey = `job_application_test__${job_id}`;
 
-    const cachedTest = cache.get(cacheKey);
-    if (cachedTest) return res.status(200).json({ application_test: cachedTest });
+    // const cachedTest = cache.get(cacheKey);
+    // if (cachedTest) return res.status(200).json({ application_test: cachedTest });
 
     const job = await Job.findById(job_id)
       .populate<{
@@ -145,7 +148,7 @@ const getApplicationTest = async function (req: IUserRequest, res: Response) {
         type,
       };
 
-      cache.set(cacheKey, responseObject);
+      // cache.set(cacheKey, responseObject);
 
       res.status(200).json(responseObject);
     }
