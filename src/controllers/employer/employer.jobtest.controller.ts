@@ -87,9 +87,7 @@ const getDraftQuestion = async function (req: IUserRequest, res: Response) {
 
     const jobTest = await JobTest.findOne({ job: job_id }).select("job_test").populate<{ job_test: { instruction: string; questions: any[] } }>({ path: "job_test", select: "instruction questions" }).lean();
 
-    if (!jobTest) return res.status(404).json({ message: "Job Test record not found" });
-
-    res.status(200).json({ instruction: jobTest.job_test.instruction, questions: jobTest.job_test.questions });
+    res.status(200).json({ success: !!jobTest, jobTest: { instruction: jobTest?.job_test.instruction, questions: jobTest?.job_test.questions } });
   } catch (error) {
     handleErrors({ res, error });
   }
@@ -152,9 +150,7 @@ const getDraftCutOff = async function (req: IUserRequest, res: Response) {
 
     const jobTest = await JobTest.findOne({ job: job_id }).select("job_test").populate<{ job_test: { cut_off_points: Record<string, any> } }>({ path: "job_test", select: "cut_off_points" }).lean();
 
-    if (!jobTest) return res.status(404).json({ message: "Job Test Cutoff record not found!" });
-
-    res.status(200).json(jobTest);
+    res.status(200).json({ success: !!jobTest, jobTest });
   } catch (error) {
     handleErrors({ res, error });
   }
@@ -194,9 +190,7 @@ const getInviteMsgDraft = async function (req: IUserRequest, res: Response) {
 
     const jobTest = await JobTest.findOne({ job: job_id }).select("invitation_letter").lean();
 
-    if (!jobTest) return res.status(404).json({ message: "Job Test Invitation Letter not found" });
-
-    res.status(200).json(jobTest);
+    res.status(200).json({ success: !!jobTest, jobTest });
   } catch (error) {
     handleErrors({ res, error });
   }
