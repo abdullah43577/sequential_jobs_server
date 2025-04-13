@@ -81,7 +81,7 @@ const submitJobTest = async function (req: IUserRequest, res: Response) {
     });
 
     //* check if submission has occurred before
-    const submissions = await TestSubmission.find({ test: job_test_id, applicant: userId });
+    const submissions = await TestSubmission.findOne({ test: job_test_id, applicant: userId });
     if (submissions) return res.status(400).json({ message: "You've already submitted this test" });
 
     const submission = await TestSubmission.create({
