@@ -33,7 +33,7 @@ const interviewSchema = new Schema<IInterview>(
         rating_scale: { type: Map, of: Number, required: true, default: {} },
       },
     ],
-    // stage: {type: String, enum: ['set_rating_scale', 'set_interview', 'panelist_invite', 'panelist_letter_invitation', 'panelist_invite_confirmation', '']}
+    stage: { type: String, enum: ["set_rating_scale", "set_interview", "panelist_invite", "panelist_letter_invitation", "panelist_invite_confirmation", ""] },
   },
   { timestamps: true }
 );

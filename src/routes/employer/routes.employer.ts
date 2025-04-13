@@ -3,7 +3,7 @@ import { validateAccessToken, validateCompanySession } from "../../middleware/va
 import { upload } from "../../utils/multerConfig";
 import { applicationTest, applicationTestCutoff, deleteJob, getApplicationTestDraft, getApplicationTestCutoffDraft, getJobDraft, getJobs, jobPostCreation, toggleJobState } from "../../controllers/employer/employer.jobpost.controller";
 import { getApplicantsForJobTest, getDraftCutOff, getDraftQuestion, getInviteMsgDraft, getJobsForJobTest, jobTest, jobTestApplicantsInvite, jobTestCutoff, jobTestInviteMsg } from "../../controllers/employer/employer.jobtest.controller";
-import { handleCreateInterview, handleGradeCandidates, handleInviteCandidates, handleInvitePanelists } from "../../controllers/employer/employer.interview.controller";
+import { getJobsForInterviews, handleCreateInterview, handleGradeCandidates, handleInviteCandidates, handleInvitePanelists } from "../../controllers/employer/employer.interview.controller";
 import { getQualifiedCandidates, hireCandidate } from "../../controllers/employer/employer.documentation.controller";
 
 const companyRouter = Router();
@@ -33,6 +33,7 @@ companyRouter.get("/job-test/get_applicants/:job_id", validateAccessToken, valid
 companyRouter.patch("/job-test/applicant-invite", validateAccessToken, jobTestApplicantsInvite);
 
 //* INTERVIEW MANAGEMENT
+companyRouter.get("/interview/get_jobs", validateAccessToken, validateCompanySession, getJobsForInterviews);
 companyRouter.post("/interview/create", validateAccessToken, validateCompanySession, handleCreateInterview);
 companyRouter.put("/interview/invite_panelists/:interview_id", validateAccessToken, validateCompanySession, handleInvitePanelists);
 companyRouter.put("/interview/invite_candidates/:interview_id", validateAccessToken, validateCompanySession, handleInviteCandidates);

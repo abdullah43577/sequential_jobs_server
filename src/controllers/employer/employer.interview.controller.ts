@@ -12,6 +12,34 @@ import { transportMail } from "../../utils/nodemailer.ts/transportMail";
 import crypto from "crypto";
 
 //* INTERVIEW MANAGEMENT
+const getJobsForInterviews = async function (req: IUserRequest, res: Response) {
+  try {
+    const { userId } = req;
+
+    const jobs = await Job.find({ employer: userId, is_live: true }).select("job_title salary job_type createdAt").lean();
+
+    //* extract all job ids
+    const jobIds = jobs.map(job => job._id);
+
+    const interviews = await InterviewMgmt.find({ job: { $in: jobIds } }).lean();
+
+    const formattedJobs = jobs.map(job => {
+      const interviewData = interviews.find(interview => interview.job.toString() === job._id.toString());
+      if (!interviewData) return;
+
+      return {
+        ...job,
+        stage: interviewData.stage,
+        has_created_interview: !!interviewData.candidates.length,
+      };
+    });
+
+    res.status(200).json(formattedJobs);
+  } catch (error) {
+    handleErrors({ res, error });
+  }
+};
+
 const handleCreateInterview = async function (req: IUserRequest, res: Response) {
   try {
     const { userId } = req;
@@ -220,4 +248,4 @@ const handleGradeCandidates = async function (req: IUserRequest, res: Response) 
   }
 };
 
-export { handleCreateInterview, handleInvitePanelists, handleInviteCandidates, handleGradeCandidates };
+export { getJobsForInterviews, handleCreateInterview, handleInvitePanelists, handleInviteCandidates, handleGradeCandidates };
