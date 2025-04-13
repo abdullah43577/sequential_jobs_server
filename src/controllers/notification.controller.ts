@@ -47,6 +47,9 @@ const deleteNotification = async function (req: IUserRequest, res: Response) {
 const deleteAllNotifications = async function (req: IUserRequest, res: Response) {
   try {
     const { userId } = req;
+    const deletedCount = await Notification.deleteAllNotifications(userId as string);
+
+    res.status(200).json({ message: "Deleted All Notifications Successfully", deletedCount });
   } catch (error) {
     handleErrors({ res, error });
   }

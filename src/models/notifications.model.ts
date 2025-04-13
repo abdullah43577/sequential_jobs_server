@@ -29,6 +29,7 @@ export interface INotificationDocument extends INotification, Document {
 //* for statics
 export interface INotificationModel extends Model<INotificationDocument> {
   markAllAsRead(userId: Types.ObjectId | string): Promise<number>;
+  deleteAllNotifications(user: Types.ObjectId | string): Promise<number>;
 }
 
 const notificationSchema = new Schema<INotificationDocument, INotificationModel>(
@@ -87,7 +88,7 @@ notificationSchema.methods.markAsRead = function () {
   return this.save();
 };
 
-notificationSchema.statics.markAllAsRead = async function (userId: Types.ObjectId) {
+notificationSchema.statics.markAllAsRead = async function (userId: Types.ObjectId | string) {
   const result = await this.updateMany(
     {
       recipient: userId,
@@ -106,6 +107,11 @@ notificationSchema.statics.markAllAsRead = async function (userId: Types.ObjectI
 
 notificationSchema.methods.deleteNotification = async function () {
   return this.deleteOne();
+};
+
+notificationSchema.statics.deleteAllNotifications = async function (userId: Types.ObjectId | string) {
+  const result = await this.deleteMany({ recipient: userId });
+  return result.deletedCount;
 };
 
 const Notification = model<INotificationDocument, INotificationModel>("Notification", notificationSchema);

@@ -358,7 +358,7 @@ const jobTestApplicantsInvite = async function (req: IUserRequest, res: Response
       const message = `${test.employer?.first_name} ${test.employer?.last_name} as invited you to take a job test.`;
 
       //* notification
-      await Notification.create({
+      const notification = await Notification.create({
         recipient: user._id,
         sender: userId,
         type: NotificationType.MESSAGE,
@@ -370,13 +370,14 @@ const jobTestApplicantsInvite = async function (req: IUserRequest, res: Response
       //* socket instance
       const io = getSocketIO();
 
-      io.to(user._id.toString()).emit("job_test_invite", {
-        type: "invite",
+      io.to(user._id.toString()).emit("notification", {
+        id: notification._id,
         title: subject,
-        message,
-        jobTitle: (test.job as any).job_title,
-        testId: test._id,
-        expiresAt: expirationDate,
+        body: message,
+        status: NotificationStatus.UNREAD,
+        type: NotificationType.MESSAGE,
+        readAt: notification.readAt,
+        createdAt: notification.createdAt,
       });
 
       jobTest.stage = "candidate_invite";
