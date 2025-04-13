@@ -1,4 +1,4 @@
-import { Types } from "mongoose";
+import { Document, Types } from "mongoose";
 import { NotificationStatus, NotificationType } from "../../models/notifications.model";
 
 export interface IUser {

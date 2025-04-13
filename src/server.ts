@@ -3,7 +3,7 @@ import express, { Request, Response } from "express";
 import morgan from "morgan";
 import cors from "cors";
 const { PORT } = process.env;
-import { router } from "./routes/router";
+import { notificationRouter } from "./routes/notificationRouter";
 import { connectDB } from "./helper/connectDB";
 import cookieParser from "cookie-parser";
 import helmet from "helmet";
@@ -11,7 +11,6 @@ import { authRouter } from "./routes/authRoutes";
 import { initializeSocket } from "./helper/socket";
 import { companyRouter } from "./routes/employer/routes.employer";
 import { seekerRouter } from "./routes/seeker/routes.seeker";
-import Job from "./models/jobs/jobs.model";
 
 const app = express();
 
@@ -28,7 +27,7 @@ app.use(cookieParser());
 app.use(helmet());
 
 // routes
-app.use("/api", router);
+app.use("/api/notifications", notificationRouter);
 app.use("/api/auth", authRouter);
 app.use("/api/employer", companyRouter);
 app.use("/api/seeker", seekerRouter);
@@ -48,7 +47,7 @@ const server = app.listen(PORT, async () => {
   await connectDB();
   console.log(`server started on http://localhost:${PORT}`);
 
-  // const d = await Job.updateMany({ "applicants.applicant.has_taken_application_test": { $exists: false } }, { $set: { "applicants.$.has_taken_application_test": false } });
+  // const d = await Job.collection.updateMany({ "applicants.applicant.has_taken_application_test": { $exists: true } }, { $unset: { "applicants.$.has_taken_application_test": false } });
   // console.log("I ran");
 });
 
