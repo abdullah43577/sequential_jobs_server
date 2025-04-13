@@ -27,35 +27,21 @@ const getAllJobTests = async function (req: IUserRequest, res: Response) {
           _id: string;
           job: { job_title: string };
           employer: { organisation_name: string };
-          job_test: {
-            _id: string;
-            instruction: string;
-            questions: {
-              _id: string;
-              question_type: "multiple_choice" | "yes/no" | "text";
-              options: string[];
-              score: number;
-              correct_answer: string;
-            }[];
-            type: "job_test";
-          };
+          job_test: string;
           updatedAt: Date; // This shows updatedAt is at the root level
         }[]
       >();
 
     const formattedResponse = await Promise.all(
       jobTests.map(async test => {
-        const hasTakenJobTest = await TestSubmission.findOne({ applicant: userId, test: test.job_test._id });
+        const hasTakenJobTest = await TestSubmission.findOne({ applicant: userId, test: test.job_test });
 
-        const { _id, instruction, questions, type } = test.job_test;
+        // const { _id, instruction, questions, type } = test.job_test;
 
-        const filteredQuestions = questions.map(({ correct_answer, score, ...rest }) => rest);
+        // const filteredQuestions = questions.map(({ correct_answer, score, ...rest }) => rest);
 
         return {
-          job_test_id: _id, //* the ref to the actual global Test Schema
-          instruction,
-          questions: filteredQuestions,
-          type,
+          job_test_id: test.job_test, //* the ref to the actual global Test Schema
           job_title: test.job.job_title,
           organisation_name: test.employer.organisation_name,
           updatedAt: test.updatedAt,
@@ -66,6 +52,19 @@ const getAllJobTests = async function (req: IUserRequest, res: Response) {
 
     // cache.set(cacheKey, formattedResponse);
     return res.status(200).json(formattedResponse);
+  } catch (error) {
+    handleErrors({ res, error });
+  }
+};
+
+const getJobTestDetails = async function (req: IUserRequest, res: Response) {
+  try {
+    const test_id = req.params;
+
+    const test = await Test.findById(test_id).select("instruction questions type").lean();
+    if (!test) return res.status(404).json({ message: "Test with specified ID not found!" });
+
+    res.status(200).json(test);
   } catch (error) {
     handleErrors({ res, error });
   }
@@ -108,4 +107,4 @@ const submitJobTest = async function (req: IUserRequest, res: Response) {
   }
 };
 
-export { getAllJobTests, submitJobTest };
+export { getAllJobTests, getJobTestDetails, submitJobTest };

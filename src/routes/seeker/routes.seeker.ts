@@ -3,7 +3,7 @@ import { validateAccessToken, validateCompanySession, validateSeekerSession } fr
 import { upload } from "../../utils/multerConfig";
 import { applyForJob, getAllJobs, getApplicationTest, getJobDetails, submitApplicationTest } from "../../controllers/seeker/seeker.jobs.controller";
 import { uploadResume } from "../../controllers/seeker/seeker.resumemgmt.controller";
-import { getAllJobTests, submitJobTest } from "../../controllers/seeker/seeker.testmgmt.controller";
+import { getAllJobTests, getJobTestDetails, submitJobTest } from "../../controllers/seeker/seeker.testmgmt.controller";
 import { getInterviewInfo, getJobsWithoutScheduledInterview, getJobsWithScheduledInterview, scheduleInterview } from "../../controllers/seeker/seeker.interview.controller";
 import { getJobsFormatForDocumentation, submitDocuments, updateApplicantStatus } from "../../controllers/seeker/seeker.documentation.controller";
 
@@ -21,6 +21,7 @@ seekerRouter.put("/profile/update", validateAccessToken, validateSeekerSession, 
 
 //* TEST MANAGEMENT
 seekerRouter.get("/get_job_tests", validateAccessToken, validateSeekerSession, getAllJobTests);
+seekerRouter.get("/get_job_test_info/:test_id", validateAccessToken, validateSeekerSession, getJobTestDetails);
 seekerRouter.post("/submit_job_test", validateAccessToken, validateSeekerSession, submitJobTest);
 
 //* INTERVIEW MANAGEMENT
