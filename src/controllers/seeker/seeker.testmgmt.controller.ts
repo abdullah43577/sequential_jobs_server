@@ -19,7 +19,6 @@ const getAllJobTests = async function (req: IUserRequest, res: Response) {
 
     const jobTests = await JobTest.find({ candidates_invited: { $in: userId } })
       .select("job employer job_test updatedAt")
-      .populate("job_test", "instruction questions")
       .populate("job", "job_title")
       .populate("employer", "organisation_name")
       .lean<
