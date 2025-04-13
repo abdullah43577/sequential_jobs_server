@@ -21,7 +21,7 @@ seekerRouter.put("/profile/update", validateAccessToken, validateSeekerSession, 
 
 //* TEST MANAGEMENT
 seekerRouter.get("/get_job_tests", validateAccessToken, validateSeekerSession, getAllJobTests);
-seekerRouter.get("/get_job_test_info/:test_id", validateAccessToken, validateSeekerSession, getJobTestDetails);
+seekerRouter.get("/get_job_test_info", validateAccessToken, validateSeekerSession, getJobTestDetails);
 seekerRouter.post("/submit_job_test", validateAccessToken, validateSeekerSession, submitJobTest);
 
 //* INTERVIEW MANAGEMENT

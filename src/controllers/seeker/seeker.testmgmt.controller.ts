@@ -13,9 +13,6 @@ const cache = new NodeCache({ stdTTL: 600, checkperiod: 120 });
 const getAllJobTests = async function (req: IUserRequest, res: Response) {
   try {
     const { userId } = req;
-    // const cacheKey = `candidate_job_test_${userId}`;
-    // const cachedTests = cache.get(cacheKey);
-    // if (cachedTests) return res.status(200).json(cachedTests);
 
     const jobTests = await JobTest.find({ candidates_invited: { $in: userId } })
       .select("job employer job_test updatedAt")
@@ -34,10 +31,6 @@ const getAllJobTests = async function (req: IUserRequest, res: Response) {
     const formattedResponse = await Promise.all(
       jobTests.map(async test => {
         const hasTakenJobTest = await TestSubmission.findOne({ applicant: userId, test: test.job_test });
-
-        // const { _id, instruction, questions, type } = test.job_test;
-
-        // const filteredQuestions = questions.map(({ correct_answer, score, ...rest }) => rest);
 
         return {
           job_test_id: test.job_test, //* the ref to the actual global Test Schema
@@ -58,7 +51,7 @@ const getAllJobTests = async function (req: IUserRequest, res: Response) {
 
 const getJobTestDetails = async function (req: IUserRequest, res: Response) {
   try {
-    const test_id = req.params;
+    const { test_id } = req.query;
 
     const test = await Test.findById(test_id).select("instruction questions type").lean();
     if (!test) return res.status(404).json({ message: "Test with specified ID not found!" });
