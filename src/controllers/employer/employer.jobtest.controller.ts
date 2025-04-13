@@ -290,11 +290,11 @@ const jobTestApplicantsInvite = async function (req: IUserRequest, res: Response
 
     const test = await Test.findById(jobTest.job_test)
       .select("_id employer job")
-      .populate<{ employer: { first_name: string; last_name: string } | null }>({
+      .populate<{ employer: { organisation_name: string } }>({
         path: "employer",
-        select: "first_name last_name",
+        select: "organisation_name",
       })
-      .populate<{ job: { job_title: string } | null }>({
+      .populate<{ job: { job_title: string } }>({
         path: "job",
         select: "job_title",
       })
@@ -339,7 +339,7 @@ const jobTestApplicantsInvite = async function (req: IUserRequest, res: Response
         additionalDetails: {
           date: expirationDate.toLocaleDateString(),
           time: "Open Until " + expirationDate.toLocaleTimeString(),
-          organizerName: `${test.employer?.first_name} ${test.employer?.last_name}`,
+          organizerName: test.employer?.organisation_name,
         },
       };
 
@@ -355,7 +355,7 @@ const jobTestApplicantsInvite = async function (req: IUserRequest, res: Response
         message: html,
       });
 
-      const message = `${test.employer?.first_name} ${test.employer?.last_name} as invited you to take a job test.`;
+      const message = `${test.employer.organisation_name} as invited you to take a job test.`;
 
       //* notification
       const notification = await Notification.create({
@@ -373,7 +373,7 @@ const jobTestApplicantsInvite = async function (req: IUserRequest, res: Response
       io.to(user._id.toString()).emit("notification", {
         id: notification._id,
         title: subject,
-        body: message,
+        message,
         status: NotificationStatus.UNREAD,
         type: NotificationType.MESSAGE,
         readAt: notification.readAt,
