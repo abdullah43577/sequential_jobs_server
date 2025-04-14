@@ -25,12 +25,11 @@ const getJobsForInterviews = async function (req: IUserRequest, res: Response) {
 
     const formattedJobs = jobs.map(job => {
       const interviewData = interviews.find(interview => interview.job.toString() === job._id.toString());
-      if (!interviewData) return;
 
       return {
         ...job,
-        stage: interviewData.stage,
-        has_created_interview: !!interviewData.candidates.length,
+        stage: interviewData?.stage || "set_rating_scale",
+        has_created_interview: !!interviewData?.candidates.length,
       };
     });
 
@@ -61,6 +60,7 @@ const handleCreateInterview = async function (req: IUserRequest, res: Response) 
       rating_scale: data.rating_scale,
       interview_time_slot: processedTimeSlots,
       invitation_letter: data.invitation_letter,
+      stage: "panelist_letter_invitation",
     });
 
     return res.status(200).json({ message: "Interview records added", interview_id: newInterview._id });
@@ -71,12 +71,12 @@ const handleCreateInterview = async function (req: IUserRequest, res: Response) 
 
 const handleInvitePanelists = async function (req: IUserRequest, res: Response) {
   try {
-    const { interview_id } = req.params;
+    const { job_id } = req.params;
     const panelists = req.body.panelists as string[];
 
     if (!panelists || typeof panelists !== "object" || panelists.length === 0) return res.status(400).json({ message: "Panelist emails required!" });
 
-    const interview = await InterviewMgmt.findById(interview_id).populate<{ job: { _id: string; job_title: string } }>("job", "job_title");
+    const interview = await InterviewMgmt.findOne({ job: job_id }).populate<{ job: { _id: string; job_title: string } }>("job", "job_title");
     if (!interview) return res.status(400).json({ message: "Interview not found!" });
 
     const uniquePanelists = panelists.filter(email => !interview.panelists.includes(email));
@@ -103,7 +103,7 @@ const handleInvitePanelists = async function (req: IUserRequest, res: Response) 
             title: "You've Been Invited as an Interview Panelist",
             recipientName: email,
             message: `You have been selected as a panelist for an upcoming interview for the position of ${interview.job.job_title}. Please click the button below to access the interview panel and review candidate details.
-  ${newPanelist.isTemporary ? `\n\nTemporary Account Credentials:\nEmail: ${email}\nPassword: ${tempPassword}\n\nThis account will expire in 7 days. Please change your password after first login.` : ""}`,
+  ${newPanelist.isTemporary ? `\n\nTemporary Account Credentials:\nEmail: ${email}\nPassword: ${tempPassword}\n\nThis account will expire in 7 days. Please change your password after first login.` : ""} \n\n interview id ${interview._id}`,
             buttonText: "Access Interview Panel",
             buttonAction: `https://login?email=${encodeURIComponent(newPanelist.email)}${newPanelist.isTemporary ? "&temp=true" : ""}`,
             additionalDetails: {
@@ -136,6 +136,7 @@ const handleInvitePanelists = async function (req: IUserRequest, res: Response) 
     await Promise.all(promises);
 
     // Save the updated interview document in bulk
+    interview.stage = "panelist_invite_confirmation";
     await interview.save();
 
     return res.status(200).json({ message: "Panelists Invited Successfully" });
@@ -146,12 +147,12 @@ const handleInvitePanelists = async function (req: IUserRequest, res: Response) 
 
 const handleInviteCandidates = async function (req: IUserRequest, res: Response) {
   try {
-    const { interview_id } = req.params;
+    const { job_id } = req.params;
     const { candidate_ids } = req.body;
 
     if (!candidate_ids || !Array.isArray(candidate_ids)) return res.status(400).json({ message: "Candidate IDs is required and must be of an array type" });
 
-    const interview = await InterviewMgmt.findById(interview_id).populate<{ job: { _id: string; job_title: string } }>("job", "job_title");
+    const interview = await InterviewMgmt.findOne({ job: job_id }).populate<{ job: { _id: string; job_title: string } }>("job", "job_title");
     if (!interview) return res.status(400).json({ message: "Interview not found!" });
 
     const uniqueCandidates = candidate_ids.filter(id => !interview.candidates.includes(id));
@@ -198,6 +199,7 @@ const handleInviteCandidates = async function (req: IUserRequest, res: Response)
     await Promise.all(promises);
 
     //* save candidates record
+    interview.stage = "applicants_invite";
     await interview.save();
 
     return res.status(200).json({ message: "Candidates invited successfully" });
@@ -208,7 +210,6 @@ const handleInviteCandidates = async function (req: IUserRequest, res: Response)
 
 const handleGradeCandidates = async function (req: IUserRequest, res: Response) {
   try {
-    const { userId } = req;
     const { interview_id, graded_scale, candidate_id } = req.body;
 
     if (!interview_id) return res.status(400).json({ message: "Interview ID is required" });

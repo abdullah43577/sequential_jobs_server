@@ -35,7 +35,7 @@ companyRouter.patch("/job-test/applicant-invite", validateAccessToken, jobTestAp
 //* INTERVIEW MANAGEMENT
 companyRouter.get("/interview/get_jobs", validateAccessToken, validateCompanySession, getJobsForInterviews);
 companyRouter.post("/interview/create", validateAccessToken, validateCompanySession, handleCreateInterview);
-companyRouter.put("/interview/invite_panelists/:interview_id", validateAccessToken, validateCompanySession, handleInvitePanelists);
+companyRouter.put("/interview/invite_panelists/:job_id", validateAccessToken, validateCompanySession, handleInvitePanelists);
 companyRouter.put("/interview/invite_candidates/:interview_id", validateAccessToken, validateCompanySession, handleInviteCandidates);
 companyRouter.put("/interview/grade_candidate", validateAccessToken, validateCompanySession, handleGradeCandidates);
 
