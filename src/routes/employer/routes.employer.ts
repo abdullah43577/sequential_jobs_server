@@ -45,14 +45,14 @@ companyRouter.patch("/job-test/applicant-invite", validateAccessToken, jobTestAp
 
 //* INTERVIEW MANAGEMENT
 companyRouter.get("/interview/get_jobs", validateAccessToken, validateCompanySession, getJobsForInterviews);
-companyRouter.get("/interview/get_rating_scale", validateAccessToken, validateCompanySession, handleGetRatingScaleDraft);
-companyRouter.get("/interview/get_time_slots", validateAccessToken, validateCompanySession, handleGetTimeSlotDrafts);
-companyRouter.get("/interview/get_letter", validateAccessToken, validateCompanySession, handleGetInvitationLetter);
-companyRouter.get("/interview/get_panelists", validateAccessToken, validateCompanySession, handleGetPanelistEmails);
+companyRouter.get("/interview/get_rating_scale/:job_id", validateAccessToken, validateCompanySession, handleGetRatingScaleDraft);
+companyRouter.get("/interview/get_time_slots/:job_id", validateAccessToken, validateCompanySession, handleGetTimeSlotDrafts);
+companyRouter.get("/interview/get_letter/:job_id", validateAccessToken, validateCompanySession, handleGetInvitationLetter);
+companyRouter.get("/interview/get_panelists/:job_id", validateAccessToken, validateCompanySession, handleGetPanelistEmails);
 companyRouter.post("/interview/create", validateAccessToken, validateCompanySession, handleCreateInterview);
 companyRouter.put("/interview/invite_panelists/:job_id", validateAccessToken, validateCompanySession, handleInvitePanelists);
-companyRouter.get("/interview/get_candidates", validateAccessToken, validateCompanySession, handleGetCandidates);
-companyRouter.put("/interview/invite_candidates/:interview_id", validateAccessToken, validateCompanySession, handleInviteCandidates);
+companyRouter.get("/interview/get_candidates/:job_id", validateAccessToken, validateCompanySession, handleGetCandidates);
+companyRouter.put("/interview/invite_candidates/:job_id", validateAccessToken, validateCompanySession, handleInviteCandidates);
 companyRouter.put("/interview/grade_candidate", validateAccessToken, validateCompanySession, handleGradeCandidates);
 
 //* DOCUMENTATION MANAGEMENT

@@ -78,6 +78,8 @@ const handleCreateInterview = async function (req: IUserRequest, res: Response) 
 const handleGetRatingScaleDraft = async function (req: IUserRequest, res: Response) {
   try {
     const { job_id } = req.params;
+    if (!job_id) return res.status(400).json({ message: "Job ID is required" });
+
     const interview = await InterviewMgmt.findOne({ job: job_id }).select("rating_scale").lean();
     if (!interview) return res.status(200).json({ success: false, rating_scale: {} });
 
@@ -90,6 +92,8 @@ const handleGetRatingScaleDraft = async function (req: IUserRequest, res: Respon
 const handleGetTimeSlotDrafts = async function (req: IUserRequest, res: Response) {
   try {
     const { job_id } = req.params;
+    if (!job_id) return res.status(400).json({ message: "Job ID is required" });
+
     const interview = await InterviewMgmt.findOne({ job: job_id }).select("interview_time_slot").lean();
     if (!interview) return res.status(200).json({ success: false, interview_time_slots: [] });
 
@@ -102,6 +106,8 @@ const handleGetTimeSlotDrafts = async function (req: IUserRequest, res: Response
 const handleGetInvitationLetter = async function (req: IUserRequest, res: Response) {
   try {
     const { job_id } = req.params;
+    if (!job_id) return res.status(400).json({ message: "Job ID is required" });
+
     const interview = await InterviewMgmt.findOne({ job: job_id }).select("invitation_letter").lean();
     if (!interview) return res.status(200).json({ success: false, invitation_letter: [] });
 
@@ -114,6 +120,8 @@ const handleGetInvitationLetter = async function (req: IUserRequest, res: Respon
 const handleGetPanelistEmails = async function (req: IUserRequest, res: Response) {
   try {
     const { job_id } = req.params;
+    if (!job_id) return res.status(400).json({ message: "Job ID is required" });
+
     const interview = await InterviewMgmt.findOne({ job: job_id }).select("panelists").lean();
     if (!interview) return res.status(200).json({ success: false, emails: [] });
 
@@ -126,6 +134,8 @@ const handleGetPanelistEmails = async function (req: IUserRequest, res: Response
 const handleInvitePanelists = async function (req: IUserRequest, res: Response) {
   try {
     const { job_id } = req.params;
+    if (!job_id) return res.status(400).json({ message: "Job ID is required" });
+
     const panelists = req.body.panelists as string[];
 
     if (!panelists || typeof panelists !== "object" || panelists.length === 0) return res.status(400).json({ message: "Panelist emails required!" });
@@ -202,8 +212,8 @@ const handleInvitePanelists = async function (req: IUserRequest, res: Response) 
 const handleGetCandidates = async function (req: IUserRequest, res: Response) {
   try {
     const { job_id } = req.params;
-    //candidate name, date of application, role applied for, resume, status, decision
-    // get applicants that submitted at least application test
+    if (!job_id) return res.status(400).json({ message: "Job ID is required" });
+
     const testSubmissions = await TestSubmission.find({ job: job_id })
       .select("test job applicant")
       .populate<{ test: { type: "application_test" | "job_test" } }>({
@@ -238,6 +248,8 @@ const handleGetCandidates = async function (req: IUserRequest, res: Response) {
 const handleInviteCandidates = async function (req: IUserRequest, res: Response) {
   try {
     const { job_id } = req.params;
+    if (!job_id) return res.status(400).json({ message: "Job ID is required" });
+
     const { candidate_ids } = req.body;
 
     if (!candidate_ids || !Array.isArray(candidate_ids)) return res.status(400).json({ message: "Candidate IDs is required and must be of an array type" });
