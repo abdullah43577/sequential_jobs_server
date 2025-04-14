@@ -57,6 +57,7 @@ export const EmployerInterviewManagementSchema = z.object({
         .required()
     )
     .min(1, { message: "Interview time slot must have at least one property" }),
+  meetingLink: z.string(),
   panelists: z.array(z.string().email()),
   invitation_letter: z.string(),
   // stage: z.enum(["set_rating_scale", "set_interview", "panelist_invite", "paneliset_letter_invitation", "applicants_invite"]),

@@ -16,6 +16,7 @@ const interviewSchema = new Schema<IInterview>(
         available_date_time: [{ type: Object, required: true }],
       },
     ],
+    meetingLink: { type: String, required: true },
     panelists: [{ type: String, default: [] }],
     invitation_letter: { type: String, required: true },
     candidates: [

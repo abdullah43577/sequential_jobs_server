@@ -114,6 +114,7 @@ export interface IInterview {
     interview_duration: string;
     available_date_time: {};
   }[];
+  meetingLink: string;
   panelists: string[];
   invitation_letter: string;
   candidates: { candidate: Types.ObjectId; scheduled_date_time?: { date: Date; start_time: string; end_time: string }; status?: "pending" | "confirmed" | "completed" | "canceled"; rating_scale?: Map<string, number> }[];

@@ -45,6 +45,9 @@ const handleCreateInterview = async function (req: IUserRequest, res: Response) 
     const { job_id } = req.query;
     const data = EmployerInterviewManagementSchema.parse(req.body);
 
+    const interview = await InterviewMgmt.findOne({ job: job_id });
+    if (interview) return res.status(200).json({ message: "An interview record already exists in the database" });
+
     const existingJob = await Job.findById(job_id);
     if (!existingJob) return res.status(404).json({ message: "Job not found!" });
 
@@ -59,11 +62,60 @@ const handleCreateInterview = async function (req: IUserRequest, res: Response) 
       employer: userId,
       rating_scale: data.rating_scale,
       interview_time_slot: processedTimeSlots,
+      meetingLink: data.meetingLink,
       invitation_letter: data.invitation_letter,
       stage: "panelist_letter_invitation",
     });
 
     return res.status(200).json({ message: "Interview records added", interview_id: newInterview._id });
+  } catch (error) {
+    handleErrors({ res, error });
+  }
+};
+
+const handleGetRatingScaleDraft = async function (req: IUserRequest, res: Response) {
+  try {
+    const { job_id } = req.params;
+    const interview = await InterviewMgmt.findOne({ job: job_id }).select("rating_scale").lean();
+    if (!interview) return res.status(200).json({ success: false, rating_scale: {} });
+
+    res.status(200).json({ success: true, rating_scale: interview.rating_scale });
+  } catch (error) {
+    handleErrors({ res, error });
+  }
+};
+
+const handleGetTimeSlotDrafts = async function (req: IUserRequest, res: Response) {
+  try {
+    const { job_id } = req.params;
+    const interview = await InterviewMgmt.findOne({ job: job_id }).select("interview_time_slot").lean();
+    if (!interview) return res.status(200).json({ success: false, interview_time_slots: [] });
+
+    res.status(200).json({ success: true, interview_time_slots: interview.interview_time_slot });
+  } catch (error) {
+    handleErrors({ res, error });
+  }
+};
+
+const handleGetInvitationLetter = async function (req: IUserRequest, res: Response) {
+  try {
+    const { job_id } = req.params;
+    const interview = await InterviewMgmt.findOne({ job: job_id }).select("invitation_letter").lean();
+    if (!interview) return res.status(200).json({ success: false, invitation_letter: [] });
+
+    res.status(200).json({ success: true, invitation_letter: interview.invitation_letter });
+  } catch (error) {
+    handleErrors({ res, error });
+  }
+};
+
+const handleGetPanelistEmails = async function (req: IUserRequest, res: Response) {
+  try {
+    const { job_id } = req.params;
+    const interview = await InterviewMgmt.findOne({ job: job_id }).select("panelists").lean();
+    if (!interview) return res.status(200).json({ success: false, emails: [] });
+
+    res.status(200).json({ success: true, emails: interview.panelists });
   } catch (error) {
     handleErrors({ res, error });
   }
@@ -249,4 +301,4 @@ const handleGradeCandidates = async function (req: IUserRequest, res: Response) 
   }
 };
 
-export { getJobsForInterviews, handleCreateInterview, handleInvitePanelists, handleInviteCandidates, handleGradeCandidates };
+export { getJobsForInterviews, handleCreateInterview, handleGetRatingScaleDraft, handleGetTimeSlotDrafts, handleGetInvitationLetter, handleGetPanelistEmails, handleInvitePanelists, handleInviteCandidates, handleGradeCandidates };
