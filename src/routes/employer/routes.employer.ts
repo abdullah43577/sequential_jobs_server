@@ -6,6 +6,7 @@ import { getApplicantsForJobTest, getDraftCutOff, getDraftQuestion, getInviteMsg
 import {
   getJobsForInterviews,
   handleCreateInterview,
+  handleGetCandidates,
   handleGetInvitationLetter,
   handleGetPanelistEmails,
   handleGetRatingScaleDraft,
@@ -50,6 +51,7 @@ companyRouter.get("/interview/get_letter", validateAccessToken, validateCompanyS
 companyRouter.get("/interview/get_panelists", validateAccessToken, validateCompanySession, handleGetPanelistEmails);
 companyRouter.post("/interview/create", validateAccessToken, validateCompanySession, handleCreateInterview);
 companyRouter.put("/interview/invite_panelists/:job_id", validateAccessToken, validateCompanySession, handleInvitePanelists);
+companyRouter.get("/interview/get_candidates", validateAccessToken, validateCompanySession, handleGetCandidates);
 companyRouter.put("/interview/invite_candidates/:interview_id", validateAccessToken, validateCompanySession, handleInviteCandidates);
 companyRouter.put("/interview/grade_candidate", validateAccessToken, validateCompanySession, handleGradeCandidates);
 

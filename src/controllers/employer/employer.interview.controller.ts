@@ -10,6 +10,8 @@ import User from "../../models/users.model";
 import { generateProfessionalEmail } from "../../utils/nodemailer.ts/email-templates/generateProfessionalEmail";
 import { transportMail } from "../../utils/nodemailer.ts/transportMail";
 import crypto from "crypto";
+import TestSubmission from "../../models/jobs/testsubmission.model";
+import { Types } from "mongoose";
 
 //* INTERVIEW MANAGEMENT
 const getJobsForInterviews = async function (req: IUserRequest, res: Response) {
@@ -197,6 +199,42 @@ const handleInvitePanelists = async function (req: IUserRequest, res: Response) 
   }
 };
 
+const handleGetCandidates = async function (req: IUserRequest, res: Response) {
+  try {
+    const { job_id } = req.params;
+    //candidate name, date of application, role applied for, resume, status, decision
+    // get applicants that submitted at least application test
+    const testSubmissions = await TestSubmission.find({ job: job_id })
+      .select("test job applicant")
+      .populate<{ test: { type: "application_test" | "job_test" } }>({
+        path: "test",
+        select: "type",
+        match: { type: "application_test" },
+      })
+      .populate<{ job: { job_title: string; applicants: { _id: string; applicant: Types.ObjectId; date_of_application: Date; status: string }[] } }>("job", "job_title applicants")
+      .populate<{ applicant: { _id: string; first_name: string; last_name: string; resume: string } }>("applicant", "first_name last_name resume");
+
+    if (!testSubmissions) return res.status(400).json({ message: "Error fetching candidates with test submissions" });
+
+    const formattedResponse = testSubmissions.map(sub => {
+      const applicantId = sub.applicant._id.toString();
+      const dataEntry = sub.job.applicants.find(app => app.applicant.toString() === applicantId);
+
+      return {
+        candidate_name: `${sub.applicant.first_name} ${sub.applicant.last_name}`,
+        date_of_application: dataEntry?.date_of_application,
+        role_applied_for: sub.job.job_title,
+        resume: sub.applicant.resume,
+        status: dataEntry?.status,
+      };
+    });
+
+    res.status(200).json(formattedResponse);
+  } catch (error) {
+    handleErrors({ res, error });
+  }
+};
+
 const handleInviteCandidates = async function (req: IUserRequest, res: Response) {
   try {
     const { job_id } = req.params;
@@ -301,4 +339,4 @@ const handleGradeCandidates = async function (req: IUserRequest, res: Response) 
   }
 };
 
-export { getJobsForInterviews, handleCreateInterview, handleGetRatingScaleDraft, handleGetTimeSlotDrafts, handleGetInvitationLetter, handleGetPanelistEmails, handleInvitePanelists, handleInviteCandidates, handleGradeCandidates };
+export { getJobsForInterviews, handleCreateInterview, handleGetRatingScaleDraft, handleGetTimeSlotDrafts, handleGetInvitationLetter, handleGetPanelistEmails, handleInvitePanelists, handleGetCandidates, handleInviteCandidates, handleGradeCandidates };
