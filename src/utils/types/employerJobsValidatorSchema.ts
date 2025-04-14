@@ -52,7 +52,6 @@ export const EmployerInterviewManagementSchema = z.object({
           end_time: z.string(),
           break_time: z.string(),
           interview_duration: z.string(),
-          medical_duration: z.string(),
         })
         .required()
     )
@@ -60,5 +59,5 @@ export const EmployerInterviewManagementSchema = z.object({
   meetingLink: z.string(),
   panelists: z.array(z.string().email()),
   invitation_letter: z.string(),
-  // stage: z.enum(["set_rating_scale", "set_interview", "panelist_invite", "paneliset_letter_invitation", "applicants_invite"]),
+  // stage: z.enum(["set_rating_scale", "set_interview", "panelist_invite", "panelist_letter_invitation", "applicants_invite"]),
 });
