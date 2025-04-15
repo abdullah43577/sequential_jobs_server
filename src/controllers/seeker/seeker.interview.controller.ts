@@ -36,7 +36,7 @@ const getJobsWithoutScheduledInterview = async function (req: IUserRequest, res:
 
       const is_interview_scheduled = candidate?.scheduled_date_time && Object.keys(candidate.scheduled_date_time).length > 0;
 
-      return { company_name: interview.job.employer.organisation_name, job_title: interview.job.job_title, created_at: interview.job.createdAt, job_type: interview.job.job_type, is_interview_scheduled };
+      return { job_id: interview.job._id, company_name: interview.job.employer.organisation_name, job_title: interview.job.job_title, created_at: interview.job.createdAt, job_type: interview.job.job_type, is_interview_scheduled };
     });
 
     res.status(200).json(jobs);
