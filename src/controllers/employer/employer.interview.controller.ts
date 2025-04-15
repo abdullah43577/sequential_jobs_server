@@ -1,4 +1,4 @@
-import { Response } from "express";
+import { application, Response } from "express";
 import { IUserRequest } from "../../interface";
 import Job from "../../models/jobs/jobs.model";
 import { EmployerInterviewManagementSchema } from "../../utils/types/employerJobsValidatorSchema";
@@ -219,27 +219,49 @@ const handleGetCandidates = async function (req: IUserRequest, res: Response) {
       .populate<{ test: { type: "application_test" | "job_test" } }>({
         path: "test",
         select: "type",
-        match: { type: "application_test" },
       })
       .populate<{ job: { job_title: string; applicants: { _id: string; applicant: Types.ObjectId; date_of_application: Date; status: string }[] } }>("job", "job_title applicants")
-      .populate<{ applicant: { _id: string; first_name: string; last_name: string; resume: string } }>("applicant", "first_name last_name resume");
+      .populate<{ applicant: { _id: string; first_name: string; last_name: string; resume: string } }>("applicant", "first_name last_name resume")
+      .lean();
 
     if (!testSubmissions) return res.status(400).json({ message: "Error fetching candidates with test submissions" });
 
-    const formattedResponse = testSubmissions.map(sub => {
-      const applicantId = sub.applicant._id.toString();
-      const dataEntry = sub.job.applicants.find(app => app.applicant.toString() === applicantId);
+    const applicationTestOnlyCandidates = testSubmissions.filter(sub => sub.test.type === "application_test");
 
-      return {
-        candidate_name: `${sub.applicant.first_name} ${sub.applicant.last_name}`,
-        date_of_application: dataEntry?.date_of_application,
-        role_applied_for: sub.job.job_title,
-        resume: sub.applicant.resume,
-        status: dataEntry?.status,
-      };
-    });
+    const jobTestOnlyCandidates = testSubmissions.filter(sub => sub.test.type === "job_test");
 
-    res.status(200).json(formattedResponse);
+    const formatResponse = function (arr: any[]) {
+      return arr.map(sub => {
+        const applicantId = sub.applicant._id.toString();
+        const dataEntry = sub.job.applicants.find((app: any) => app.applicant.toString() === applicantId);
+
+        return {
+          candidate_name: `${sub.applicant.first_name} ${sub.applicant.last_name}`,
+          date_of_application: dataEntry?.date_of_application,
+          role_applied_for: sub.job.job_title,
+          resume: sub.applicant.resume,
+          status: dataEntry?.status,
+        };
+      });
+    };
+
+    const applicationTestCandidates = formatResponse(applicationTestOnlyCandidates);
+    const jobTestCandidates = formatResponse(jobTestOnlyCandidates);
+
+    // const formattedResponse = testSubmissions.map(sub => {
+    //   const applicantId = sub.applicant._id.toString();
+    //   const dataEntry = sub.job.applicants.find(app => app.applicant.toString() === applicantId);
+
+    //   return {
+    //     candidate_name: `${sub.applicant.first_name} ${sub.applicant.last_name}`,
+    //     date_of_application: dataEntry?.date_of_application,
+    //     role_applied_for: sub.job.job_title,
+    //     resume: sub.applicant.resume,
+    //     status: dataEntry?.status,
+    //   };
+    // });
+
+    res.status(200).json({ applicationTestCandidates, jobTestCandidates });
   } catch (error) {
     handleErrors({ res, error });
   }
