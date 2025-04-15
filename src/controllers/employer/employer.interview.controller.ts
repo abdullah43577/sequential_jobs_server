@@ -236,6 +236,7 @@ const handleGetCandidates = async function (req: IUserRequest, res: Response) {
         const dataEntry = sub.job.applicants.find((app: any) => app.applicant.toString() === applicantId);
 
         return {
+          applicant_id: applicantId,
           candidate_name: `${sub.applicant.first_name} ${sub.applicant.last_name}`,
           date_of_application: dataEntry?.date_of_application,
           role_applied_for: sub.job.job_title,
