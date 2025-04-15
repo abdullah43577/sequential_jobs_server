@@ -56,7 +56,7 @@ const getQualifiedCandidates = async function (req: IUserRequest, res: Response)
     if (!job_id) return res.status(400).json({ message: "Job ID is required" });
 
     const interview = await InterviewMgmt.findOne({ job: job_id })
-      .select("job candidates")
+      .select("job rating_scale candidates")
       .populate<{ job: { job_title: string; applicants: { _id: string; applicant: { _id: string }; date_of_application: Date; status: string }[] } }>({
         path: "job",
         select: "job_title applicants",
@@ -65,12 +65,17 @@ const getQualifiedCandidates = async function (req: IUserRequest, res: Response)
           select: "_id",
         },
       })
-      .populate<{ candidates: { candidate: { _id: string; first_name: string; last_name: string; resume: string } }[] }>("candidates.candidate", "first_name last_name resume")
+      .populate<{ candidates: { candidate: { _id: string; first_name: string; last_name: string; resume: string }; scheduled_date_time: Record<string, any>; interview_score: number; status: string }[] }>(
+        "candidates.candidate",
+        "first_name last_name resume"
+      )
       .lean();
 
     if (!interview) return res.status(404).json({ message: "No interview found for this job" });
 
-    const { job, candidates } = interview;
+    const { job, rating_scale, candidates } = interview;
+
+    const totalObtainableGrade = Object.values(rating_scale).reduce((acc, cur) => +acc + +cur, 0);
 
     const qualifiedCandidates = candidates.map(candidate => {
       const application = job.applicants.find(app => app.applicant._id.toString() === candidate.candidate._id.toString());
@@ -81,6 +86,8 @@ const getQualifiedCandidates = async function (req: IUserRequest, res: Response)
         role_applied_for: job.job_title,
         resume: candidate.candidate.resume,
         hired: application?.status === "hired",
+        interview_result: candidate.interview_score ? `${candidate.interview_score} / ${totalObtainableGrade}` : "Not Graded",
+        decision: application?.status === "offer_sent" ? "Offer Sent" : "Send Offer",
       };
     });
 
@@ -212,14 +219,25 @@ const getCandidatesWithOffers = async function (req: IUserRequest, res: Response
 
     if (!job) return res.status(200).json([]);
 
+    const interview = await InterviewMgmt.findOne({ job: job_id }).select("rating_scale candidates").lean();
+
+    if (!interview) return res.status(404).json({ message: "Interview record not found!" });
+
+    const totalObtainableGrade = Object.values(interview?.rating_scale).reduce((acc, cur) => +acc + +cur, 0);
+
     const formattedResponse = job.applicants
       .filter(app => app.status === "offer_sent")
-      .map(app => ({
-        candidate_name: `${app.applicant.first_name} ${app.applicant.last_name}`,
-        resume: app.applicant.resume,
-        date_of_application: app.date_of_application,
-        role_applied_for: job.job_title,
-      }));
+      .map(app => {
+        const candidate = interview?.candidates.find(cd => cd.candidate.toString() === app.applicant.toString());
+
+        return {
+          candidate_name: `${app.applicant.first_name} ${app.applicant.last_name}`,
+          resume: app.applicant.resume,
+          date_of_application: app.date_of_application,
+          role_applied_for: job.job_title,
+          interview_result: candidate?.interview_score ? `${candidate?.interview_score} / ${totalObtainableGrade}` : "Not Graded",
+        };
+      });
 
     res.status(200).json(formattedResponse);
   } catch (error) {
@@ -239,14 +257,25 @@ const getCandidatesWithAcceptedOffer = async function (req: IUserRequest, res: R
 
     if (!job) return res.status(200).json([]);
 
+    const interview = await InterviewMgmt.findOne({ job: job_id });
+
+    if (!interview) return res.status(404).json({ message: "Interview record not found!" });
+
+    const totalObtainableGrade = Object.values(interview?.rating_scale).reduce((acc, cur) => +acc + +cur, 0);
+
     const formattedResponse = job.applicants
       .filter(app => app.status === "hired")
-      .map(app => ({
-        candidate_name: `${app.applicant.first_name} ${app.applicant.last_name}`,
-        resume: app.applicant.resume,
-        date_of_application: app.date_of_application,
-        role_applied_for: job.job_title,
-      }));
+      .map(app => {
+        const candidate = interview?.candidates.find(cd => cd.candidate.toString() === app.applicant.toString());
+
+        return {
+          candidate_name: `${app.applicant.first_name} ${app.applicant.last_name}`,
+          resume: app.applicant.resume,
+          date_of_application: app.date_of_application,
+          role_applied_for: job.job_title,
+          interview_result: candidate?.interview_score ? `${candidate?.interview_score} / ${totalObtainableGrade}` : "Not Graded",
+        };
+      });
 
     res.status(200).json(formattedResponse);
   } catch (error) {

@@ -117,7 +117,7 @@ export interface IInterview {
   meetingLink: string;
   panelists: string[];
   invitation_letter: string;
-  candidates: { candidate: Types.ObjectId; scheduled_date_time?: { date: Date; start_time: string; end_time: string }; status?: "pending" | "confirmed" | "completed" | "canceled"; rating_scale?: Map<string, number> }[];
+  candidates: { candidate: Types.ObjectId; scheduled_date_time?: { date: Date; start_time: string; end_time: string }; interview_score: number; status?: "pending" | "confirmed" | "completed" | "canceled"; rating_scale?: Map<string, number> }[];
   stage: "set_rating_scale" | "set_interview" | "panelist_letter_invitation" | "panelist_invite_confirmation" | "applicants_invite";
 }
 

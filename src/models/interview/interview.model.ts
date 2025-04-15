@@ -26,6 +26,7 @@ const interviewSchema = new Schema<IInterview>(
           type: Object,
           default: {},
         },
+        interview_score: { type: Number, default: null },
         status: {
           type: String,
           enum: ["pending", "confirmed", "completed", "canceled"],
