@@ -145,7 +145,5 @@ export interface ITestSubmission {
 
 export interface IDocumentation {
   job: Types.ObjectId;
-  invitation_letter: string;
-  contract_agreement_file: string;
-  documents: Map<string, string>;
+  candidates: { candidate: Types.ObjectId; invitation_letter: string; contract_agreement_file: String; documents: Map<string, string> }[];
 }

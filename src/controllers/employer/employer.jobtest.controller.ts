@@ -377,7 +377,6 @@ const jobTestApplicantsInvite = async function (req: IUserRequest, res: Response
           message,
           status: NotificationStatus.UNREAD,
           type: NotificationType.MESSAGE,
-          readAt: notification.readAt,
           createdAt: notification.createdAt,
         });
 
