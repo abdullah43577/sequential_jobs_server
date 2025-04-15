@@ -28,26 +28,17 @@ const getJobsForDocumentation = async function (req: IUserRequest, res: Response
 
     if (!interviewJobs) return res.status(200).json([]);
 
-    const formattedResponse = await Promise.all(
-      interviewJobs.map(async data => {
-        const applicantIds = data.job.applicants.map(app => app.applicant);
-
-        const submission = await TestSubmission.findOne({ job: data.job._id, applicant: { $in: applicantIds } });
-
-        const correspondingApplicant = data.job.applicants.find(app => app.applicant.toString() === submission?.applicant.toString());
-
-        return {
-          job_title: data.job.job_title,
-          date_created: (data.job as any).createdAt,
-          no_of_applicants: data.job.applicants.length,
-          job_type: data.job.job_type,
-          employment_type: data.job.employment_type,
-          status: correspondingApplicant?.status,
-          application_test_cv_sorting_status: submission?.status,
-          action: "",
-        };
-      })
-    );
+    const formattedResponse = interviewJobs.map(data => {
+      return {
+        job_id: data.job._id,
+        job_title: data.job.job_title,
+        date_created: (data.job as any).createdAt,
+        no_of_applicants: data.job.applicants.length,
+        job_type: data.job.job_type,
+        employment_type: data.job.employment_type,
+        action: "",
+      };
+    });
 
     return res.status(200).json(formattedResponse);
   } catch (error) {
@@ -64,11 +55,12 @@ const getQualifiedCandidates = async function (req: IUserRequest, res: Response)
     const interview = await InterviewMgmt.findOne({ job: job_id })
       .select("job candidates")
       .populate<{
-        job: { applicants: { _id: string; applicant: string; date_of_application: string; hired: string }[]; job_title: string };
+        job: { applicants: { _id: string; applicant: Types.ObjectId; date_of_application: Date }[]; job_title: string };
+
         candidates: { _id: string; first_name: string; last_name: string; resume: string }[];
       }>([
-        { path: "candidates", select: "first_name last_name resume" },
         { path: "job", select: "job_title applicants" },
+        { path: "candidates", select: "first_name last_name resume" },
       ])
       .lean();
 
@@ -81,10 +73,10 @@ const getQualifiedCandidates = async function (req: IUserRequest, res: Response)
 
       return {
         full_name: `${candidate.first_name} ${candidate.last_name}`,
-        date_of_application: application ? application.date_of_application : null,
+        date_of_application: application?.date_of_application,
         role_applied_for: job.job_title,
-        resume: candidate.resume || null,
-        hired: application ? application.hired : false,
+        resume: candidate.resume,
+        // hired: application ? application.hired : false,
       };
     });
 
