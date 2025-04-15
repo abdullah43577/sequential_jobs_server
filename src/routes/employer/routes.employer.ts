@@ -15,7 +15,7 @@ import {
   handleInviteCandidates,
   handleInvitePanelists,
 } from "../../controllers/employer/employer.interview.controller";
-import { getQualifiedCandidates, hireCandidate } from "../../controllers/employer/employer.documentation.controller";
+import { getJobsForDocumentation, getQualifiedCandidates, hireCandidate } from "../../controllers/employer/employer.documentation.controller";
 
 const companyRouter = Router();
 
@@ -56,6 +56,7 @@ companyRouter.put("/interview/invite_candidates/:job_id", validateAccessToken, v
 companyRouter.put("/interview/grade_candidate", validateAccessToken, validateCompanySession, handleGradeCandidates);
 
 //* DOCUMENTATION MANAGEMENT
+companyRouter.get("/documentation/get_jobs", validateAccessToken, validateCompanySession, getJobsForDocumentation);
 companyRouter.get("/documentation/get_qualified_candidates", validateAccessToken, validateCompanySession, getQualifiedCandidates);
 companyRouter.post("/documentation/hire_candidate", validateAccessToken, validateCompanySession, upload.single("contract_agreement_file"), hireCandidate);
 

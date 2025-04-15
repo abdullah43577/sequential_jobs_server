@@ -8,6 +8,7 @@ import { transportMail } from "../../utils/nodemailer.ts/transportMail";
 import { EmailTypes, generateProfessionalEmail } from "../../utils/nodemailer.ts/email-templates/generateProfessionalEmail";
 import User from "../../models/users.model";
 import { getSocketIO } from "../../helper/socket";
+import Job from "../../models/jobs/jobs.model";
 
 //* INTERVIEW MANAGEMENT
 const getJobsWithoutScheduledInterview = async function (req: IUserRequest, res: Response) {
@@ -227,6 +228,16 @@ const scheduleInterview = async function (req: IUserRequest, res: Response) {
       subject: `Interview Confirmation: ${interview.job.job_title} at ${interview.employer.organisation_name}`,
       message: candidateHtml,
     });
+
+    //* update job status
+    await Job.findOneAndUpdate(
+      { _id: job_id, "applicants.applicant": userId },
+      {
+        $set: {
+          "applicants.$.status": "interview_scheduled",
+        },
+      }
+    );
 
     res.status(200).json({
       message: "Interview scheduled successfully!",
