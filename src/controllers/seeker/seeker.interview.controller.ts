@@ -2,6 +2,7 @@ import { Response } from "express";
 import { handleErrors } from "../../helper/handleErrors";
 import { IUserRequest } from "../../interface";
 import InterviewMgmt from "../../models/interview/interview.model";
+import { scheduleInterviewSchema } from "../../utils/types/seekerValidatorSchema";
 
 //* INTERVIEW MANAGEMENT
 const getJobsWithoutScheduledInterview = async function (req: IUserRequest, res: Response) {
@@ -77,7 +78,7 @@ const getInterviewInfo = async function (req: IUserRequest, res: Response) {
 const scheduleInterview = async function (req: IUserRequest, res: Response) {
   try {
     const { userId } = req;
-    const { scheduled_date_time, job_id } = req.body;
+    const { scheduled_date_time, job_id } = scheduleInterviewSchema.parse(req.body);
 
     const interview = await InterviewMgmt.findOneAndUpdate(
       { job: job_id, "candidates.candidate": userId },

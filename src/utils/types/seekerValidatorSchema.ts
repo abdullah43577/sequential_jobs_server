@@ -17,3 +17,8 @@ export const JobTestSubmissionSchema = ApplicationTestSubmissionSchema.omit({
 }).extend({
   job_test_id: z.string({ message: "Job ID is required" }),
 });
+
+export const scheduleInterviewSchema = z.object({
+  scheduled_date_time: z.object({ date: z.string(), start_time: z.string(), end_time: z.string() }),
+  job_id: z.string(),
+});
