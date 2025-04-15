@@ -267,7 +267,14 @@ const handleInviteCandidates = async function (req: IUserRequest, res: Response)
 
     if (!candidate_ids || !Array.isArray(candidate_ids)) return res.status(400).json({ message: "Candidate IDs is required and must be of an array type" });
 
-    const interview = await InterviewMgmt.findOne({ job: job_id }).populate<{ job: { _id: string; job_title: string; employer: { organisation_name: string } } }>("job", "employer job_title").populate("job.employer", "organisation_name");
+    const interview = await InterviewMgmt.findOne({ job: job_id }).populate<{ job: { _id: string; job_title: string; employer: { organisation_name: string } } }>({
+      path: "job",
+      select: "employer job_title",
+      populate: {
+        path: "employer",
+        select: "organisation_name",
+      },
+    });
     if (!interview) return res.status(400).json({ message: "Interview not found!" });
 
     const uniqueCandidates = candidate_ids.filter(id => !interview.candidates.some(c => c.candidate.toString() === id.toString()));
