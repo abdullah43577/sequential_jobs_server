@@ -7,6 +7,7 @@ import InterviewMgmt from "../../models/interview/interview.model";
 const getJobsWithoutScheduledInterview = async function (req: IUserRequest, res: Response) {
   try {
     const { userId } = req;
+    console.log(userId, "user id");
     const interviews = await InterviewMgmt.find({
       "candidates.candidate": userId,
       "candidates.scheduled_date_time": { $exists: false },
@@ -22,19 +23,25 @@ const getJobsWithoutScheduledInterview = async function (req: IUserRequest, res:
         };
       }>({
         path: "job",
-        select: "job_title createdAt job_type employer", // ✅ Select fields from `job`
+        select: "job_title createdAt job_type employer",
         populate: {
           path: "employer",
-          select: "organisation_name", // ✅ Select fields from `employer`
+          select: "organisation_name",
         },
       });
+
+    console.log(interviews, "interviews");
 
     if (!interviews) return res.status(404).json({ message: "No Jobs Matching criteria found!" });
 
     const jobs = interviews.map(interview => {
+      console.log(interview, "interview");
       const candidate = interview.candidates.find(c => c.candidate.toString() === userId?.toString());
+      console.log(candidate, "candidate here");
 
       const is_interview_scheduled = candidate?.scheduled_date_time && Object.keys(candidate.scheduled_date_time).length > 0;
+
+      console.log(is_interview_scheduled, "is interview scheduled");
 
       return { job_id: interview.job._id, company_name: interview.job.employer.organisation_name, job_title: interview.job.job_title, created_at: interview.job.createdAt, job_type: interview.job.job_type, is_interview_scheduled };
     });
