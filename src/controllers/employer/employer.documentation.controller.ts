@@ -11,30 +11,37 @@ import fs from "fs";
 import path from "path";
 import User from "../../models/users.model";
 import TestSubmission from "../../models/jobs/testsubmission.model";
+import { Types } from "mongoose";
 
 //* DOCUMENTATION MANAGEMENT
 const getJobsForDocumentation = async function (req: IUserRequest, res: Response) {
   try {
     const { userId } = req;
 
-    const jobs = await Job.find({ employer: userId }).select("job_title createdAt applicants job_type employment_type").lean();
+    const interviewJobs = await InterviewMgmt.find({ employer: userId, "candidates.0": { $exists: true } })
+      .select("job")
+      .populate<{ job: { _id: string; job_title: string; createdAt: Date; applicants: { applicant: Types.ObjectId; date_of_application: Date; status: string }[]; job_type: string; employment_type: string } }>(
+        "job",
+        "job_title createdAt applicants job_type employment_type"
+      )
+      .lean();
 
-    if (!jobs) return res.status(200).json([]);
+    if (!interviewJobs) return res.status(200).json([]);
 
     const formattedResponse = await Promise.all(
-      jobs.map(async job => {
-        const applicantIds = job.applicants.map(app => app.applicant);
+      interviewJobs.map(async data => {
+        const applicantIds = data.job.applicants.map(app => app.applicant);
 
-        const submission = await TestSubmission.findOne({ job: job._id, applicant: { $in: applicantIds } });
+        const submission = await TestSubmission.findOne({ job: data.job._id, applicant: { $in: applicantIds } });
 
-        const correspondingApplicant = job.applicants.find(app => app.applicant.toString() === submission?.applicant.toString());
+        const correspondingApplicant = data.job.applicants.find(app => app.applicant.toString() === submission?.applicant.toString());
 
         return {
-          job_title: job.job_title,
-          date_created: (job as any).createdAt,
-          no_of_applicants: job.applicants.length,
-          job_type: job.job_type,
-          employment_type: job.employment_type,
+          job_title: data.job.job_title,
+          date_created: (data.job as any).createdAt,
+          no_of_applicants: data.job.applicants.length,
+          job_type: data.job.job_type,
+          employment_type: data.job.employment_type,
           status: correspondingApplicant?.status,
           application_test_cv_sorting_status: submission?.status,
           action: "",
