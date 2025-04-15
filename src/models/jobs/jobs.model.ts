@@ -22,7 +22,7 @@ const jobSchema = new Schema<IJob>(
       {
         applicant: { type: Schema.Types.ObjectId, ref: "User", default: [] },
         date_of_application: { type: Date, default: Date.now },
-        status: { type: String, enum: ["applied", "shortlisted", "interview_scheduled", "interview_completed", "offer_sent", "hired", "rejected"], default: "applied" },
+        status: { type: String, enum: ["applied", "shortlisted", "interview_invite_sent", "interview_scheduled", "interview_completed", "offer_sent", "hired", "rejected"], default: "applied" },
       },
     ],
     application_test: { type: Schema.Types.ObjectId, ref: "Test", default: null },

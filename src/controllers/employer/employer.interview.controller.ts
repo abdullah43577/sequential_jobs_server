@@ -248,19 +248,6 @@ const handleGetCandidates = async function (req: IUserRequest, res: Response) {
     const applicationTestCandidates = formatResponse(applicationTestOnlyCandidates);
     const jobTestCandidates = formatResponse(jobTestOnlyCandidates);
 
-    // const formattedResponse = testSubmissions.map(sub => {
-    //   const applicantId = sub.applicant._id.toString();
-    //   const dataEntry = sub.job.applicants.find(app => app.applicant.toString() === applicantId);
-
-    //   return {
-    //     candidate_name: `${sub.applicant.first_name} ${sub.applicant.last_name}`,
-    //     date_of_application: dataEntry?.date_of_application,
-    //     role_applied_for: sub.job.job_title,
-    //     resume: sub.applicant.resume,
-    //     status: dataEntry?.status,
-    //   };
-    // });
-
     res.status(200).json({ applicationTestCandidates, jobTestCandidates });
   } catch (error) {
     handleErrors({ res, error });
@@ -315,6 +302,16 @@ const handleInviteCandidates = async function (req: IUserRequest, res: Response)
         });
 
         interview.candidates.push({ candidate: id });
+
+        //* update candidate status
+        await Job.findOneAndUpdate(
+          { _id: job_id, "applicants.applicant": id },
+          {
+            $set: {
+              "applicants.$.status": "interview_invite_sent",
+            },
+          }
+        );
       } catch (error) {
         console.error(`Error inviting candidate ${id}:`, error);
       }

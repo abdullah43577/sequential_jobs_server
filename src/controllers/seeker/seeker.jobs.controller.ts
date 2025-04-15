@@ -204,6 +204,18 @@ const submitApplicationTest = async function (req: IUserRequest, res: Response) 
       score: totalScore,
     });
 
+    const candidateStatus = submission.status === "suitable" ? "shortlisted" : "applied";
+
+    //* update candidate status
+    await Job.findOneAndUpdate(
+      { _id: job_id, "applicants.applicant": userId },
+      {
+        $set: {
+          "applicants.$.status": candidateStatus,
+        },
+      }
+    );
+
     res.status(201).json({ message: "Test submitted successfully", submission });
   } catch (error) {
     handleErrors({ res, error });
