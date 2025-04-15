@@ -12,7 +12,7 @@ const getJobsWithoutScheduledInterview = async function (req: IUserRequest, res:
       "candidates.candidate": userId,
       "candidates.scheduled_date_time": { $exists: false },
     })
-      .select("job")
+      .select("job candidates")
       .populate<{
         job: {
           _id: string;
