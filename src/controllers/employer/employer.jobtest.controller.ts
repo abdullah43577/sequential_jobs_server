@@ -322,68 +322,72 @@ const jobTestApplicantsInvite = async function (req: IUserRequest, res: Response
 
     // Send invitations
     const emailPromises = newInvites.map(async invite => {
-      const user = await User.findById(invite.user);
-      if (!user) return null;
+      try {
+        const user = await User.findById(invite.user);
+        if (!user) return null;
 
-      // Generate a unique test link (you might want to generate a more secure token)
-      const testLink = `http://localhost:8080/job-test/${test._id}`;
+        // Generate a unique test link (you might want to generate a more secure token)
+        const testLink = `http://localhost:8080/job-test/${test._id}`;
 
-      const emailTemplateData = {
-        type: "test" as EmailTypes,
-        title: "Job Assessment Invitation",
-        recipientName: `${user.first_name} ${user.last_name}`,
-        message: `You have been invited to complete a job assessment for the ${test.job?.job_title} position. 
+        const emailTemplateData = {
+          type: "test" as EmailTypes,
+          title: "Job Assessment Invitation",
+          recipientName: `${user.first_name} ${user.last_name}`,
+          message: `You have been invited to complete a job assessment for the ${test.job?.job_title} position. 
         Please click the button below to start the test. This invitation will expire on ${expirationDate.toLocaleDateString()}. \n\n ${jobTest.invitation_letter}`,
-        buttonText: "Start Assessment",
-        buttonAction: testLink,
-        additionalDetails: {
-          date: expirationDate.toLocaleDateString(),
-          time: "Open Until " + expirationDate.toLocaleTimeString(),
-          organizerName: test.employer?.organisation_name,
-        },
-      };
+          buttonText: "Start Assessment",
+          buttonAction: testLink,
+          additionalDetails: {
+            date: expirationDate.toLocaleDateString(),
+            time: "Open Until " + expirationDate.toLocaleTimeString(),
+            organizerName: test.employer?.organisation_name,
+          },
+        };
 
-      // Generate email HTML
-      const { html } = generateProfessionalEmail(emailTemplateData);
+        // Generate email HTML
+        const { html } = generateProfessionalEmail(emailTemplateData);
 
-      const subject = `Job Assessment Invitation - ${(test.job as any).job_title}`;
+        const subject = `Job Assessment Invitation - ${(test.job as any).job_title}`;
 
-      // Send email
-      await transportMail({
-        email: user.email,
-        subject,
-        message: html,
-      });
+        // Send email
+        await transportMail({
+          email: user.email,
+          subject,
+          message: html,
+        });
 
-      const message = `${test.employer.organisation_name} as invited you to take a job test.`;
+        const message = `${test.employer.organisation_name} as invited you to take a job test.`;
 
-      //* notification
-      const notification = await Notification.create({
-        recipient: user._id,
-        sender: userId,
-        type: NotificationType.MESSAGE,
-        title: subject,
-        message,
-        status: NotificationStatus.UNREAD,
-      });
+        //* notification
+        const notification = await Notification.create({
+          recipient: user._id,
+          sender: userId,
+          type: NotificationType.MESSAGE,
+          title: subject,
+          message,
+          status: NotificationStatus.UNREAD,
+        });
 
-      //* socket instance
-      const io = getSocketIO();
+        //* socket instance
+        const io = getSocketIO();
 
-      io.to(user._id.toString()).emit("notification", {
-        id: notification._id,
-        title: subject,
-        message,
-        status: NotificationStatus.UNREAD,
-        type: NotificationType.MESSAGE,
-        readAt: notification.readAt,
-        createdAt: notification.createdAt,
-      });
+        io.to(user._id.toString()).emit("notification", {
+          id: notification._id,
+          title: subject,
+          message,
+          status: NotificationStatus.UNREAD,
+          type: NotificationType.MESSAGE,
+          readAt: notification.readAt,
+          createdAt: notification.createdAt,
+        });
 
-      jobTest.stage = "candidate_invite";
-      jobTest.candidates_invited.push(user._id);
-      await jobTest.save();
-      return;
+        jobTest.stage = "candidate_invite";
+        jobTest.candidates_invited.push(user._id);
+        await jobTest.save();
+        return;
+      } catch (error) {
+        console.error(`Error inviting candidate ${invite.user}:`, error);
+      }
     });
 
     // Wait for all emails to be sent

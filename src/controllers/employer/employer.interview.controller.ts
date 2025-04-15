@@ -12,6 +12,8 @@ import { transportMail } from "../../utils/nodemailer.ts/transportMail";
 import crypto from "crypto";
 import TestSubmission from "../../models/jobs/testsubmission.model";
 import { Types } from "mongoose";
+import Notification, { NotificationStatus, NotificationType } from "../../models/notifications.model";
+import { getSocketIO } from "../../helper/socket";
 
 //* INTERVIEW MANAGEMENT
 const getJobsForInterviews = async function (req: IUserRequest, res: Response) {
@@ -257,6 +259,7 @@ const handleGetCandidates = async function (req: IUserRequest, res: Response) {
 
 const handleInviteCandidates = async function (req: IUserRequest, res: Response) {
   try {
+    const { userId } = req;
     const { job_id } = req.params;
     if (!job_id) return res.status(400).json({ message: "Job ID is required" });
 
@@ -264,10 +267,10 @@ const handleInviteCandidates = async function (req: IUserRequest, res: Response)
 
     if (!candidate_ids || !Array.isArray(candidate_ids)) return res.status(400).json({ message: "Candidate IDs is required and must be of an array type" });
 
-    const interview = await InterviewMgmt.findOne({ job: job_id }).populate<{ job: { _id: string; job_title: string } }>("job", "job_title");
+    const interview = await InterviewMgmt.findOne({ job: job_id }).populate<{ job: { _id: string; job_title: string; employer: { organisation_name: string } } }>("job", "employer job_title").populate("job.employer", "organisation_name");
     if (!interview) return res.status(400).json({ message: "Interview not found!" });
 
-    const uniqueCandidates = candidate_ids.filter(id => !interview.candidates.includes(id));
+    const uniqueCandidates = candidate_ids.filter(id => !interview.candidates.some(c => c.candidate.toString() === id.toString()));
 
     const promises = uniqueCandidates.map(async id => {
       try {
@@ -313,6 +316,32 @@ const handleInviteCandidates = async function (req: IUserRequest, res: Response)
             },
           }
         );
+
+        const message = `${interview.job.employer.organisation_name} as invited you for an interview.`;
+
+        //* notification
+        const notification = await Notification.create({
+          recipient: id,
+          sender: userId,
+          type: NotificationType.MESSAGE,
+          title: subject,
+          message,
+          status: NotificationStatus.UNREAD,
+        });
+
+        //* socket instance
+        const io = getSocketIO();
+
+        io.to(id.toString()).emit("notification", {
+          id: notification._id,
+          title: subject,
+          message,
+          status: NotificationStatus.UNREAD,
+          type: NotificationType.MESSAGE,
+          readAt: notification.readAt,
+          createdAt: notification.createdAt,
+        });
+        return;
       } catch (error) {
         console.error(`Error inviting candidate ${id}:`, error);
       }
