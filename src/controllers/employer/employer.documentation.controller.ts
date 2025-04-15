@@ -57,14 +57,15 @@ const getQualifiedCandidates = async function (req: IUserRequest, res: Response)
 
     const interview = await InterviewMgmt.findOne({ job: job_id })
       .select("job candidates")
-      .populate<{
-        job: { applicants: { _id: string; applicant: Types.ObjectId; date_of_application: Date; status: string }[]; job_title: string };
-
-        candidates: { _id: string; first_name: string; last_name: string; resume: string }[];
-      }>([
-        { path: "job", select: "job_title applicants" },
-        { path: "candidates", select: "first_name last_name resume" },
-      ])
+      .populate<{ job: { job_title: string; applicants: { _id: string; applicant: { _id: string }; date_of_application: Date; status: string }[] } }>({
+        path: "job",
+        select: "job_title applicants",
+        populate: {
+          path: "applicants.applicant",
+          select: "_id",
+        },
+      })
+      .populate<{ candidates: { candidate: { _id: string; first_name: string; last_name: string; resume: string } }[] }>("candidates.candidate", "first_name last_name resume")
       .lean();
 
     if (!interview) return res.status(404).json({ message: "No interview found for this job" });
@@ -72,13 +73,13 @@ const getQualifiedCandidates = async function (req: IUserRequest, res: Response)
     const { job, candidates } = interview;
 
     const qualifiedCandidates = candidates.map(candidate => {
-      const application = job.applicants.find(app => app.applicant.toString() === candidate._id.toString());
+      const application = job.applicants.find(app => app.applicant._id.toString() === candidate.candidate._id.toString());
 
       return {
-        full_name: `${candidate.first_name} ${candidate.last_name}`,
+        full_name: `${candidate.candidate.first_name} ${candidate.candidate.last_name}`,
         date_of_application: application?.date_of_application,
         role_applied_for: job.job_title,
-        resume: candidate.resume,
+        resume: candidate.candidate.resume,
         hired: application?.status === "hired",
       };
     });
