@@ -78,8 +78,8 @@ const submitDocuments = async function (req: IUserRequest, res: Response) {
     }
 
     // Save file URLs in the `documents` field
-    documentation.documents = uploadedFiles;
-    await documentation.save();
+    // documentation.documents = uploadedFiles;
+    // await documentation.save();
 
     res.status(200).json({ message: "Documents Submitted Successfully" });
   } catch (error) {
