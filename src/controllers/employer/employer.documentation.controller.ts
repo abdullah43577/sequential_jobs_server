@@ -81,6 +81,7 @@ const getQualifiedCandidates = async function (req: IUserRequest, res: Response)
       const application = job.applicants.find(app => app.applicant._id.toString() === candidate.candidate._id.toString());
 
       return {
+        candidate_id: candidate.candidate._id,
         full_name: `${candidate.candidate.first_name} ${candidate.candidate.last_name}`,
         date_of_application: application?.date_of_application,
         role_applied_for: job.job_title,
