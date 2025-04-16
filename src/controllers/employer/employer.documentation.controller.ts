@@ -102,7 +102,10 @@ const hireCandidate = async function (req: IUserRequest, res: Response) {
   try {
     const { userId } = req;
     const { job_id } = req.params;
-    const { invitation_letter, documents, candidate_ids } = req.body;
+    // const { invitation_letter, documents, candidate_ids } = req.body;
+    const invitation_letter = req.body.invitation_letter;
+    const documents = JSON.parse(req.body.documents || "{}");
+    const candidate_ids = JSON.parse(req.body.candidate_ids || "[]");
     const documentFile = req.file;
 
     if (!invitation_letter || Object.keys(documents).length === 0) return res.status(400).json({ message: "Invitation Letter and Document Specifications are required" });
