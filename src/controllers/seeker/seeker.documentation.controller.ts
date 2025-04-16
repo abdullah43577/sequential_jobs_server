@@ -29,6 +29,8 @@ const getJobsFormatForDocumentation = async function (req: IUserRequest, res: Re
       };
     });
 
+    console.log(formattedResponse, "formatted response");
+
     res.status(200).json(formattedResponse);
   } catch (error) {
     handleErrors({ res, error });
