@@ -58,7 +58,7 @@ companyRouter.put("/interview/grade_candidate", validateAccessToken, validateCom
 //* DOCUMENTATION MANAGEMENT
 companyRouter.get("/documentation/get_jobs", validateAccessToken, validateCompanySession, getJobsForDocumentation);
 companyRouter.get("/documentation/get_qualified_candidates", validateAccessToken, validateCompanySession, getQualifiedCandidates);
-companyRouter.post("/documentation/hire_candidate", validateAccessToken, validateCompanySession, upload.single("contract_agreement_file"), hireCandidate);
+companyRouter.post("/documentation/hire_candidate/:job_id", validateAccessToken, validateCompanySession, upload.single("contract_agreement_file"), hireCandidate);
 companyRouter.get("/documentation/get_candidates_with_offers", validateAccessToken, validateCompanySession, getCandidatesWithOffers);
 companyRouter.get("/documentation/get_candidates_with_accepted_offer", validateAccessToken, validateCompanySession, getCandidatesWithAcceptedOffer);
 
