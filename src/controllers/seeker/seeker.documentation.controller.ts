@@ -12,7 +12,7 @@ const getJobsFormatForDocumentation = async function (req: IUserRequest, res: Re
   try {
     const { userId } = req;
 
-    const jobs = await Job.find({ "applicants.applicant": userId, "applicants.status": "offer_sent" }).select("employer job_title applicants").populate<{ employer: { organisation_name: string } }>("employer");
+    const jobs = await Job.find({ "applicants.applicant": userId, "applicants.status": "offer_sent" }).select("job_type employment_type employer job_title applicants").populate<{ employer: { organisation_name: string } }>("employer");
     if (!jobs) return res.status(404).json({ message: "No Job Applications found" });
 
     const formattedResponse = jobs.map(job => {
