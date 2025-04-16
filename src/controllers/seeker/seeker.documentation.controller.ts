@@ -12,10 +12,24 @@ const getJobsFormatForDocumentation = async function (req: IUserRequest, res: Re
   try {
     const { userId } = req;
 
-    const jobs = await Job.find({ "applicants.applicant": userId }).select("employer job_title applicants").populate<{ employer: { organisation_name: string } }>("employer");
+    const jobs = await Job.find({ "applicants.applicant": userId, "applicants.status": "offer_sent" }).select("employer job_title applicants").populate<{ employer: { organisation_name: string } }>("employer");
     if (!jobs) return res.status(404).json({ message: "No Job Applications found" });
 
-    res.status(200).json(jobs);
+    const formattedResponse = jobs.map(job => {
+      const dataEntry = job.applicants.find(j => j.applicant.toString() === userId);
+
+      return {
+        job_id: job._id,
+        job_title: job.job_title,
+        company: job.employer.organisation_name,
+        date_of_application: dataEntry?.date_of_application,
+        job_type: job.job_type,
+        employment_type: job.employment_type,
+        status: dataEntry?.status,
+      };
+    });
+
+    res.status(200).json(formattedResponse);
   } catch (error) {
     handleErrors({ res, error });
   }
@@ -31,10 +45,7 @@ const updateApplicantStatus = async function (req: IUserRequest, res: Response) 
 
     if (!job) return res.status(404).json({ message: "Job not found!" });
 
-    const documentation = await Documentation.findOne({ job: job_id }).select("documents").lean();
-    if (!documentation) return res.status(404).json({ message: "Documents Record not found!" });
-
-    res.status(200).json({ job, documentation });
+    res.status(200).json({ message: "Applicant Status Updated" });
   } catch (error) {
     handleErrors({ res, error });
   }
