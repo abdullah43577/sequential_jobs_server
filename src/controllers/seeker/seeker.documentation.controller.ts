@@ -15,19 +15,30 @@ const getJobsFormatForDocumentation = async function (req: IUserRequest, res: Re
     const jobs = await Job.find({ "applicants.applicant": userId, "applicants.status": "offer_sent" }).select("job_type employment_type employer job_title applicants").populate<{ employer: { organisation_name: string } }>("employer");
     if (!jobs) return res.status(404).json({ message: "No Job Applications found" });
 
-    const formattedResponse = jobs.map(job => {
-      const dataEntry = job.applicants.find(j => j.applicant.toString() === userId);
+    const formattedResponse = await Promise.all(
+      jobs.map(async job => {
+        const dataEntry = job.applicants.find(j => j.applicant.toString() === userId);
 
-      return {
-        job_id: job._id,
-        job_title: job.job_title,
-        company: job.employer.organisation_name,
-        date_of_application: dataEntry?.date_of_application,
-        job_type: job.job_type,
-        employment_type: job.employment_type,
-        status: dataEntry?.status,
-      };
-    });
+        const documentation = await Documentation.findOne({ job: job._id });
+
+        const docEntry = documentation?.candidates.find(cd => cd.candidate.toString() === userId);
+
+        if (!docEntry) return;
+
+        const has_submitted_documents = Object.values(docEntry.documents).length > 0;
+
+        return {
+          job_id: job._id,
+          job_title: job.job_title,
+          company: job.employer.organisation_name,
+          date_of_application: dataEntry?.date_of_application,
+          job_type: job.job_type,
+          employment_type: job.employment_type,
+          status: dataEntry?.status,
+          has_submitted_documents,
+        };
+      })
+    );
 
     console.log(formattedResponse, "formatted response");
 
@@ -41,7 +52,10 @@ const updateApplicantStatus = async function (req: IUserRequest, res: Response) 
   try {
     const { userId } = req;
     const { applicant_status, job_id } = req.body;
+
     if (!applicant_status) return res.status(404).json({ message: "Applicant status is required" });
+
+    if (applicant_status !== "hired" || applicant_status !== "rejected") return res.status(400).json({ message: "Applicant Status can either be hired or rejected" });
 
     const job = await Job.findOneAndUpdate({ _id: job_id, "applicants.applicant": userId }, { $set: { "applicants.$.status": applicant_status } }, { returnDocument: "after" });
 
