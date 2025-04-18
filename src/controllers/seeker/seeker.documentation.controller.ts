@@ -6,6 +6,7 @@ import Documentation from "../../models/documentation.model";
 import fs from "fs";
 import path from "path";
 import cloudinary from "../../utils/cloudinaryConfig";
+import { Readable } from "stream";
 
 //* DOCUMENTATION MANAGEMENT
 const getJobsFormatForDocumentation = async function (req: IUserRequest, res: Response) {
@@ -56,7 +57,7 @@ const updateApplicantStatus = async function (req: IUserRequest, res: Response) 
 
     if (!applicant_status) return res.status(404).json({ message: "Applicant status is required" });
 
-    if (applicant_status !== "hired" || applicant_status !== "rejected") return res.status(400).json({ message: "Applicant Status can either be hired or rejected" });
+    if (applicant_status !== "hired" && applicant_status !== "rejected") return res.status(400).json({ message: "Applicant Status can either be hired or rejected" });
 
     const job = await Job.findOneAndUpdate({ _id: job_id, "applicants.applicant": userId }, { $set: { "applicants.$.status": applicant_status } }, { returnDocument: "after" });
 
@@ -71,45 +72,58 @@ const updateApplicantStatus = async function (req: IUserRequest, res: Response) 
 const submitDocuments = async function (req: IUserRequest, res: Response) {
   try {
     const documents = req.files as Express.Multer.File[];
-    const { job_id } = req.body;
+    const { job_id, fieldKeys, candidate_id } = req.body;
 
     if (!documents || documents.length === 0) {
       return res.status(400).json({ message: "No files uploaded" });
     }
 
-    if (!job_id) return res.status(404).json({ message: "Job ID is required" });
+    if (!job_id || !fieldKeys || !candidate_id) {
+      return res.status(400).json({ message: "Job ID, Candidate ID, and Field Keys are required" });
+    }
 
     const documentation = await Documentation.findOne({ job: job_id });
-    if (!documentation) return res.status(404).json({ message: "Documentation with specified ID not found" });
+    if (!documentation) return res.status(404).json({ message: "Documentation not found" });
 
-    const uploadedFiles: Map<string, string> = new Map();
+    const fieldKeyList: string[] = JSON.parse(fieldKeys);
 
-    // Upload files to Cloudinary and store URLs
-    for (const file of documents) {
-      const filePath = path.join(__dirname, "../../uploads", file.filename);
+    const uploadedDocs: Map<string, string> = new Map();
 
-      if (!fs.existsSync(filePath)) {
-        return res.status(500).json({ error: `File not found: ${file.filename}` });
-      }
+    for (let i = 0; i < documents.length; i++) {
+      const file = documents[i];
+      const key = fieldKeyList[i];
 
-      const response = await cloudinary.uploader.upload(filePath, {
-        folder: `documents/${documentation._id}`,
-        resource_type: "auto",
-      });
+      await new Promise<void>((resolve, reject) => {
+        const uploadStream = cloudinary.uploader.upload_stream(
+          {
+            folder: `documents/${job_id}/${candidate_id}`,
+            resource_type: "auto",
+          },
+          async (error, result) => {
+            if (error || !result?.secure_url) return reject(error || new Error("Upload failed"));
+            uploadedDocs.set(key, result.secure_url);
+            resolve();
+          }
+        );
 
-      uploadedFiles.set(file.originalname, response.secure_url);
-
-      // ✅ Delete local file after successful upload
-      fs.unlink(filePath, err => {
-        if (err) console.error("Error deleting file:", err);
+        const bufferStream = new Readable();
+        bufferStream.push(file.buffer);
+        bufferStream.push(null);
+        bufferStream.pipe(uploadStream);
       });
     }
 
-    // Save file URLs in the `documents` field
-    // documentation.documents = uploadedFiles;
-    // await documentation.save();
+    // Find candidate entry and update
+    const candidateEntry = documentation.candidates.find(c => c.candidate.toString() === candidate_id);
+    if (!candidateEntry) return res.status(404).json({ message: "Candidate not found in documentation" });
 
-    res.status(200).json({ message: "Documents Submitted Successfully" });
+    uploadedDocs.forEach((url, key) => {
+      candidateEntry.documents.set(key, url);
+    });
+
+    await documentation.save();
+
+    res.status(200).json({ message: "Documents Submitted Successfully", uploaded: Object.fromEntries(uploadedDocs) });
   } catch (error) {
     handleErrors({ res, error });
   }
