@@ -12,14 +12,14 @@ const getJobsFormatForDocumentation = async function (req: IUserRequest, res: Re
   try {
     const { userId } = req;
 
-    const jobs = await Job.find({ "applicants.applicant": userId, "applicants.status": "offer_sent" }).select("job_type employment_type employer job_title applicants").populate<{ employer: { organisation_name: string } }>("employer");
+    const jobs = await Job.find({ "applicants.applicant": userId, "applicants.status": "offer_sent" }).select("job_type employment_type employer job_title applicants").populate<{ employer: { organisation_name: string } }>("employer").lean();
     if (!jobs) return res.status(404).json({ message: "No Job Applications found" });
 
     const formattedResponse = await Promise.all(
       jobs.map(async job => {
         const dataEntry = job.applicants.find(j => j.applicant.toString() === userId);
 
-        const documentation = await Documentation.findOne({ job: job._id });
+        const documentation = await Documentation.findOne({ job: job._id }).lean();
 
         const docEntry = documentation?.candidates.find(cd => cd.candidate.toString() === userId);
 
@@ -35,9 +35,9 @@ const getJobsFormatForDocumentation = async function (req: IUserRequest, res: Re
           job_type: job.job_type,
           employment_type: job.employment_type,
           status: dataEntry?.status,
-          offer_letter: docEntry.invitation_letter,
-          contract_agreement_file: docEntry.contract_agreement_file,
-          docs_to_be_uploaded: docEntry.documents,
+          offer_letter: docEntry?.invitation_letter,
+          contract_agreement_file: docEntry?.contract_agreement_file,
+          docs_to_be_uploaded: docEntry?.documents,
           has_submitted_documents,
         };
       })
