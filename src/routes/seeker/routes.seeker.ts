@@ -33,6 +33,6 @@ seekerRouter.post("/schedule_interview", validateAccessToken, validateSeekerSess
 //* DOCUMENTATION MANAGEMENT
 seekerRouter.get("/documentation/get_jobs", validateAccessToken, validateSeekerSession, getJobsFormatForDocumentation);
 seekerRouter.post("/documentation/update_status", validateAccessToken, validateSeekerSession, updateApplicantStatus);
-seekerRouter.post("/documentation/submit_documents", validateAccessToken, validateCompanySession, upload.array("documents"), submitDocuments);
+seekerRouter.post("/documentation/submit_documents", validateAccessToken, validateSeekerSession, upload.array("documents"), submitDocuments);
 
 export { seekerRouter };
