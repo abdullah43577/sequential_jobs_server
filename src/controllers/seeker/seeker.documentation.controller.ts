@@ -76,14 +76,16 @@ const updateApplicantStatus = async function (req: IUserRequest, res: Response) 
 
 const submitDocuments = async function (req: IUserRequest, res: Response) {
   try {
+    const { userId } = req;
+
     const documents = req.files as Express.Multer.File[];
-    const { job_id, fieldKeys, candidate_id } = req.body;
+    const { job_id, fieldKeys } = req.body;
 
     if (!documents || documents.length === 0) {
       return res.status(400).json({ message: "No files uploaded" });
     }
 
-    if (!job_id || !fieldKeys || !candidate_id) {
+    if (!job_id || !fieldKeys) {
       return res.status(400).json({ message: "Job ID, Candidate ID, and Field Keys are required" });
     }
 
@@ -101,7 +103,7 @@ const submitDocuments = async function (req: IUserRequest, res: Response) {
       await new Promise<void>((resolve, reject) => {
         const uploadStream = cloudinary.uploader.upload_stream(
           {
-            folder: `documents/${job_id}/${candidate_id}`,
+            folder: `documents/${job_id}/${userId}`,
             resource_type: "auto",
           },
           async (error, result) => {
@@ -119,7 +121,7 @@ const submitDocuments = async function (req: IUserRequest, res: Response) {
     }
 
     // Find candidate entry and update
-    const candidateEntry = documentation.candidates.find(c => c.candidate.toString() === candidate_id);
+    const candidateEntry = documentation.candidates.find(c => c.candidate.toString() === userId);
     if (!candidateEntry) return res.status(404).json({ message: "Candidate not found in documentation" });
 
     uploadedDocs.forEach((url, key) => {
@@ -128,7 +130,7 @@ const submitDocuments = async function (req: IUserRequest, res: Response) {
 
     await documentation.save();
 
-    res.status(200).json({ message: "Documents Submitted Successfully", uploaded: Object.fromEntries(uploadedDocs) });
+    res.status(200).json({ message: "Documents Submitted Successfully" });
   } catch (error) {
     handleErrors({ res, error });
   }
