@@ -25,7 +25,7 @@ const getJobsFormatForDocumentation = async function (req: IUserRequest, res: Re
 
         if (!docEntry) return;
 
-        const has_submitted_documents = Object.values(docEntry.documents).length > 0;
+        const has_submitted_documents = Object.values(docEntry.documents).some(val => val?.trim());
 
         return {
           job_id: job._id,
@@ -35,12 +35,13 @@ const getJobsFormatForDocumentation = async function (req: IUserRequest, res: Re
           job_type: job.job_type,
           employment_type: job.employment_type,
           status: dataEntry?.status,
+          offer_letter: docEntry.invitation_letter,
+          contract_agreement_file: docEntry.contract_agreement_file,
+          docs_to_be_uploaded: docEntry.documents,
           has_submitted_documents,
         };
       })
     );
-
-    console.log(formattedResponse, "formatted response");
 
     res.status(200).json(formattedResponse);
   } catch (error) {
