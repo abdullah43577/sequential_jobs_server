@@ -21,25 +21,24 @@ const getJobsForMedical = async function (req: IUserRequest, res: Response) {
       .populate<{ applicants: { applicant: { _id: string; first_name: string; last_name: string; resume: string }; date_of_application: string; status: string }[] }>({
         path: "applicants.applicant",
         select: "first_name last_name resume",
-      });
+      })
+      .lean();
 
     const jobIds = jobs.map(job => job._id);
 
     const medicals = await MedicalMgmt.find({ job: { $in: jobIds } });
 
-    const formattedResponse = jobs.map(job => {
+    const formattedResponse = jobs.flatMap(job => {
       const medicalData = medicals.find(medical => medical.job.toString() === job._id.toString());
 
-      job.applicants.map(app => {
-        return {
-          role_applied_for: job.job_title,
-          candidate_name: `${app.applicant.first_name} ${app.applicant.last_name}`,
-          date_of_application: app.date_of_application,
-          resume: app.applicant.resume,
-          decision: app.status,
-          has_created_medical: !!medicalData?.candidates?.length,
-        };
-      });
+      return job.applicants.map(app => ({
+        role_applied_for: job.job_title,
+        candidate_name: `${app.applicant.first_name} ${app.applicant.last_name}`,
+        date_of_application: app.date_of_application,
+        resume: app.applicant.resume,
+        decision: app.status,
+        has_created_medical: !!medicalData?.candidates?.length,
+      }));
     });
 
     res.status(200).json(formattedResponse);
