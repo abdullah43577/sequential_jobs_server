@@ -32,6 +32,7 @@ const getJobsForMedical = async function (req: IUserRequest, res: Response) {
       const medicalData = medicals.find(medical => medical.job.toString() === job._id.toString());
 
       return job.applicants.map(app => ({
+        job_id: job._id,
         role_applied_for: job.job_title,
         candidate_name: `${app.applicant.first_name} ${app.applicant.last_name}`,
         date_of_application: app.date_of_application,
