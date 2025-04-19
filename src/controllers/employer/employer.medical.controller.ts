@@ -23,7 +23,13 @@ const getJobsForMedical = async function (req: IUserRequest, res: Response) {
         select: "first_name last_name resume",
       });
 
+    const jobIds = jobs.map(job => job._id);
+
+    const medicals = await MedicalMgmt.find({ job: { $in: jobIds } });
+
     const formattedResponse = jobs.map(job => {
+      const medicalData = medicals.find(medical => medical.job.toString() === job._id.toString());
+
       job.applicants.map(app => {
         return {
           role_applied_for: job.job_title,
@@ -31,7 +37,7 @@ const getJobsForMedical = async function (req: IUserRequest, res: Response) {
           date_of_application: app.date_of_application,
           resume: app.applicant.resume,
           decision: app.status,
-          medical_schedule: "",
+          has_created_medical: !!medicalData?.candidates?.length,
         };
       });
     });
