@@ -98,7 +98,7 @@ const scheduleInterview = async function (req: IUserRequest, res: Response) {
         select: "first_name last_name email organisation_name",
       });
 
-    if (!interview) return res.status(400).json({ message: "Interview Record not found!" });
+    if (!interview) return res.status(404).json({ message: "Interview Record not found!" });
 
     // Get candidate information
     const candidate = await User.findById(userId).select("first_name last_name email");
@@ -154,7 +154,6 @@ const scheduleInterview = async function (req: IUserRequest, res: Response) {
       message: `${candidate.first_name} ${candidate.last_name} has scheduled an interview for the ${interview.job.job_title} position.`,
       status: NotificationStatus.UNREAD,
       type: NotificationType.INTERVIEW,
-      readAt: employerNotification.readAt,
       createdAt: employerNotification.createdAt,
     });
 

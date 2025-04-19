@@ -32,6 +32,7 @@ const interviewSchema = new Schema<IInterview>(
           enum: ["pending", "confirmed", "completed", "canceled"],
           default: "pending",
         },
+        //* used for grading the candidate in response to the rating scale at the top here
         rating_scale: { type: Map, of: Number, required: true, default: {} },
       },
     ],

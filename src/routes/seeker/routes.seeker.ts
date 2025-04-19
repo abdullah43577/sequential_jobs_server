@@ -6,6 +6,7 @@ import { uploadResume } from "../../controllers/seeker/seeker.resumemgmt.control
 import { getAllJobTests, getJobTestDetails, submitJobTest } from "../../controllers/seeker/seeker.testmgmt.controller";
 import { getInterviewInfo, getJobsWithoutScheduledInterview, getJobsWithScheduledInterview, scheduleInterview } from "../../controllers/seeker/seeker.interview.controller";
 import { getJobsFormatForDocumentation, submitDocuments, updateApplicantStatus } from "../../controllers/seeker/seeker.documentation.controller";
+import { getJobsWithMedicals, getMedicalInfo, scheduleMedical } from "../../controllers/seeker/seeker.medical.controller";
 
 const seekerRouter = Router();
 
@@ -34,5 +35,10 @@ seekerRouter.post("/schedule_interview", validateAccessToken, validateSeekerSess
 seekerRouter.get("/documentation/get_jobs", validateAccessToken, validateSeekerSession, getJobsFormatForDocumentation);
 seekerRouter.post("/documentation/update_status", validateAccessToken, validateSeekerSession, updateApplicantStatus);
 seekerRouter.post("/documentation/submit_documents", validateAccessToken, validateSeekerSession, upload.array("documents"), submitDocuments);
+
+//* MEDICAL MANAGEMENT
+seekerRouter.get("/medical/get_jobs", validateAccessToken, validateSeekerSession, getJobsWithMedicals);
+seekerRouter.get("/medical/get_info", validateAccessToken, validateSeekerSession, getMedicalInfo);
+seekerRouter.put("/medical/schedule_medical", validateAccessToken, validateCompanySession, scheduleMedical);
 
 export { seekerRouter };

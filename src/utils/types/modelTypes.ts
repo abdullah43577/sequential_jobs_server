@@ -147,3 +147,12 @@ export interface IDocumentation {
   job: Types.ObjectId;
   candidates: { candidate: Types.ObjectId; invitation_letter: string; contract_agreement_file: String; documents: Map<string, string> }[];
 }
+
+export interface IMedical {
+  job: Types.ObjectId;
+  employer: Types.ObjectId;
+  medical_time_slot: { date: Date; start_time: string; end_time: string; break_time: string; medical_duration: string; available_date_time: Record<string, any>[] };
+  address: string;
+  medicalists: string[];
+  candidates: { candidate: Types.ObjectId; scheduled_date_time: Record<string, any>; medical_documents: Map<string, string>; status: "pending" | "completed" | "canceled" }[];
+}

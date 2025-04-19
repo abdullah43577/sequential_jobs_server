@@ -14,6 +14,7 @@ import TestSubmission from "../../models/jobs/testsubmission.model";
 import { Types } from "mongoose";
 import Notification, { NotificationStatus, NotificationType } from "../../models/notifications.model";
 import { getSocketIO } from "../../helper/socket";
+import { guessNameFromEmail } from "../../utils/guessNameFromEmail";
 
 //* INTERVIEW MANAGEMENT
 const getJobsForInterviews = async function (req: IUserRequest, res: Response) {
@@ -49,11 +50,13 @@ const handleCreateInterview = async function (req: IUserRequest, res: Response) 
     const { job_id } = req.query;
     const data = EmployerInterviewManagementSchema.parse(req.body);
 
-    const interview = await InterviewMgmt.findOne({ job: job_id });
-    if (interview) return res.status(200).json({ message: "An interview record already exists in the database" });
+    if (!job_id) return res.status(200).json({ message: "Job ID is required" });
 
-    const existingJob = await Job.findById(job_id);
-    if (!existingJob) return res.status(404).json({ message: "Job not found!" });
+    const existingInterview = await InterviewMgmt.findOne({ job: job_id });
+    if (existingInterview) return res.status(200).json({ message: "An interview record already exists in the database" });
+
+    const job = await Job.findById(job_id);
+    if (!job) return res.status(404).json({ message: "Job not found!" });
 
     // Process each interview_time_slot and generate available slots dynamically
     const processedTimeSlots = data.interview_time_slot.map(slot => ({
@@ -155,7 +158,11 @@ const handleInvitePanelists = async function (req: IUserRequest, res: Response) 
           const tempPassword = crypto.randomBytes(8).toString("hex");
           const hashedPassword = await hashPassword(tempPassword);
 
+          const nameGuess = guessNameFromEmail(email);
+
           const newPanelist = await User.create({
+            first_name: nameGuess.firstName || "Guest",
+            last_name: "panelist",
             email,
             password: hashedPassword,
             role: "panelist",
@@ -167,7 +174,7 @@ const handleInvitePanelists = async function (req: IUserRequest, res: Response) 
           const emailData = {
             type: "invite" as const,
             title: "You've Been Invited as an Interview Panelist",
-            recipientName: email,
+            recipientName: nameGuess.firstName || "Guest",
             message: `You have been selected as a panelist for an upcoming interview for the position of ${interview.job.job_title}. Please click the button below to access the interview panel and review candidate details.
   ${newPanelist.isTemporary ? `\n\nTemporary Account Credentials:\nEmail: ${email}\nPassword: ${tempPassword}\n\nThis account will expire in 7 days. Please change your password after first login.` : ""} \n\n interview id ${interview._id}`,
             buttonText: "Access Interview Panel",

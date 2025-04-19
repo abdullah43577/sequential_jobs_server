@@ -5,7 +5,6 @@ import Job from "../../models/jobs/jobs.model";
 import JobTest from "../../models/assessment/jobtest.model";
 import Test from "../../models/jobs/test.model";
 import { handleErrors } from "../../helper/handleErrors";
-import Calendar from "../../models/assessment/calendar.model";
 import User from "../../models/users.model";
 import { EmailTypes, generateProfessionalEmail } from "../../utils/nodemailer.ts/email-templates/generateProfessionalEmail";
 import { transportMail } from "../../utils/nodemailer.ts/transportMail";
@@ -315,10 +314,6 @@ const jobTestApplicantsInvite = async function (req: IUserRequest, res: Response
       status: "pending",
       expiresAt: expirationDate,
     }));
-
-    if (newInvites.length > 0) {
-      await Calendar.insertMany(newInvites);
-    }
 
     // Send invitations
     const emailPromises = newInvites.map(async invite => {

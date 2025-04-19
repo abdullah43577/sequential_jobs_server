@@ -16,6 +16,7 @@ import {
   handleInvitePanelists,
 } from "../../controllers/employer/employer.interview.controller";
 import { getCandidatesWithAcceptedOffer, getCandidatesWithOffers, getJobsForDocumentation, getQualifiedCandidates, hireCandidate } from "../../controllers/employer/employer.documentation.controller";
+import { getJobsForMedical, setMedicalSchedule } from "../../controllers/employer/employer.medical.controller";
 
 const companyRouter = Router();
 
@@ -61,5 +62,9 @@ companyRouter.get("/documentation/get_qualified_candidates", validateAccessToken
 companyRouter.post("/documentation/hire_candidate/:job_id", validateAccessToken, validateCompanySession, upload.single("contract_agreement_file"), hireCandidate);
 companyRouter.get("/documentation/get_candidates_with_offers", validateAccessToken, validateCompanySession, getCandidatesWithOffers);
 companyRouter.get("/documentation/get_candidates_with_accepted_offer", validateAccessToken, validateCompanySession, getCandidatesWithAcceptedOffer);
+
+//* MEDICAL MANAGEMENT
+companyRouter.get("/medical/get_jobs", validateAccessToken, validateCompanySession, getJobsForMedical);
+companyRouter.post("/medical/set_medical_schedule", validateAccessToken, validateCompanySession, setMedicalSchedule);
 
 export { companyRouter };
