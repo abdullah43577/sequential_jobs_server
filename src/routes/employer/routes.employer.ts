@@ -16,7 +16,7 @@ import {
   handleInvitePanelists,
 } from "../../controllers/employer/employer.interview.controller";
 import { getCandidatesWithAcceptedOffer, getCandidatesWithOffers, getJobsForDocumentation, getQualifiedCandidates, hireCandidate } from "../../controllers/employer/employer.documentation.controller";
-import { getJobsForMedical, setMedicalSchedule } from "../../controllers/employer/employer.medical.controller";
+import { getJobsForMedical, setMedicalSchedule } from "../../controllers/employer/medicals/employer.medical.controller";
 
 const companyRouter = Router();
 

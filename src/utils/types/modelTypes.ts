@@ -151,8 +151,8 @@ export interface IDocumentation {
 export interface IMedical {
   job: Types.ObjectId;
   employer: Types.ObjectId;
-  medical_time_slot: { date: Date; start_time: string; end_time: string; break_time: string; medical_duration: string; available_date_time: Record<string, any>[] };
+  medical_time_slot: { date: Date; start_time: string; end_time: string; medical_duration: string; available_date_time: Record<string, any>[] };
   address: string;
   medicalists: string[];
-  candidates: { candidate: Types.ObjectId; scheduled_date_time: Record<string, any>; medical_documents: Map<string, string>; status: "pending" | "completed" | "canceled" }[];
+  candidates: { candidate: Types.ObjectId; scheduled_date_time?: Record<string, any>; medical_documents?: Map<string, string>; status?: "pending" | "completed" | "canceled" }[];
 }
