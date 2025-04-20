@@ -68,7 +68,6 @@ export const EmployerMedicalsManagementSchema = z.object({
           date: z.string(),
           start_time: z.string(),
           end_time: z.string(),
-          break_time: z.string(),
           medical_duration: z.string(),
         })
         .required()

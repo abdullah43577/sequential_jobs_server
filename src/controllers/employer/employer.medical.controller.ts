@@ -64,7 +64,7 @@ const setMedicalSchedule = async function (req: IUserRequest, res: Response) {
 
     const processedTimeSlots = data.medical_time_slot.map(slot => ({
       ...slot,
-      available_date_time: generateAvailableSlots(slot.date, slot.start_time, slot.end_time, slot.break_time, slot.medical_duration),
+      available_date_time: generateAvailableSlots(slot.date, slot.start_time, slot.end_time, "0 min", slot.medical_duration),
     }));
 
     const invitedMedicalists: string[] = [];

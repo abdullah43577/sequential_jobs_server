@@ -8,7 +8,6 @@ const medicalSchema = new Schema<IMedical>({
       date: { type: Date, required: true },
       start_time: { type: String, required: true },
       end_time: { type: String, required: true },
-      break_time: { type: String, required: true },
       medical_duration: { type: String, required: true },
       available_date_time: [{ type: Object, required: true }],
     },

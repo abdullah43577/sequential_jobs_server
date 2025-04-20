@@ -1,6 +1,6 @@
 import moment from "moment";
 
-export const generateAvailableSlots = (date: string, startTime: string, endTime: string, breakTime: string, interviewDuration: string) => {
+export const generateAvailableSlots = (date: string, startTime: string, endTime: string, breakTime: string = "0 min", interviewDuration: string) => {
   const slots = [];
   let start = moment(`${date} ${startTime}`, "YYYY-MM-DD hh:mm A");
   const end = moment(`${date} ${endTime}`, "YYYY-MM-DD hh:mm A");
