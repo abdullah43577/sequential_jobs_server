@@ -35,6 +35,7 @@ const getJobsForMedical = async function (req: IUserRequest, res: Response) {
         job_id: job._id,
         role_applied_for: job.job_title,
         candidate_name: `${app.applicant.first_name} ${app.applicant.last_name}`,
+        candidate_id: app.applicant._id,
         date_of_application: app.date_of_application,
         resume: app.applicant.resume,
         decision: app.status,
