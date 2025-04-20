@@ -17,10 +17,16 @@ import {
 } from "../../controllers/employer/employer.interview.controller";
 import { getCandidatesWithAcceptedOffer, getCandidatesWithOffers, getJobsForDocumentation, getQualifiedCandidates, hireCandidate } from "../../controllers/employer/employer.documentation.controller";
 import { getJobsForMedical, setMedicalSchedule } from "../../controllers/employer/medicals/employer.medical.controller";
+import { GetActiveJobs, GetAllJobs, TotalApplicantsTable } from "../../controllers/employer/employer.dashboard.controller";
 
 const companyRouter = Router();
 
 // companyRouter.get("/has-applicants", validateAccessToken, validateCompanySession, getJobsWithApplicants);
+
+//* DASHBOARD
+companyRouter.get("/get_all_jobs_with_applicants", validateAccessToken, validateCompanySession, TotalApplicantsTable);
+companyRouter.get("/get_all_jobs", validateAccessToken, validateCompanySession, GetAllJobs);
+companyRouter.get("/get_active_jobs", validateAccessToken, validateCompanySession, GetActiveJobs);
 
 //* JOB POST CREATION
 companyRouter.get("/get_employer_jobs", validateAccessToken, validateCompanySession, getJobs);
