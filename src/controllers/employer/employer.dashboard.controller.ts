@@ -70,6 +70,43 @@ const GetAllJobs = async function (req: IUserRequest, res: Response) {
   }
 };
 
+const GetAllJobsWithCandidatesHires = async function (req: IUserRequest, res: Response) {
+  try {
+    const { userId } = req;
+
+    const jobs = await Job.find({ employer: userId, "applicants.status": "hired" })
+      .select("job_title employment_type country state city salary currency_type payment_frequency applicants")
+      .populate<{ applicants: { applicant: { _id: string; first_name: string; last_name: string; resume: string }; date_of_application: string; status: string }[] }>("applicants.applicant", "first_name last_name resume")
+      .lean();
+
+    if (!jobs) return res.status(200).json([]);
+
+    const formattedResponse = jobs
+      .map(job => {
+        const hiredApplicants = job.applicants.filter(app => app.status === "hired");
+
+        return hiredApplicants.map(app => ({
+          candidate_id: app.applicant._id,
+          candidate_name: `${app.applicant.first_name} ${app.applicant.last_name}`,
+          resume: app.applicant.resume,
+          job_id: job._id,
+          job_title: job.job_title,
+          employment_type: job.employment_type,
+          location: `${job.city}, ${job.state}, ${job.country}`,
+          salary: job.salary,
+          currency: job.currency_type,
+          payment_frequency: job.payment_frequency,
+          date_of_application: app.date_of_application,
+        }));
+      })
+      .flat();
+
+    res.status(200).json(formattedResponse);
+  } catch (error) {
+    handleErrors({ res, error });
+  }
+};
+
 const GetActiveJobs = async function (req: IUserRequest, res: Response) {
   try {
     const { userId } = req;
@@ -92,4 +129,4 @@ const GetActiveJobs = async function (req: IUserRequest, res: Response) {
   }
 };
 
-export { TotalApplicantsTable, GetAllJobs, GetActiveJobs };
+export { TotalApplicantsTable, GetAllJobs, GetActiveJobs, GetAllJobsWithCandidatesHires };
