@@ -88,7 +88,7 @@ const getQualifiedCandidates = async function (req: IUserRequest, res: Response)
         resume: candidate.candidate.resume,
         hired: application?.status === "hired",
         interview_result: candidate.interview_score ? `${candidate.interview_score} / ${totalObtainableGrade}` : "Not Graded",
-        decision: application?.status === "offer_sent" ? "Offer Sent" : "Send Offer",
+        decision: application?.status === "has_offer" ? "Offer Sent" : "Send Offer",
       };
     });
 
@@ -201,7 +201,7 @@ const hireCandidate = async function (req: IUserRequest, res: Response) {
           createdAt: notification.createdAt,
         });
 
-        await Job.updateOne({ _id: job_id, "applicants.applicant": user._id }, { $set: { "applicants.$.status": "offer_sent" } });
+        await Job.updateOne({ _id: job_id, "applicants.applicant": user._id }, { $set: { "applicants.$.status": "has_offer" } });
       })
     );
 
@@ -230,7 +230,7 @@ const getCandidatesWithOffers = async function (req: IUserRequest, res: Response
     const totalObtainableGrade = Object.values(interview?.rating_scale).reduce((acc, cur) => +acc + +cur, 0);
 
     const formattedResponse = job.applicants
-      .filter(app => app.status === "offer_sent")
+      .filter(app => app.status === "has_offer")
       .map(app => {
         const candidate = interview?.candidates.find(cd => cd.candidate.toString() === app.applicant.toString());
 

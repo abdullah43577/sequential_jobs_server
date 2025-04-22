@@ -13,7 +13,7 @@ const getJobsFormatForDocumentation = async function (req: IUserRequest, res: Re
   try {
     const { userId } = req;
 
-    const statusArray = ["offer_sent", "hired", "rejected"];
+    const statusArray = ["has_offer", "hired", "rejected"];
 
     const jobs = await Job.find({ "applicants.applicant": userId, "applicants.status": { $in: statusArray } })
       .select("job_type employment_type employer job_title applicants")
