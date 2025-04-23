@@ -1,7 +1,7 @@
 import { application, Response } from "express";
 import { IUserRequest } from "../../interface";
 import Job from "../../models/jobs/jobs.model";
-import { EmployerInterviewManagementSchema } from "../../utils/types/employerJobsValidatorSchema";
+import { EmployerInterviewManagementSchema, PanelistGradeCandidate } from "../../utils/types/employerJobsValidatorSchema";
 import { generateAvailableSlots } from "../../utils/generateAvailableSlots";
 import InterviewMgmt from "../../models/interview/interview.model";
 import { handleErrors } from "../../helper/handleErrors";
@@ -130,7 +130,9 @@ const handleGetPanelistEmails = async function (req: IUserRequest, res: Response
     const interview = await InterviewMgmt.findOne({ job: job_id }).select("panelists").lean();
     if (!interview) return res.status(200).json({ success: false, emails: [] });
 
-    res.status(200).json({ success: true, emails: interview.panelists });
+    const panelistEmails = interview.panelists.map(pan => pan.email);
+
+    res.status(200).json({ success: true, emails: panelistEmails });
   } catch (error) {
     handleErrors({ res, error });
   }
@@ -148,7 +150,8 @@ const handleInvitePanelists = async function (req: IUserRequest, res: Response) 
     const interview = await InterviewMgmt.findOne({ job: job_id }).populate<{ job: { _id: string; job_title: string } }>("job", "job_title");
     if (!interview) return res.status(400).json({ message: "Interview not found!" });
 
-    const uniquePanelists = panelists.filter(email => !interview.panelists.includes(email));
+    const existingEmails = new Set(interview.panelists.map(pan => pan.email));
+    const uniquePanelists = panelists.filter(email => !existingEmails.has(email));
 
     const promises = uniquePanelists.map(async email => {
       try {
@@ -199,7 +202,12 @@ const handleInvitePanelists = async function (req: IUserRequest, res: Response) 
             message: html,
           });
 
-          interview.panelists.push(email);
+          const rating_scale_keys = Array.from(interview.rating_scale.keys());
+          const newScale = new Map<string, string | number>();
+
+          rating_scale_keys.forEach(key => newScale.set(key, ""));
+
+          interview.panelists.push({ email: email, rating_scale: newScale });
         }
       } catch (error) {
         console.error(`Error creating and inviting panelist ${email}:`, error);
@@ -373,45 +381,107 @@ const handleInviteCandidates = async function (req: IUserRequest, res: Response)
   }
 };
 
-const handleGradeCandidates = async function (req: IUserRequest, res: Response) {
+const handleGradeCandidate = async function (req: IUserRequest, res: Response) {
   try {
-    const { interview_id, graded_scale, candidate_id } = req.body;
+    const { panelist_email, candidate_id, job_id, rating_scale } = PanelistGradeCandidate.parse(req.body);
 
-    if (!interview_id) return res.status(400).json({ message: "Interview ID is required" });
+    const interview = await InterviewMgmt.findOne({ job: job_id });
+    if (!interview) return res.status(404).json({ message: "Interview Record not found!" });
 
-    if (!graded_scale || typeof graded_scale !== "object" || Object.keys(graded_scale).length === 0) {
-      return res.status(400).json({ message: "Graded scale is required!" });
+    const panelistEntry = interview.panelists.find(panelist => panelist.email === panelist_email);
+    if (!panelistEntry) return res.status(400).json({ message: "Panelist Record not found!" });
+
+    // Prevent regrading
+    if ([...panelistEntry.rating_scale.values()].some(v => v !== "" && v !== null && v !== undefined)) {
+      return res.status(400).json({ message: "You have already graded this candidate." });
     }
 
-    const interview = await InterviewMgmt.findById(interview_id);
-    if (!interview) return res.status(404).json({ message: "Interview record not found!" });
+    // Assign grades to panelist
+    panelistEntry.rating_scale = new Map(Object.entries(rating_scale));
 
-    // Find the specific candidate in the interview
     const candidateEntry = interview.candidates.find(c => c.candidate.toString() === candidate_id);
+    if (!candidateEntry) return res.status(400).json({ message: "Candidate Entry not found" });
 
-    if (!candidateEntry) {
-      return res.status(404).json({ message: "Candidate not found in this interview!" });
-    }
+    // Calculate average per scale key across all panelists
+    const scaleKeys = Array.from(interview.rating_scale.keys());
 
-    // ✅ Validate that the grading criteria match the global rating scale
-    const globalCriteria = Array.from(interview.rating_scale.keys());
-    for (const key of Object.keys(graded_scale)) {
-      if (!globalCriteria.includes(key)) {
-        return res.status(400).json({ message: `Invalid rating criterion: ${key}` });
-      }
-    }
+    const totalScores: Record<string, number> = {};
+    const ratingCounts: Record<string, number> = {};
 
-    // ✅ Store actual ratings in the candidate's rating scale
-    for (const [key, value] of Object.entries(graded_scale)) {
-      candidateEntry.rating_scale?.set(key, Number(value));
-    }
+    scaleKeys.forEach(key => {
+      totalScores[key] = 0;
+      ratingCounts[key] = 0;
+    });
+
+    interview.panelists.forEach(p => {
+      scaleKeys.forEach(key => {
+        const value = p.rating_scale.get(key);
+        if (value !== "" && !isNaN(Number(value))) {
+          totalScores[key] += Number(value);
+          ratingCounts[key] += 1;
+        }
+      });
+    });
+
+    const averageRatingScale = new Map<string, number>();
+    scaleKeys.forEach(key => {
+      const average = ratingCounts[key] > 0 ? totalScores[key] / ratingCounts[key] : 0;
+      averageRatingScale.set(key, parseFloat(average.toFixed(1)));
+    });
+
+    candidateEntry.rating_scale = averageRatingScale;
+
+    // Calculate total interview score (optional)
+    const totalScore = Array.from(averageRatingScale.values()).reduce((acc, val) => acc + val, 0);
+    candidateEntry.interview_score = parseFloat(totalScore.toFixed(1));
 
     await interview.save();
 
-    res.status(200).json({ message: "Candidate Graded Successfully!" });
+    return res.status(200).json({ message: "Candidate graded successfully" });
   } catch (error) {
     handleErrors({ res, error });
   }
 };
 
-export { getJobsForInterviews, handleCreateInterview, handleGetRatingScaleDraft, handleGetTimeSlotDrafts, handleGetInvitationLetter, handleGetPanelistEmails, handleInvitePanelists, handleGetCandidates, handleInviteCandidates, handleGradeCandidates };
+// const handleGradeCandidates = async function (req: IUserRequest, res: Response) {
+//   try {
+//     const { interview_id, graded_scale, candidate_id } = req.body;
+
+//     if (!interview_id) return res.status(400).json({ message: "Interview ID is required" });
+
+//     if (!graded_scale || typeof graded_scale !== "object" || Object.keys(graded_scale).length === 0) {
+//       return res.status(400).json({ message: "Graded scale is required!" });
+//     }
+
+//     const interview = await InterviewMgmt.findById(interview_id);
+//     if (!interview) return res.status(404).json({ message: "Interview record not found!" });
+
+//     // Find the specific candidate in the interview
+//     const candidateEntry = interview.candidates.find(c => c.candidate.toString() === candidate_id);
+
+//     if (!candidateEntry) {
+//       return res.status(404).json({ message: "Candidate not found in this interview!" });
+//     }
+
+//     // ✅ Validate that the grading criteria match the global rating scale
+//     const globalCriteria = Array.from(interview.rating_scale.keys());
+//     for (const key of Object.keys(graded_scale)) {
+//       if (!globalCriteria.includes(key)) {
+//         return res.status(400).json({ message: `Invalid rating criterion: ${key}` });
+//       }
+//     }
+
+//     // ✅ Store actual ratings in the candidate's rating scale
+//     for (const [key, value] of Object.entries(graded_scale)) {
+//       candidateEntry.rating_scale?.set(key, Number(value));
+//     }
+
+//     await interview.save();
+
+//     res.status(200).json({ message: "Candidate Graded Successfully!" });
+//   } catch (error) {
+//     handleErrors({ res, error });
+//   }
+// };
+
+export { getJobsForInterviews, handleCreateInterview, handleGetRatingScaleDraft, handleGetTimeSlotDrafts, handleGetInvitationLetter, handleGetPanelistEmails, handleInvitePanelists, handleGetCandidates, handleInviteCandidates, handleGradeCandidate };

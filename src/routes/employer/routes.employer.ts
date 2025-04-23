@@ -11,7 +11,7 @@ import {
   handleGetPanelistEmails,
   handleGetRatingScaleDraft,
   handleGetTimeSlotDrafts,
-  handleGradeCandidates,
+  handleGradeCandidate,
   handleInviteCandidates,
   handleInvitePanelists,
 } from "../../controllers/employer/employer.interview.controller";
@@ -59,7 +59,7 @@ companyRouter.post("/interview/create", validateAccessToken, validateCompanySess
 companyRouter.put("/interview/invite_panelists/:job_id", validateAccessToken, validateCompanySession, handleInvitePanelists);
 companyRouter.get("/interview/get_candidates/:job_id", validateAccessToken, validateCompanySession, handleGetCandidates);
 companyRouter.put("/interview/invite_candidates/:job_id", validateAccessToken, validateCompanySession, handleInviteCandidates);
-companyRouter.put("/interview/grade_candidate", validateAccessToken, validateCompanySession, handleGradeCandidates);
+companyRouter.put("/interview/grade_candidate", validateAccessToken, validateCompanySession, handleGradeCandidate);
 
 //* DOCUMENTATION MANAGEMENT
 companyRouter.get("/documentation/get_jobs", validateAccessToken, validateCompanySession, getJobsForDocumentation);

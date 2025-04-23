@@ -8,6 +8,7 @@ import { handleErrors } from "../helper/handleErrors";
 import { registrationEmail } from "../utils/nodemailer.ts/email-templates/registration-email";
 import { transportMail } from "../utils/nodemailer.ts/transportMail";
 import jwt, { Secret } from "jsonwebtoken";
+import { getBaseUrl } from "../helper/getBaseUrl";
 const { EMAIL_VERIFICATION_TOKEN } = process.env;
 
 const testApi = async (req: Request, res: Response) => {
@@ -62,13 +63,15 @@ const validateEmail = async (req: Request, res: Response) => {
 
     if (!user) return res.status(400).json({ message: "User not found" });
 
+    const baseUrl = getBaseUrl(req);
+
     //* send mail
     const emailTemplateData = {
       title: "Email Verified Successfully!",
       name: user?.first_name,
       message: "Your email has been successfully verified. You can now log in to your account and start exploring.",
       btnTxt: "Login",
-      btnAction: "http://localhost:3000/auth/login",
+      btnAction: `${baseUrl}/auth/login`,
     };
 
     const html = registrationEmail(emailTemplateData);
@@ -130,12 +133,14 @@ const forgotPassword = async (req: Request, res: Response) => {
     //* send email with the OTP for resetting password
     const resetToken = jwt.sign({ id: user._id }, EMAIL_VERIFICATION_TOKEN as Secret, { expiresIn: "10m" });
 
+    const baseUrl = getBaseUrl(req);
+
     const emailTemplateData = {
       title: "Reset Your Password",
       name: user.first_name,
       message: "We received a request to reset your password for your Sequential Jobs account. Click the button below to set a new password. \n\n Reset token expires in 10 minutes \n\n If you didn’t request this, you can safely ignore this email.",
       btnTxt: "Reset Password",
-      btnAction: `http://localhost:3000/auth/reset-password?token=${resetToken}`,
+      btnAction: `${baseUrl}/auth/reset-password?token=${resetToken}`,
     };
 
     const html = registrationEmail(emailTemplateData);

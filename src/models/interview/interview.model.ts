@@ -17,7 +17,12 @@ const interviewSchema = new Schema<IInterview>(
       },
     ],
     meetingLink: { type: String, required: true },
-    panelists: [{ type: String, default: [] }],
+    panelists: [
+      {
+        email: { type: String, required: true },
+        rating_scale: { type: Map, of: Schema.Types.Mixed, required: true, default: {} },
+      },
+    ],
     invitation_letter: { type: String, required: true },
     candidates: [
       {
@@ -32,7 +37,7 @@ const interviewSchema = new Schema<IInterview>(
           enum: ["pending", "confirmed", "completed", "canceled"],
           default: "pending",
         },
-        //* used for grading the candidate in response to the rating scale at the top here
+        //* used for grading the candidate in response to the rating scale at the top here (it's the total average of all panelists that's recorded here)
         rating_scale: { type: Map, of: Number, required: true, default: {} },
       },
     ],

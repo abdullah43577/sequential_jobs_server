@@ -77,3 +77,10 @@ export const EmployerMedicalsManagementSchema = z.object({
   address: z.string(),
   medicalists: z.array(z.string()).min(1, "An array of medical experts emails must be provided"),
 });
+
+export const PanelistGradeCandidate = z.object({
+  rating_scale: z.record(z.string(), z.number()),
+  panelist_email: z.string().email(),
+  candidate_id: z.string(),
+  job_id: z.string(),
+});
