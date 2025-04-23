@@ -35,28 +35,34 @@ const getAppliedJobs = async function (req: IUserRequest, res: Response) {
   }
 };
 
-const getInterviewsAttended = async function (req: IUserRequest, res: Response) {
+const getInterviewsScheduled = async function (req: IUserRequest, res: Response) {
   try {
     const { userId } = req;
 
     const interviews = await InterviewMgmt.find({ "candidates.candidate": userId })
       .select("job employer candidates")
-      .populate<{ job: { _id: string; job_title: string } }>("job", "job_title")
+      .populate<{ job: { _id: string; job_title: string; applicants: { applicant: string; date_of_application: string; status: string }[] } }>("job", "job_title applicants")
       .populate<{ employer: { _id: string; organisation_name: string } }>("employer", "organisation_name")
       .lean();
 
     if (!interviews) return res.status(200).json([]);
 
-    const formattedResponse = interviews.map(interview => {
-      const dataEntry = interview.candidates.find(cd => cd.candidate._id.toString() === userId);
+    const formattedResponse = interviews
+      .map(interview => {
+        const applicantEntry = interview.job.applicants.find(app => app.status === "interview_scheduled");
 
-      return {
-        job_title: interview.job.job_title,
-        company_name: interview.employer.organisation_name,
-        interview_attended: dataEntry?.status === "completed",
-        interview_score: dataEntry?.interview_score || "Not Graded",
-      };
-    });
+        if (!applicantEntry) return null;
+
+        const dataEntry = interview.candidates.find(cd => cd.candidate.toString() === userId);
+
+        return {
+          job_title: interview.job.job_title,
+          company_name: interview.employer.organisation_name,
+          interview_attended: dataEntry?.status === "completed",
+          interview_score: dataEntry?.interview_score || "Not Graded",
+        };
+      })
+      .filter(Boolean);
 
     res.status(200).json(formattedResponse);
   } catch (error) {
@@ -64,7 +70,76 @@ const getInterviewsAttended = async function (req: IUserRequest, res: Response) 
   }
 };
 
-const getJobTestsData = async function (req: IUserRequest, res: Response) {
+const getInterviewsAttended = async function (req: IUserRequest, res: Response) {
+  try {
+    const { userId } = req;
+
+    const interviews = await InterviewMgmt.find({ "candidates.candidate": userId })
+      .select("job employer candidates")
+      .populate<{ job: { _id: string; job_title: string; applicants: { applicant: string; date_of_application: string; status: string }[]; job_type: string; employment_type: string } }>("job", "job_title job_type employment_type applicants")
+      .populate<{ employer: { _id: string; organisation_name: string } }>("employer", "organisation_name")
+      .lean();
+
+    if (!interviews) return res.status(200).json([]);
+
+    const statuses = ["interview_completed", "has_offer", "hired", "rejected"];
+
+    const formattedResponse = interviews
+      .map(interview => {
+        const applicantEntry = interview.job.applicants.find(app => statuses.includes(app.status));
+
+        if (!applicantEntry) return null;
+
+        const dataEntry = interview.candidates.find(cd => cd.candidate.toString() === userId);
+
+        return {
+          job_title: interview.job.job_title,
+          company_name: interview.employer.organisation_name,
+          job_type: interview.job.job_type,
+          employment_type: interview.job.employment_type,
+          interview_score: dataEntry?.interview_score || "Not Graded",
+        };
+      })
+      .filter(Boolean);
+
+    res.status(200).json(formattedResponse);
+  } catch (error) {
+    handleErrors({ res, error });
+  }
+};
+
+const getJobTestsInvite = async function (req: IUserRequest, res: Response) {
+  try {
+    const { userId } = req;
+
+    const jobTest = await JobTest.find({ candidates_invited: { $in: [userId] } })
+      .select("job employer job_test invitation_letter")
+      .populate<{ job: { _id: string; job_title: string } }>("job", "job_ttile")
+      .populate<{ employer: { _id: string; organisation_name: string } }>("employer", "organisation_name")
+      .lean();
+
+    if (!jobTest) return res.status(200).json([]);
+
+    const formattedResponse = await Promise.all(
+      jobTest.map(async jobTest => {
+        const testSubmission = await TestSubmission.findOne({ test: jobTest.job_test, job: jobTest.job._id, applicant: userId }).lean();
+
+        return {
+          job_title: jobTest.job.job_title,
+          org_name: jobTest.employer.organisation_name,
+          invitation_letter: jobTest.invitation_letter,
+          has_taken_job_test: !!testSubmission,
+        };
+      })
+    );
+
+    res.status(200).json(formattedResponse);
+  } catch (error) {
+    handleErrors({ res, error });
+  }
+};
+
+const getJobTestsResult = async function (req: IUserRequest, res: Response) {
   try {
     const { userId } = req;
 
@@ -132,4 +207,4 @@ const getJobOffers = async function (req: IUserRequest, res: Response) {
   }
 };
 
-export { getAppliedJobs, getInterviewsAttended, getJobTestsData, getJobOffers };
+export { getAppliedJobs, getInterviewsScheduled, getInterviewsAttended, getJobTestsInvite, getJobTestsResult, getJobOffers };
