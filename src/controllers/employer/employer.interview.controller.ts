@@ -176,15 +176,16 @@ const handleInvitePanelists = async function (req: IUserRequest, res: Response) 
           //* send invite email with temporary credentials
           const emailData = {
             type: "invite" as const,
-            title: "You've Been Invited as an Interview Panelist",
+            title: "You've Been Selected as an Interview Panelist",
             recipientName: nameGuess.firstName || "Guest",
-            message: `You have been selected as a panelist for an upcoming interview for the position of ${interview.job.job_title}. Please click the button below to access the interview panel and review candidate details.
-  ${newPanelist.isTemporary ? `\n\nTemporary Account Credentials:\nEmail: ${email}\nPassword: ${tempPassword}\n\nThis account will expire in 7 days. Please change your password after first login.` : ""} \n\n interview id ${interview._id}`,
+            message: `You have been selected as a panelist for upcoming candidate interviews for the position of ${interview.job.job_title}.
+            
+When candidates schedule their interviews, you will receive follow-up emails with specific details including the job ID and candidate ID you'll need when submitting candidate evaluations.
+
+${newPanelist.isTemporary ? `\n\nTemporary Account Credentials:\nEmail: ${email}\nPassword: ${tempPassword}\n\nThis account will expire in 7 days. Please change your password after first login.` : ""}`,
             buttonText: "Access Interview Panel",
             buttonAction: `https://login?email=${encodeURIComponent(newPanelist.email)}${newPanelist.isTemporary ? "&temp=true" : ""}`,
             additionalDetails: {
-              date: "formattedDate",
-              time: "formattedTime",
               location: "Virtual Interview",
               organizerName: "Sequential Jobs Team",
             },
@@ -193,7 +194,7 @@ const handleInvitePanelists = async function (req: IUserRequest, res: Response) 
           // Generate email HTML
           const { html } = generateProfessionalEmail(emailData);
 
-          const subject = `Panelist Interview Invite - ${interview.job.job_title}`;
+          const subject = `Panelist Selection - ${interview.job.job_title}`;
 
           // Send email
           await transportMail({

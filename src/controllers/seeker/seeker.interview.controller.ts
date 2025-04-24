@@ -89,7 +89,7 @@ const scheduleInterview = async function (req: IUserRequest, res: Response) {
       },
       { returnDocument: "after" }
     )
-      .populate<{ job: { job_title: string } }>({
+      .populate<{ job: { _id: string; job_title: string } }>({
         path: "job",
         select: "job_title",
       })
@@ -167,9 +167,16 @@ const scheduleInterview = async function (req: IUserRequest, res: Response) {
 
           const panelistEmailData = {
             type: "interview" as EmailTypes,
-            title: "Interview Scheduled",
+            title: "Interview Scheduled - Panelist Information",
             recipientName: recipientName,
-            message: `A candidate interview has been scheduled for the ${interview.job.job_title} position at ${interview.employer.organisation_name}. Please find the details below:`,
+            message: `A candidate interview has been scheduled for the ${interview.job.job_title} position at ${interview.employer.organisation_name}. 
+            
+As a panelist, you'll need to evaluate this candidate after the interview. Please keep the following reference information for your records:
+
+Job ID: ${interview.job._id}
+Candidate ID: ${userId}
+
+You will need these IDs when submitting your candidate evaluation.`,
             buttonText: "Join Interview",
             buttonAction: interview.meetingLink,
             additionalDetails: {
@@ -178,6 +185,8 @@ const scheduleInterview = async function (req: IUserRequest, res: Response) {
               date: formattedDate,
               time: timeSlot,
               organization: interview.employer.organisation_name,
+              jobId: interview.job._id,
+              candidateId: userId,
             },
           };
 
