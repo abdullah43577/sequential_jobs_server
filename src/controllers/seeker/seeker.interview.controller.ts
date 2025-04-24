@@ -159,10 +159,10 @@ const scheduleInterview = async function (req: IUserRequest, res: Response) {
 
     // 2. Send emails to all panelists
     if (interview.panelists && interview.panelists.length > 0) {
-      const panelistEmailPromises = interview.panelists.map(async panelistEmail => {
+      const panelistEmailPromises = interview.panelists.map(async panelistData => {
         try {
           // Try to find panelist in the database if you need their name
-          const panelist = await User.findOne({ email: panelistEmail }).select("first_name last_name");
+          const panelist = await User.findOne({ email: panelistData.email }).select("first_name last_name");
           const recipientName = panelist ? `${panelist.first_name} ${panelist.last_name}` : "Interview Panelist";
 
           const panelistEmailData = {
@@ -185,14 +185,14 @@ const scheduleInterview = async function (req: IUserRequest, res: Response) {
 
           // Send email to panelist
           await transportMail({
-            email: panelistEmail,
+            email: panelistData?.email,
             subject: emailSubject,
             message: panelistHtml,
           });
 
           return true;
         } catch (error) {
-          console.error(`Error sending email to panelist ${panelistEmail}:`, error);
+          console.error(`Error sending email to panelist ${panelistData.email}:`, error);
           return false;
         }
       });
