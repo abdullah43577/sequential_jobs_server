@@ -1,11 +1,12 @@
 import { Router } from "express";
-import { validateAccessToken, validateCompanySession } from "../../middleware/validateToken";
+import { validateAccessToken, validateCompanySession, validatePanelistSession } from "../../middleware/validateToken";
 import { upload } from "../../utils/multerConfig";
 import { applicationTest, applicationTestCutoff, deleteJob, getApplicationTestDraft, getApplicationTestCutoffDraft, getJobDraft, getJobs, jobPostCreation, toggleJobState } from "../../controllers/employer/employer.jobpost.controller";
 import { getApplicantsForJobTest, getDraftCutOff, getDraftQuestion, getInviteMsgDraft, getJobsForJobTest, jobTest, jobTestApplicantsInvite, jobTestCutoff, jobTestInviteMsg } from "../../controllers/employer/employer.jobtest.controller";
 import {
   getJobsForInterviews,
   handleCreateInterview,
+  handleFetchRatingDetailsForPanelists,
   handleGetCandidates,
   handleGetInvitationLetter,
   handleGetPanelistEmails,
@@ -59,7 +60,8 @@ companyRouter.post("/interview/create", validateAccessToken, validateCompanySess
 companyRouter.put("/interview/invite_panelists/:job_id", validateAccessToken, validateCompanySession, handleInvitePanelists);
 companyRouter.get("/interview/get_candidates/:job_id", validateAccessToken, validateCompanySession, handleGetCandidates);
 companyRouter.put("/interview/invite_candidates/:job_id", validateAccessToken, validateCompanySession, handleInviteCandidates);
-companyRouter.put("/interview/grade_candidate", validateAccessToken, validateCompanySession, handleGradeCandidate);
+companyRouter.get("/interview/rating_scale", validateAccessToken, validatePanelistSession, handleFetchRatingDetailsForPanelists);
+companyRouter.put("/interview/grade_candidate", validateAccessToken, validatePanelistSession, handleGradeCandidate);
 
 //* DOCUMENTATION MANAGEMENT
 companyRouter.get("/documentation/get_jobs", validateAccessToken, validateCompanySession, getJobsForDocumentation);

@@ -67,4 +67,15 @@ const validateCompanySession = function (req: IUserRequest, res: Response, next:
   }
 };
 
-export { validateAccessToken, validateRefreshToken, validateCompanySession, validateSeekerSession };
+const validatePanelistSession = function (req: IUserRequest, res: Response, next: NextFunction) {
+  try {
+    const { userId, role } = req;
+    if (role !== "panelist") return res.status(401).json({ message: "Unquthorized!, only a panelist is authorized to do this!" });
+
+    next();
+  } catch (error) {
+    handleErrors({ res, error });
+  }
+};
+
+export { validateAccessToken, validateRefreshToken, validateCompanySession, validateSeekerSession, validatePanelistSession };

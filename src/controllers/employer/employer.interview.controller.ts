@@ -171,6 +171,7 @@ const handleInvitePanelists = async function (req: IUserRequest, res: Response) 
             email,
             password: hashedPassword,
             role: "panelist",
+            has_validated_email: true,
             isTemporary: true,
             expiresAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000), // 7 days
           });
@@ -384,6 +385,25 @@ const handleInviteCandidates = async function (req: IUserRequest, res: Response)
   }
 };
 
+const handleFetchRatingDetailsForPanelists = async function (req: IUserRequest, res: Response) {
+  try {
+    const { candidateId, jobId } = req.body;
+    if (!candidateId || !jobId) return res.status(400).json({ message: "Candidate and Job ID is required!" });
+
+    const interview = await InterviewMgmt.findOne({ job: jobId }).select("rating_scale meetingLink").lean();
+    if (!interview) return res.status(404).json({ message: "Interview not found!" });
+
+    const formattedResponse = {
+      rating_scale: interview.rating_scale,
+      meetingLink: interview.meetingLink,
+    };
+
+    res.status(200).json(formattedResponse);
+  } catch (error) {
+    handleErrors({ res, error });
+  }
+};
+
 const handleGradeCandidate = async function (req: IUserRequest, res: Response) {
   try {
     const { panelist_email, candidate_id, job_id, rating_scale } = PanelistGradeCandidate.parse(req.body);
@@ -487,4 +507,16 @@ const handleGradeCandidate = async function (req: IUserRequest, res: Response) {
 //   }
 // };
 
-export { getJobsForInterviews, handleCreateInterview, handleGetRatingScaleDraft, handleGetTimeSlotDrafts, handleGetInvitationLetter, handleGetPanelistEmails, handleInvitePanelists, handleGetCandidates, handleInviteCandidates, handleGradeCandidate };
+export {
+  getJobsForInterviews,
+  handleCreateInterview,
+  handleGetRatingScaleDraft,
+  handleGetTimeSlotDrafts,
+  handleGetInvitationLetter,
+  handleGetPanelistEmails,
+  handleInvitePanelists,
+  handleGetCandidates,
+  handleInviteCandidates,
+  handleFetchRatingDetailsForPanelists,
+  handleGradeCandidate,
+};
