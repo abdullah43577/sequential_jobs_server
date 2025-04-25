@@ -94,5 +94,5 @@ export const registerValidationSchema = z
 
 export const loginValidationSchema = z.object({
   email: z.string().email(),
-  password: z.string().min(8, "Password must be at least 8 characters long").regex(passwordValidationRegex, "Password must contain at least one uppercase letter, one lowercase letter, one number, and one special character"),
+  password: z.string().min(8, "Password must be at least 8 characters long"),
 });
