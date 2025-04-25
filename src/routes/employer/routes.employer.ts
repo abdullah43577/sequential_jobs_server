@@ -60,7 +60,7 @@ companyRouter.post("/interview/create", validateAccessToken, validateCompanySess
 companyRouter.put("/interview/invite_panelists/:job_id", validateAccessToken, validateCompanySession, handleInvitePanelists);
 companyRouter.get("/interview/get_candidates/:job_id", validateAccessToken, validateCompanySession, handleGetCandidates);
 companyRouter.put("/interview/invite_candidates/:job_id", validateAccessToken, validateCompanySession, handleInviteCandidates);
-companyRouter.get("/interview/rating_scale", validateAccessToken, validatePanelistSession, handleFetchRatingDetailsForPanelists);
+companyRouter.post("/interview/rating_scale", validateAccessToken, validatePanelistSession, handleFetchRatingDetailsForPanelists);
 companyRouter.put("/interview/grade_candidate", validateAccessToken, validatePanelistSession, handleGradeCandidate);
 
 //* DOCUMENTATION MANAGEMENT
