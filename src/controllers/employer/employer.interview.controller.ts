@@ -128,7 +128,9 @@ const handleGetPanelistEmails = async function (req: IUserRequest, res: Response
     if (!job_id) return res.status(400).json({ message: "Job ID is required" });
 
     const interview = await InterviewMgmt.findOne({ job: job_id }).select("panelists").lean();
-    if (!interview) return res.status(200).json({ success: false, emails: [] });
+    if (!interview || interview?.panelists?.length === 0) {
+      return res.status(200).json({ success: false, emails: [] });
+    }
 
     const panelistEmails = interview.panelists.map(pan => pan.email);
 
