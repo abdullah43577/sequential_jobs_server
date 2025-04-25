@@ -11,6 +11,7 @@ export const JobPostCreationSchema = z.object({
   salary: z.string(),
   currency_type: z.string(),
   years_of_exp: z.string(),
+  payment_frequency: z.enum(["yearly", "monthly", "weekly"]),
   generic_skills: z.array(z.string()),
   technical_skills: z.array(z.string()),
   description: z.string(),

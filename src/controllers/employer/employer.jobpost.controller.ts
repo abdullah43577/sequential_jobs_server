@@ -12,7 +12,7 @@ const cache = new NodeCache({ stdTTL: 600, checkperiod: 120 });
 const getJobs = async function (req: IUserRequest, res: Response) {
   try {
     const { userId } = req;
-    const jobs = await Job.find({ employer: userId }).select("job_title createdAt country job_type employment_type salary currency_type application_test stage is_live").lean();
+    const jobs = await Job.find({ employer: userId }).select("job_title createdAt country job_type employment_type salary currency_type payment_frequency application_test stage is_live").lean();
 
     res.status(200).json(jobs);
   } catch (error) {
