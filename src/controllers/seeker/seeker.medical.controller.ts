@@ -46,7 +46,7 @@ const getJobsWithMedicals = async function (req: IUserRequest, res: Response) {
         job_title: medical.job.job_title,
         createdAt: medical.job.createdAt,
         job_type: medical.job.job_type,
-        is_medical_scheduled,
+        is_medical_scheduled: !!is_medical_scheduled,
       };
     });
 

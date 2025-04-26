@@ -48,6 +48,6 @@ seekerRouter.post("/documentation/submit_documents", validateAccessToken, valida
 //* MEDICAL MANAGEMENT
 seekerRouter.get("/medical/get_jobs", validateAccessToken, validateSeekerSession, getJobsWithMedicals);
 seekerRouter.get("/medical/get_info", validateAccessToken, validateSeekerSession, getMedicalInfo);
-seekerRouter.put("/medical/schedule_medical", validateAccessToken, validateCompanySession, scheduleMedical);
+seekerRouter.put("/medical/schedule_medical", validateAccessToken, validateSeekerSession, scheduleMedical);
 
 export { seekerRouter };
