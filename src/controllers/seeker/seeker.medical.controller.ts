@@ -283,13 +283,13 @@ const getJobsWithScheduledMedicals = async function (req: IUserRequest, res: Res
         job: {
           _id: string;
           job_title: string;
-          createdAt: string;
+          updatedAt: string;
           job_type: string;
           employer: { _id: string; organisation_name: string };
         };
       }>({
         path: "job",
-        select: "job_title createdAt job_type employer",
+        select: "job_title updatedAt job_type employer",
         populate: {
           path: "employer",
           select: "organisation_name",
@@ -304,9 +304,9 @@ const getJobsWithScheduledMedicals = async function (req: IUserRequest, res: Res
       return {
         company_name: medical.job.employer.organisation_name,
         job_title: medical.job.job_title,
-        created_at: medical.job.createdAt,
+        updated_at: medical.job.updatedAt,
         job_type: medical.job.job_type,
-        has_attended_medical: candidate?.status,
+        has_attended_medical: candidate?.status === "completed",
         scheduled_date_time: candidate?.scheduled_date_time,
         medical_location: medical.address,
       };
