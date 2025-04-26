@@ -99,15 +99,14 @@ const scheduleMedical = async function (req: IUserRequest, res: Response) {
         },
       },
       { returnDocument: "after" }
-    )
-      .populate<{ job: { _id: string; job_title: string } }>({
-        path: "job",
-        select: "job_title",
-      })
-      .populate<{ employer: { _id: string; first_name: string; last_name: string; email: string; organisation_name: string } }>({
+    ).populate<{ job: { _id: string; employer: { _id: string; first_name: string; last_name: string; email: string; organisation_name: string }; job_title: string } }>({
+      path: "job",
+      select: "employer job_title",
+      populate: {
         path: "employer",
         select: "first_name last_name email organisation_name",
-      });
+      },
+    });
 
     if (!medicals) return res.status(404).json({ message: "Medical record not found!" });
 
@@ -119,6 +118,9 @@ const scheduleMedical = async function (req: IUserRequest, res: Response) {
     const formattedDate = new Date(scheduled_date_time.date).toLocaleDateString();
     const timeSlot = `${scheduled_date_time.start_time} - ${scheduled_date_time.end_time}`;
 
+    // Extract employer information from the job
+    const employer = medicals.job.employer;
+
     // Prepare email data
     const emailSubject = `Medical Scheduled: ${candidate.first_name} ${candidate.last_name} for ${medicals.job.job_title} Position`;
 
@@ -126,7 +128,7 @@ const scheduleMedical = async function (req: IUserRequest, res: Response) {
     const employerEmailData = {
       type: "medical" as EmailTypes,
       title: "Medical Appointment Scheduled",
-      recipientName: `${medicals.employer.first_name} ${medicals.employer.last_name}`,
+      recipientName: `${employer.first_name} ${employer.last_name}`,
       message: `A candidate has scheduled a medical appointment for the ${medicals.job.job_title} position. Please find the details below:`,
       buttonText: "View Medical Details",
       buttonAction: `http://localhost:8080/medicals/${medicals._id}`,
@@ -142,14 +144,14 @@ const scheduleMedical = async function (req: IUserRequest, res: Response) {
 
     // Send email to employer
     await transportMail({
-      email: medicals.employer.email,
+      email: employer.email,
       subject: emailSubject,
       message: employerHtml,
     });
 
     // Create notification for employer
     const employerNotification = await Notification.create({
-      recipient: medicals.employer._id,
+      recipient: employer._id,
       sender: userId,
       type: NotificationType.MEDICAL,
       title: emailSubject,
@@ -159,7 +161,7 @@ const scheduleMedical = async function (req: IUserRequest, res: Response) {
 
     // Send socket notification to employer
     const io = getSocketIO();
-    io.to(medicals.employer._id.toString()).emit("notification", {
+    io.to(employer._id.toString()).emit("notification", {
       id: employerNotification._id,
       title: emailSubject,
       message: `${candidate.first_name} ${candidate.last_name} has scheduled a medical appointment for the ${medicals.job.job_title} position.`,
@@ -180,7 +182,7 @@ const scheduleMedical = async function (req: IUserRequest, res: Response) {
             type: "medical" as EmailTypes,
             title: "Medical Appointment Scheduled - Expert Information",
             recipientName: recipientName,
-            message: `A candidate medical appointment has been scheduled for the ${medicals.job.job_title} position at ${medicals.employer.organisation_name}. 
+            message: `A candidate medical appointment has been scheduled for the ${medicals.job.job_title} position at ${employer.organisation_name}. 
             
 As a medical expert, you'll need to evaluate this candidate after the examination. Please keep the following reference information for your records:
 
@@ -196,7 +198,7 @@ You will need these IDs when submitting your medical evaluation report.`,
               date: formattedDate,
               time: timeSlot,
               location: medicals.address,
-              organization: medicals.employer.organisation_name,
+              organization: employer.organisation_name,
               jobId: medicals.job._id,
               candidateId: userId,
             },
@@ -227,12 +229,12 @@ You will need these IDs when submitting your medical evaluation report.`,
       type: "medical" as EmailTypes,
       title: "Medical Appointment Confirmation",
       recipientName: `${candidate.first_name} ${candidate.last_name}`,
-      message: `Your medical appointment for the ${medicals.job.job_title} position at ${medicals.employer.organisation_name} has been scheduled. Please find the details below:`,
+      message: `Your medical appointment for the ${medicals.job.job_title} position at ${employer.organisation_name} has been scheduled. Please find the details below:`,
       buttonText: "View Appointment Details",
       buttonAction: `${getBaseUrl(req)}/extension/medicals/${medicals._id}`,
       additionalDetails: {
         position: medicals.job.job_title,
-        company: medicals.employer.organisation_name,
+        company: employer.organisation_name,
         date: formattedDate,
         time: timeSlot,
         location: medicals.address,
@@ -245,7 +247,7 @@ You will need these IDs when submitting your medical evaluation report.`,
     // Send confirmation email to candidate
     await transportMail({
       email: candidate.email,
-      subject: `Medical Appointment Confirmation: ${medicals.job.job_title} at ${medicals.employer.organisation_name}`,
+      subject: `Medical Appointment Confirmation: ${medicals.job.job_title} at ${employer.organisation_name}`,
       message: candidateHtml,
     });
 
