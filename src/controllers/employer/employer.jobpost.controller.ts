@@ -85,7 +85,7 @@ const getJobDraft = async function (req: IUserRequest, res: Response) {
     const { job_id } = req.query;
     if (!job_id) return res.status(400).json({ message: "Job ID is required" });
 
-    const job = await Job.findById(job_id).select("job_title country state city job_type employment_type salary currency_type years_of_exp generic_skills technical_skills description").lean();
+    const job = await Job.findById(job_id).select("job_title country state city job_type employment_type salary currency_type payment_frequency years_of_exp generic_skills technical_skills description").lean();
 
     res.status(200).json({ success: !!job, job });
   } catch (error) {

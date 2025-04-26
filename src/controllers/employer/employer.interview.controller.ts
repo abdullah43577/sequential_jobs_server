@@ -387,15 +387,20 @@ const handleInviteCandidates = async function (req: IUserRequest, res: Response)
 
 const handleFetchRatingDetailsForPanelists = async function (req: IUserRequest, res: Response) {
   try {
+    const { userId } = req;
+
     const { candidateId, jobId } = req.body;
     if (!candidateId || !jobId) return res.status(400).json({ message: "Candidate and Job ID is required!" });
 
     const interview = await InterviewMgmt.findOne({ job: jobId }).select("rating_scale meetingLink").lean();
     if (!interview) return res.status(404).json({ message: "Interview not found!" });
 
+    const user = await User.findById(userId);
+
     const formattedResponse = {
       rating_scale: interview.rating_scale,
       meetingLink: interview.meetingLink,
+      panelist: user?.email,
     };
 
     res.status(200).json(formattedResponse);
@@ -459,6 +464,8 @@ const handleGradeCandidate = async function (req: IUserRequest, res: Response) {
     candidateEntry.interview_score = parseFloat(totalScore.toFixed(1));
 
     await interview.save();
+
+    //* delete panelist account on grade successful
 
     return res.status(200).json({ message: "Candidate graded successfully" });
   } catch (error) {
