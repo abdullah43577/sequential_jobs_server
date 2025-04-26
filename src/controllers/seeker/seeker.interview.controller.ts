@@ -9,6 +9,7 @@ import { EmailTypes, generateProfessionalEmail } from "../../utils/nodemailer.ts
 import User from "../../models/users.model";
 import { getSocketIO } from "../../helper/socket";
 import Job from "../../models/jobs/jobs.model";
+import { getBaseUrl } from "../../helper/getBaseUrl";
 
 //* INTERVIEW MANAGEMENT
 const getJobsWithoutScheduledInterview = async function (req: IUserRequest, res: Response) {
@@ -118,7 +119,7 @@ const scheduleInterview = async function (req: IUserRequest, res: Response) {
       recipientName: `${interview.employer.first_name} ${interview.employer.last_name}`,
       message: `A candidate has scheduled an interview for the ${interview.job.job_title} position. Please find the details below:`,
       buttonText: "View Interview Details",
-      buttonAction: `http://localhost:8080/interviews/${interview._id}`,
+      buttonAction: `${getBaseUrl(req)}/interviews/${interview._id}`,
       additionalDetails: {
         candidate: `${candidate.first_name} ${candidate.last_name}`,
         date: formattedDate,
