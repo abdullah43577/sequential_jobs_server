@@ -105,6 +105,7 @@ export const updateProfileSchema = z.object({
   phone_no: z.string().optional(),
   official_phone: z.string(),
   organisation_name: z.string(),
+  organisation_size: z.number(),
   industry: z.string().optional(),
   street_1: z.string().optional(),
   street_2: z.string().optional(),

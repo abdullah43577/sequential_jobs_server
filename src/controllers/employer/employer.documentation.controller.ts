@@ -15,6 +15,7 @@ import { Types } from "mongoose";
 import { Readable } from "stream";
 import { transportMail } from "../../utils/nodemailer.ts/transportMail";
 import { EmailTypes, generateProfessionalEmail } from "../../utils/nodemailer.ts/email-templates/generateProfessionalEmail";
+import { getBaseUrl } from "../../helper/getBaseUrl";
 
 //* DOCUMENTATION MANAGEMENT
 const getJobsForDocumentation = async function (req: IUserRequest, res: Response) {
@@ -294,4 +295,118 @@ const getCandidatesWithAcceptedOffer = async function (req: IUserRequest, res: R
   }
 };
 
-export { getJobsForDocumentation, getQualifiedCandidates, hireCandidate, getCandidatesWithOffers, getCandidatesWithAcceptedOffer };
+const requestReUploadDocuments = async function (req: IUserRequest, res: Response) {
+  try {
+    const { userId } = req;
+    const { candidate_id, job_id, documents, message } = req.body;
+
+    if (!candidate_id || typeof candidate_id !== "string") return res.status(400).json({ message: "Candidate ID is required and must be a string" });
+
+    if (!job_id || typeof job_id !== "string") return res.status(400).json({ message: "Job ID is required and must be a string" });
+
+    if (!documents || !Array.isArray(documents) || documents.length === 0) return res.status(400).json({ message: "At least one document must be specified for re-upload" });
+
+    // Find the job to get details and ensure employer owns this job
+    const job = await Job.findOne({ _id: job_id, employer: userId }).select("job_title");
+
+    if (!job) return res.status(404).json({ message: "Job not found or you don't have permission to manage this job" });
+
+    // Find the candidate to get their details
+    const candidate = await User.findById(candidate_id).select("first_name last_name email");
+
+    if (!candidate) return res.status(404).json({ message: "Candidate not found" });
+
+    // Update the documentation record to mark documents as requiring re-upload
+    const documentationRecord = await Documentation.findOneAndUpdate(
+      {
+        job: job_id,
+        "candidates.candidate": candidate_id,
+      },
+      {
+        $set: {
+          "candidates.$.documents_requiring_reupload": documents,
+        },
+      },
+      { returnDocument: "after" }
+    );
+
+    if (!documentationRecord) return res.status(404).json({ message: "Documentation record not found" });
+
+    // Update job status to indicate document re-upload requested
+    await Job.findOneAndUpdate(
+      { _id: job_id, "applicants.applicant": candidate_id },
+      {
+        $set: {
+          "applicants.$.status": "documents_reupload_requested",
+        },
+      }
+    );
+
+    // Find employer details
+    const employer = await User.findById(userId).select("first_name last_name email organisation_name");
+
+    if (!employer) return res.status(404).json({ message: "Employer profile not found" });
+
+    // Format document list for email
+    const documentsList = documents.map(doc => `- ${doc}`).join("\n");
+
+    // Prepare email data
+    const emailSubject = `Action Required: Re-upload Documents for ${job.job_title} Position`;
+
+    const candidateEmailData = {
+      type: "document_reupload" as EmailTypes,
+      title: "Documents Re-upload Request",
+      recipientName: `${candidate.first_name} ${candidate.last_name}`,
+      message: `${employer.organisation_name} has requested that you re-upload the following documents for your application to the ${job.job_title} position:`,
+      buttonText: "Upload Documents",
+      buttonAction: `${getBaseUrl(req)}/extension/jobs/${job_id}/documentation`,
+      additionalDetails: {
+        // company: employer.organisation_name,
+        // position: job.job_title,
+        // documents: documentsList,
+        // employerMessage: message || "Please re-upload the following documents.",
+        // deadline: "As soon as possible to avoid delays in your application process.",
+      },
+    };
+
+    const { html: candidateHtml } = generateProfessionalEmail(candidateEmailData);
+
+    // Send email to candidate
+    await transportMail({
+      email: candidate.email,
+      subject: emailSubject,
+      message: candidateHtml,
+    });
+
+    // Create notification for candidate
+    const candidateNotification = await Notification.create({
+      recipient: candidate_id,
+      sender: userId,
+      type: NotificationType.DOCUMENT_REQUEST,
+      title: emailSubject,
+      message: `${employer.organisation_name} has requested that you re-upload documents for your application to the ${job.job_title} position.`,
+      status: NotificationStatus.UNREAD,
+    });
+
+    // Send socket notification to candidate
+    const io = getSocketIO();
+    io.to(candidate_id).emit("notification", {
+      id: candidateNotification._id,
+      title: emailSubject,
+      message: `${employer.organisation_name} has requested that you re-upload documents for your application to the ${job.job_title} position.`,
+      status: NotificationStatus.UNREAD,
+      type: NotificationType.DOCUMENT_REQUEST,
+      createdAt: candidateNotification.createdAt,
+    });
+
+    // Return success response
+    res.status(200).json({
+      message: "Document re-upload request sent successfully",
+      documents_requested: documents,
+    });
+  } catch (error) {
+    handleErrors({ res, error });
+  }
+};
+
+export { getJobsForDocumentation, getQualifiedCandidates, hireCandidate, getCandidatesWithOffers, getCandidatesWithAcceptedOffer, requestReUploadDocuments };

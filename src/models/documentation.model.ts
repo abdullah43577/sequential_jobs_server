@@ -9,6 +9,7 @@ const documentationSchema = new Schema<IDocumentation>({
       invitation_letter: { type: String, required: true },
       contract_agreement_file: { type: String, default: null },
       documents: { type: Map, of: String, default: {} },
+      documents_requiring_reupload: [{ type: String }],
     },
   ],
 });

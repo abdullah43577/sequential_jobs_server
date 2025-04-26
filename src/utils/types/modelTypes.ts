@@ -13,6 +13,7 @@ export interface IUser {
   profile_pic: string | null;
   official_phone: number;
   organisation_name: string;
+  organisation_size: number;
   industry: string;
   street_1: string;
   street_2: string;
@@ -65,7 +66,11 @@ export interface IJob {
   generic_skills: string[];
   technical_skills: string[];
   description: string;
-  applicants: { applicant: Types.ObjectId; date_of_application?: Date; status: "applied" | "shortlisted" | "interview_invite_sent" | "interview_scheduled" | "interview_completed" | "has_offer" | "hired" | "rejected" }[];
+  applicants: {
+    applicant: Types.ObjectId;
+    date_of_application?: Date;
+    status: "applied" | "shortlisted" | "interview_invite_sent" | "interview_scheduled" | "interview_completed" | "has_offer" | "hired" | "documents_reupload_requested" | "rejected";
+  }[];
   is_live: boolean;
   application_test: Types.ObjectId;
   cut_off_points: {

@@ -193,7 +193,9 @@ const resetPassword = async (req: Request, res: Response) => {
 const getProfile = async (req: IUserRequest, res: Response) => {
   try {
     const { userId } = req;
-    const user = await User.findById(userId).select("first_name last_name username email role phone_no official_phone organisation_name industry street_1 street_2 country state postal_code subscription_tier bio resume").lean();
+    const user = await User.findById(userId)
+      .select("first_name last_name username email role phone_no official_phone organisation_name organisation_size industry street_1 street_2 country state postal_code subscription_tier bio profile_pic resume")
+      .lean();
     if (!user) return res.status(404).json({ message: "User record not found!" });
 
     res.status(200).json(user);

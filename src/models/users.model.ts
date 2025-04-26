@@ -42,6 +42,11 @@ const userSchema = new Schema<IUser>(
       validate: roleBasedValidation("company", "Organisation Name"),
     },
 
+    organisation_size: {
+      type: Number,
+      validate: roleBasedValidation("company", "Organisation Size"),
+    },
+
     industry: {
       type: String,
       validate: roleBasedValidation("company", "Industry"),

@@ -13,6 +13,7 @@ export enum NotificationType {
   MESSAGE = "message",
   INTERVIEW = "interview",
   MEDICAL = "medical",
+  DOCUMENT_REQUEST = "document_request",
 }
 
 // Enum for notification status
