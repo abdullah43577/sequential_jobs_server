@@ -270,4 +270,52 @@ You will need these IDs when submitting your medical evaluation report.`,
   }
 };
 
-export { getJobsWithMedicals, getMedicalInfo, scheduleMedical };
+const getJobsWithScheduledMedicals = async function (req: IUserRequest, res: Response) {
+  try {
+    const { userId } = req;
+
+    const medicals = await MedicalMgmt.find({
+      "candidates.candidate": userId,
+      "candidates.scheduled_date_time": { $exists: true },
+    })
+      .select("job candidates address")
+      .populate<{
+        job: {
+          _id: string;
+          job_title: string;
+          createdAt: string;
+          job_type: string;
+          employer: { _id: string; organisation_name: string };
+        };
+      }>({
+        path: "job",
+        select: "job_title createdAt job_type employer",
+        populate: {
+          path: "employer",
+          select: "organisation_name",
+        },
+      });
+
+    if (!medicals || medicals.length === 0) return res.status(404).json({ message: "No jobs with scheduled medicals found!" });
+
+    const jobs = medicals.map(medical => {
+      const candidate = medical.candidates.find(c => c.candidate.toString() === userId?.toString());
+
+      return {
+        company_name: medical.job.employer.organisation_name,
+        job_title: medical.job.job_title,
+        created_at: medical.job.createdAt,
+        job_type: medical.job.job_type,
+        has_attended_medical: candidate?.status,
+        scheduled_date_time: candidate?.scheduled_date_time,
+        medical_location: medical.address,
+      };
+    });
+
+    res.status(200).json(jobs);
+  } catch (error) {
+    handleErrors({ res, error });
+  }
+};
+
+export { getJobsWithMedicals, getMedicalInfo, scheduleMedical, getJobsWithScheduledMedicals };

@@ -6,7 +6,7 @@ import { uploadResume } from "../../controllers/seeker/seeker.resumemgmt.control
 import { getAllJobTests, getJobTestDetails, submitJobTest } from "../../controllers/seeker/seeker.testmgmt.controller";
 import { getInterviewInfo, getJobsWithoutScheduledInterview, getJobsWithScheduledInterview, scheduleInterview } from "../../controllers/seeker/seeker.interview.controller";
 import { getJobsFormatForDocumentation, submitDocuments, updateApplicantStatus } from "../../controllers/seeker/seeker.documentation.controller";
-import { getJobsWithMedicals, getMedicalInfo, scheduleMedical } from "../../controllers/seeker/seeker.medical.controller";
+import { getJobsWithMedicals, getJobsWithScheduledMedicals, getMedicalInfo, scheduleMedical } from "../../controllers/seeker/seeker.medical.controller";
 import { getAppliedJobs, getInterviewsAttended, getInterviewsScheduled, getJobOffers, getJobTestsInvite, getJobTestsResult } from "../../controllers/seeker/seeker.dashboard.controller";
 
 const seekerRouter = Router();
@@ -49,5 +49,6 @@ seekerRouter.post("/documentation/submit_documents", validateAccessToken, valida
 seekerRouter.get("/medical/get_jobs", validateAccessToken, validateSeekerSession, getJobsWithMedicals);
 seekerRouter.get("/medical/get_info", validateAccessToken, validateSeekerSession, getMedicalInfo);
 seekerRouter.put("/medical/schedule_medical", validateAccessToken, validateSeekerSession, scheduleMedical);
+seekerRouter.get("/medical/get_scheduled_medicals", validateAccessToken, validateSeekerSession, getJobsWithScheduledMedicals);
 
 export { seekerRouter };
