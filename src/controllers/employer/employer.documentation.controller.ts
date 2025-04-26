@@ -267,19 +267,26 @@ const getCandidatesWithAcceptedOffer = async function (req: IUserRequest, res: R
 
     const totalObtainableGrade = Object.values(interview?.rating_scale).reduce((acc, cur) => +acc + +cur, 0);
 
-    const formattedResponse = job.applicants
-      .filter(app => app.status === "hired")
-      .map(app => {
-        const candidate = interview?.candidates.find(cd => cd.candidate.toString() === app.applicant.toString());
+    const formattedResponse = await Promise.all(
+      job.applicants
+        .filter(app => app.status === "hired")
+        .map(async app => {
+          const candidate = interview?.candidates.find(cd => cd.candidate.toString() === app.applicant.toString());
 
-        return {
-          candidate_name: `${app.applicant.first_name} ${app.applicant.last_name}`,
-          resume: app.applicant.resume,
-          date_of_application: app.date_of_application,
-          role_applied_for: job.job_title,
-          interview_result: candidate?.interview_score ? `${candidate?.interview_score} / ${totalObtainableGrade}` : "Not Graded",
-        };
-      });
+          const documentation = await Documentation.findOne({ job: job._id });
+
+          const candidateDocEntry = documentation?.candidates.find(cd => cd.candidate.toString() === app.applicant._id.toString());
+
+          return {
+            candidate_name: `${app.applicant.first_name} ${app.applicant.last_name}`,
+            resume: app.applicant.resume,
+            documents: candidateDocEntry?.documents,
+            date_of_application: app.date_of_application,
+            role_applied_for: job.job_title,
+            interview_result: candidate?.interview_score ? `${candidate?.interview_score} / ${totalObtainableGrade}` : "Not Graded",
+          };
+        })
+    );
 
     res.status(200).json(formattedResponse);
   } catch (error) {

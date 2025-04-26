@@ -3,6 +3,8 @@ import { handleErrors } from "../../helper/handleErrors";
 import { IUserRequest } from "../../interface";
 import Job from "../../models/jobs/jobs.model";
 import TestSubmission from "../../models/jobs/testsubmission.model";
+import Test from "../../models/jobs/test.model";
+import { Types } from "mongoose";
 
 const TotalApplicantsTable = async function (req: IUserRequest, res: Response) {
   try {
@@ -17,17 +19,73 @@ const TotalApplicantsTable = async function (req: IUserRequest, res: Response) {
     const allApplicantIds = jobs.flatMap(job => job.applicants.map(app => app.applicant?._id));
     const allJobIds = jobs.map(job => job._id);
 
+    // Fetch all test submissions
     const testSubmissions = await TestSubmission.find({
       job: { $in: allJobIds },
       applicant: { $in: allApplicantIds },
     }).lean();
 
-    const submissionMap = new Map();
+    // Get all test IDs from the submissions
+    const testIds = testSubmissions.map(sub => sub.test);
+
+    // Fetch all tests with those IDs
+    const tests = await Test.find({ _id: { $in: testIds }, type: "application_test" })
+      .select("questions type")
+      .lean();
+
+    // Create maps for easier lookups
+    const submissionMap = new Map<
+      string,
+      {
+        _id: Types.ObjectId;
+        test: Types.ObjectId;
+        job: Types.ObjectId;
+        applicant: Types.ObjectId;
+        answers?: { question_id: Types.ObjectId; selected_answer: string }[];
+        status: string;
+        score?: number;
+      }
+    >();
     testSubmissions.forEach(sub => submissionMap.set(`${sub.job}-${sub.applicant}`, sub));
+
+    const testMap = new Map<
+      string,
+      {
+        _id: Types.ObjectId;
+        type: string;
+        questions: {
+          _id: string;
+          // question: string;
+          correct_answer: string;
+          options: string[];
+          question_type: "text" | "multiple_choice" | "yes/no";
+          score: number;
+        }[];
+      }
+    >();
+    tests.forEach(test => testMap.set(test._id.toString(), test));
 
     const formattedResponse = jobs.flatMap(job =>
       job.applicants.map(app => {
         const testSubmission = submissionMap.get(`${job._id}-${app.applicant._id}`);
+        let testQuestions: { _id: string; correct_answer: string; options: string[]; selectedAnswer: string | null }[] = [];
+
+        // If there's a test submission, get the test details and questions
+        if (testSubmission) {
+          const testDetails = testMap.get(testSubmission.test?.toString());
+
+          if (testDetails) {
+            // Merge test questions with selected answers
+            testQuestions = testDetails.questions.map(q => {
+              const selectedAnswer = testSubmission.answers?.find(ans => ans.question_id.toString() === q._id.toString());
+
+              return {
+                ...q,
+                selectedAnswer: selectedAnswer ? selectedAnswer.selected_answer : null,
+              };
+            });
+          }
+        }
 
         return {
           candidate_name: `${app.applicant.first_name} ${app.applicant.last_name}`,
@@ -37,6 +95,7 @@ const TotalApplicantsTable = async function (req: IUserRequest, res: Response) {
           application_test_cv_sorting_status: testSubmission?.status,
           application_test_score: testSubmission?.score,
           application_status: app.status,
+          test_questions: testQuestions, // Adding the test questions with answers
         };
       })
     );
