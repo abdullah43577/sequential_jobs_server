@@ -7,8 +7,10 @@ export interface IUser {
   username: string;
   email: string;
   password: string;
+  bio: string;
   role: "job-seeker" | "company" | "panelist" | "medical-expert" | "admin" | "super-admin";
   phone_no: number;
+  profile_pic: string | null;
   official_phone: number;
   organisation_name: string;
   industry: string;

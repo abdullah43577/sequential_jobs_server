@@ -1,7 +1,7 @@
 import { Request, Response } from "express";
 import { generateAccessToken, generateRefreshToken } from "../helper/generateToken";
 import { CustomJwtPayload, IUserRequest } from "../interface";
-import { loginValidationSchema, registerValidationSchema } from "../utils/types/authValidatorSchema";
+import { loginValidationSchema, registerValidationSchema, updateProfileSchema } from "../utils/types/authValidatorSchema";
 import User from "../models/users.model";
 import { comparePassword, hashPassword } from "../helper/hashPassword";
 import { handleErrors } from "../helper/handleErrors";
@@ -9,6 +9,9 @@ import { registrationEmail } from "../utils/nodemailer.ts/email-templates/regist
 import { transportMail } from "../utils/nodemailer.ts/transportMail";
 import jwt, { Secret } from "jsonwebtoken";
 import { getBaseUrl } from "../helper/getBaseUrl";
+import { Readable } from "nodemailer/lib/xoauth2";
+import cloudinary from "../utils/cloudinaryConfig";
+import { cleanObject } from "../utils/cleanedObject";
 const { EMAIL_VERIFICATION_TOKEN } = process.env;
 
 const testApi = async (req: Request, res: Response) => {
@@ -190,10 +193,57 @@ const resetPassword = async (req: Request, res: Response) => {
 const getProfile = async (req: IUserRequest, res: Response) => {
   try {
     const { userId } = req;
-    const user = await User.findById(userId).select("first_name last_name username email role phone_no official_phone organisation_name industry street_1 street_2 country state postal_code subscription_tier resume").lean();
+    const user = await User.findById(userId).select("first_name last_name username email role phone_no official_phone organisation_name industry street_1 street_2 country state postal_code subscription_tier bio resume").lean();
     if (!user) return res.status(404).json({ message: "User record not found!" });
 
     res.status(200).json(user);
+  } catch (error) {
+    handleErrors({ res, error });
+  }
+};
+
+const updateProfile = async (req: IUserRequest, res: Response) => {
+  try {
+    const { userId } = req;
+    const profilePic = req.file;
+
+    const profileBody = updateProfileSchema.parse(req.body);
+
+    const cleanedObject = cleanObject(profileBody);
+
+    const user = await User.findById(userId);
+    if (!user) return res.status(404).json({ message: "User not found!" });
+
+    if (profilePic) {
+      const stream = cloudinary.uploader.upload_stream(
+        {
+          folder: `users/${user.role}/${userId}/profile`,
+          resource_type: "image",
+        },
+        async (error, result) => {
+          if (error) {
+            return res.status(500).json({ error: "Cloudinary upload failed" });
+          }
+
+          if (result?.secure_url) {
+            user.profile_pic = result.secure_url;
+            Object.assign(user, cleanedObject);
+            await user.save();
+
+            return res.status(200).json({ message: "Profile updated successfully", user });
+          }
+        }
+      );
+
+      const bufferStream = new Readable();
+      bufferStream.push(profilePic.buffer);
+      bufferStream.push(null);
+      bufferStream.pipe(stream);
+    } else {
+      Object.assign(user, profileBody);
+      await user.save();
+      res.status(200).json({ message: "Profile updated successfully", user });
+    }
   } catch (error) {
     handleErrors({ res, error });
   }
@@ -211,4 +261,4 @@ const generateNewToken = async (req: IUserRequest, res: Response) => {
   }
 };
 
-export { testApi, createUser, validateEmail, loginUser, forgotPassword, resetPassword, generateNewToken, getProfile };
+export { testApi, createUser, validateEmail, loginUser, forgotPassword, resetPassword, generateNewToken, getProfile, updateProfile };

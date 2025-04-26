@@ -1,6 +1,7 @@
 import { Router } from "express";
-import { generateNewToken, loginUser, createUser, forgotPassword, testApi, validateEmail, resetPassword, getProfile } from "../controllers/auth.controller";
+import { generateNewToken, loginUser, createUser, forgotPassword, testApi, validateEmail, resetPassword, getProfile, updateProfile } from "../controllers/auth.controller";
 import { validateAccessToken, validateRefreshToken } from "../middleware/validateToken";
+import { upload } from "../utils/multerConfig";
 
 const authRouter = Router();
 
@@ -12,5 +13,6 @@ authRouter.post("/forgot-password", forgotPassword);
 authRouter.post("/reset-password", resetPassword);
 authRouter.post("/token", validateRefreshToken, generateNewToken);
 authRouter.get("/get_profile", validateAccessToken, getProfile);
+authRouter.put("/update_profile", validateAccessToken, upload.single("profile_pic"), updateProfile);
 
 export { authRouter };

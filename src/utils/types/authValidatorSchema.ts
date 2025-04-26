@@ -96,3 +96,17 @@ export const loginValidationSchema = z.object({
   email: z.string().email(),
   password: z.string().min(8, "Password must be at least 8 characters long"),
 });
+
+export const updateProfileSchema = z.object({
+  first_name: z.string().optional(),
+  last_name: z.string().optional(),
+  username: z.string().optional(),
+  email: z.string().email(),
+  phone_no: z.string().optional(),
+  official_phone: z.string(),
+  organisation_name: z.string(),
+  industry: z.string().optional(),
+  street_1: z.string().optional(),
+  street_2: z.string().optional(),
+  bio: z.string().optional(),
+});
