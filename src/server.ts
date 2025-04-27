@@ -17,7 +17,18 @@ const app = express();
 app.use(morgan("dev"));
 app.use(
   cors({
-    origin: ["http://localhost:3000", "https://sequentialjobs.com", "https://sequential-jobs.vercel.app"],
+    origin: [
+      "http://localhost:3000",
+      "https://sequentialjobs.com",
+      "https://ng.sequentialjobs.com",
+      "https://gh.sequentialjobs.com",
+      "https://ae.sequentialjobs.com",
+      "https://gb.sequentialjobs.com",
+      "https://ca.sequentialjobs.com",
+      "https://ke.sequentialjobs.com",
+      "https://ph.sequentialjobs.com",
+      "https://sequential-jobs.vercel.app",
+    ],
     credentials: true,
   })
 );
