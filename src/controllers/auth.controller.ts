@@ -118,7 +118,9 @@ const loginUser = async (req: Request, res: Response) => {
     const accessToken = generateAccessToken({ id: user._id.toString(), role: user.role });
     const refreshToken = generateRefreshToken({ id: user._id.toString(), role: user.role });
 
-    res.status(200).json({ message: "Login Successful", userRole: user.role, token: { accessToken, refreshToken } });
+    const hasSubmittedResume = !!user.resume;
+
+    res.status(200).json({ message: "Login Successful", has_submitted_resume: hasSubmittedResume, userRole: user.role, token: { accessToken, refreshToken } });
   } catch (error) {
     handleErrors({ res, error });
   }
