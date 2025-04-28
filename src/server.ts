@@ -2,7 +2,7 @@ import "dotenv/config";
 import express, { Request, Response } from "express";
 import morgan from "morgan";
 import cors from "cors";
-const { PORT } = process.env;
+const { PORT, SESSION_SECRET } = process.env;
 import { notificationRouter } from "./routes/notificationRouter";
 import { connectDB } from "./helper/connectDB";
 import cookieParser from "cookie-parser";
@@ -11,6 +11,9 @@ import { authRouter } from "./routes/authRoutes";
 import { initializeSocket } from "./helper/socket";
 import { companyRouter } from "./routes/employer/routes.employer";
 import { seekerRouter } from "./routes/seeker/routes.seeker";
+import passport from "passport";
+import { passportSetup } from "./utils/passportSetup";
+import session from "express-session";
 
 const app = express();
 
@@ -36,6 +39,19 @@ app.use(express.json({ limit: "10mb" }));
 app.use(express.urlencoded({ extended: false, limit: "10mb" }));
 app.use(cookieParser());
 app.use(helmet());
+app.use(
+  session({
+    secret: SESSION_SECRET as string,
+    resave: false,
+    saveUninitialized: false,
+    cookie: {
+      maxAge: 24 * 60 * 60 * 1000, // 1 day
+    },
+  })
+);
+app.use(passport.initialize());
+app.use(passport.session());
+passportSetup();
 
 // routes
 app.use("/api/notifications", notificationRouter);
