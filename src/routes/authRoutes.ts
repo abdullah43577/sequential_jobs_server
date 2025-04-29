@@ -4,12 +4,14 @@ import { validateAccessToken, validateGoogleVerificationToken, validateRefreshTo
 import { upload } from "../utils/multerConfig";
 import passport from "passport";
 import { IUserRequest } from "../interface";
-import { generateAccessToken, generateGoogleVerificationToken, generateRefreshToken } from "../helper/generateToken";
+import { generateGoogleVerificationToken } from "../helper/generateToken";
 import { IUser } from "../utils/types/modelTypes";
 
 const authRouter = Router();
 
-//* GOOGLE LOGIN
+authRouter.get("/google", passport.authenticate("google", { scope: ["profile", "email"] }));
+
+//* GOOGLE signup
 authRouter.get(
   "/google/job-seeker",
   (req, res, next) => {
@@ -19,7 +21,7 @@ authRouter.get(
   passport.authenticate("google", { scope: ["profile", "email"] })
 );
 
-// Employer login
+// Employer signup
 authRouter.get(
   "/google/employer",
   (req, res, next) => {
@@ -45,6 +47,7 @@ authRouter.get("/google/callback", passport.authenticate("google", { session: fa
     res.status(500).json({ message: "Internal Server Error", error });
   }
 });
+
 authRouter.get("/google/callback/validate-session/:tokenId", validateGoogleVerificationToken, validateOAuthSession);
 
 authRouter.get("/", testApi);

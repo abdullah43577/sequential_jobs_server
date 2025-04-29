@@ -18,7 +18,7 @@ const userSchema = new Schema<IUser>(
       },
       default: null,
     },
-    username: { type: String, validate: roleBasedValidation("company", "Username"), unique: true },
+    username: { type: String, validate: roleBasedValidation("company", "Username"), unique: true, default: null },
     email: { type: String, required: true, unique: true },
     password: { type: String, default: null },
     bio: { type: String, default: null },

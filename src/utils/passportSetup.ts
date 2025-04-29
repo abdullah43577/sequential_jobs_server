@@ -1,6 +1,7 @@
 import passport from "passport";
 import { Strategy as GoogleStrategy } from "passport-google-oauth20";
 import User from "../models/users.model";
+import { generateUsername } from "./generateUserName";
 
 const { GOOGLE_CLIENT_ID, GOOGLE_CLIENT_SECRET } = process.env;
 
@@ -10,20 +11,21 @@ export const passportSetup = function () {
       {
         clientID: GOOGLE_CLIENT_ID as string,
         clientSecret: GOOGLE_CLIENT_SECRET as string,
-        callbackURL: process.env["NODE_ENV"] === "development" ? "http://localhost:8080/auth/google/callback" : "https://sequential-jobs-server.onrender.com/auth/google/callback",
+        callbackURL: process.env["NODE_ENV"] === "development" ? "http://localhost:8080/api/auth/google/callback" : "https://sequential-jobs-server.onrender.com/api/auth/google/callback",
         passReqToCallback: true,
       },
       async function (req, _accessToken, _refreshToken, profile, done) {
         try {
           const { id, name, emails, _json } = profile;
 
-          const role = req.query.role || "job-seeker";
+          const role = req.query.role as "company" | "job-seeker";
 
           let existingUser = await User.findOne({ googleId: id });
           if (existingUser) {
             if (existingUser.isLocked) {
               return done(null, false, { message: "Your account is locked due to many failed login attempts. Please contact support." });
             } else {
+              console.log("I'm here");
               return done(null, existingUser);
             }
           }
@@ -35,9 +37,17 @@ export const passportSetup = function () {
             existingUser = await User.findOne({ email });
 
             if (existingUser) {
-              // Email exists but no Google ID - update the user record to link accounts
+              console.log("It added the google ID here");
+
               existingUser.googleId = id;
-              existingUser.has_validated_email = true;
+
+              if (!existingUser.has_validated_email) existingUser.has_validated_email = true;
+
+              //* generate username if user doesn't have already
+              if (!existingUser.username) {
+                const generatedUserName = await generateUsername(existingUser.first_name, existingUser.last_name);
+                existingUser.username = generatedUserName;
+              }
 
               await existingUser.save();
               return done(null, existingUser);
@@ -46,7 +56,11 @@ export const passportSetup = function () {
 
           if (!_json.email_verified) return done(null, false, { message: "Please verify your email with google and try again!!" });
 
-          const newUser = await User.create({
+          console.log("i ran here");
+
+          const generatedUserName = await generateUsername(name?.givenName || "", name?.familyName || "");
+
+          const newUser = new User({
             first_name: name?.givenName,
             lastName: name?.familyName,
             email: emails?.[0].value,
@@ -56,6 +70,12 @@ export const passportSetup = function () {
             has_validated_email: true,
             organisation_name: name?.givenName,
           });
+
+          if (role === "company") {
+            newUser.username = generatedUserName;
+          }
+
+          await newUser.save();
 
           done(null, newUser);
         } catch (error) {
