@@ -19,11 +19,27 @@ export const passportSetup = function () {
 
           const role = req.query.role || "job-seeker";
 
-          const existingUser = await User.findOne({ googleId: id });
+          let existingUser = await User.findOne({ googleId: id });
           if (existingUser) {
             if (existingUser.isLocked) {
               return done(null, false, { message: "Your account is locked due to many failed login attempts. Please contact support." });
             } else {
+              return done(null, existingUser);
+            }
+          }
+
+          // No user with this Google ID, check if email exists
+          if (emails && emails.length > 0) {
+            const email = emails[0].value;
+
+            existingUser = await User.findOne({ email });
+
+            if (existingUser) {
+              // Email exists but no Google ID - update the user record to link accounts
+              existingUser.googleId = id;
+              existingUser.has_validated_email = true;
+
+              await existingUser.save();
               return done(null, existingUser);
             }
           }
@@ -50,21 +66,21 @@ export const passportSetup = function () {
   );
 
   // storing current user id
-  passport.serializeUser((user, done) => {
-    done(null, (user as any)._id);
-  });
+  // passport.serializeUser((user, done) => {
+  //   done(null, (user as any)._id);
+  // });
 
-  // return user by id when requested
-  passport.deserializeUser(async (id, done) => {
-    try {
-      const user = await User.findById(id);
-      if (user) {
-        done(null, user);
-      } else {
-        done(null, false);
-      }
-    } catch (error) {
-      done(error, undefined);
-    }
-  });
+  // // return user by id when requested
+  // passport.deserializeUser(async (id, done) => {
+  //   try {
+  //     const user = await User.findById(id);
+  //     if (user) {
+  //       done(null, user);
+  //     } else {
+  //       done(null, false);
+  //     }
+  //   } catch (error) {
+  //     done(error, undefined);
+  //   }
+  // });
 };

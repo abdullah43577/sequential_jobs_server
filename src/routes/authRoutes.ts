@@ -1,9 +1,11 @@
 import { Router } from "express";
-import { generateNewToken, loginUser, createUser, forgotPassword, testApi, validateEmail, resetPassword, getProfile, updateProfile } from "../controllers/auth.controller";
-import { validateAccessToken, validateRefreshToken } from "../middleware/validateToken";
+import { generateNewToken, loginUser, createUser, forgotPassword, testApi, validateEmail, resetPassword, getProfile, updateProfile, validateOAuthSession } from "../controllers/auth.controller";
+import { validateAccessToken, validateGoogleVerificationToken, validateRefreshToken } from "../middleware/validateToken";
 import { upload } from "../utils/multerConfig";
 import passport from "passport";
 import { IUserRequest } from "../interface";
+import { generateAccessToken, generateGoogleVerificationToken, generateRefreshToken } from "../helper/generateToken";
+import { IUser } from "../utils/types/modelTypes";
 
 const authRouter = Router();
 
@@ -29,27 +31,21 @@ authRouter.get(
 
 authRouter.get("/google/callback", passport.authenticate("google", { session: false }), async (req: IUserRequest, res) => {
   try {
-    const { user } = req;
+    const user = req.user as IUser;
     if (!user) return res.status(401).json({ error: "Authentication failed" });
 
     // Generate JWT token
     const userId = (user as any)._id.toString();
-    // const token = jwt.sign(
-    //   {
-    //     userId,
-    //     role: (user as any).role,
-    //   },
-    //   process.env.SESSION_SECRET as string,
-    //   { expiresIn: "1d" }
-    // );
+
+    const google_token = generateGoogleVerificationToken({ id: userId, role: req.role as string });
 
     // Redirect to frontend with token
-    // res.redirect(`${process.env.CLIENT_URL}/auth/callback?token=${token}`);
+    res.redirect(`${process.env.CLIENT_URL}/auth/login?token=${google_token}`);
   } catch (error) {
     res.status(500).json({ message: "Internal Server Error", error });
   }
 });
-// authRouter.get("/google/callback/validate-session/:tokenId", validateOAuthSession);
+authRouter.get("/google/callback/validate-session/:tokenId", validateGoogleVerificationToken, validateOAuthSession);
 
 authRouter.get("/", testApi);
 authRouter.post("/create-user", createUser);

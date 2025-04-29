@@ -14,6 +14,7 @@ import { seekerRouter } from "./routes/seeker/routes.seeker";
 import passport from "passport";
 import { passportSetup } from "./utils/passportSetup";
 import session from "express-session";
+import { landingRouter } from "./routes/landingRoutes";
 
 const app = express();
 
@@ -39,23 +40,24 @@ app.use(express.json({ limit: "10mb" }));
 app.use(express.urlencoded({ extended: false, limit: "10mb" }));
 app.use(cookieParser());
 app.use(helmet());
-app.use(
-  session({
-    secret: SESSION_SECRET as string,
-    resave: false,
-    saveUninitialized: false,
-    cookie: {
-      maxAge: 24 * 60 * 60 * 1000, // 1 day
-    },
-  })
-);
+// app.use(
+//   session({
+//     secret: SESSION_SECRET as string,
+//     resave: false,
+//     saveUninitialized: false,
+//     cookie: {
+//       maxAge: 24 * 60 * 60 * 1000, // 1 day
+//     },
+//   })
+// );
 app.use(passport.initialize());
-app.use(passport.session());
+// app.use(passport.session());
 passportSetup();
 
 // routes
-app.use("/api/notifications", notificationRouter);
+app.use("/api", landingRouter);
 app.use("/api/auth", authRouter);
+app.use("/api/notifications", notificationRouter);
 app.use("/api/employer", companyRouter);
 app.use("/api/seeker", seekerRouter);
 

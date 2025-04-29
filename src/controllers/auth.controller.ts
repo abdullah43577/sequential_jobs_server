@@ -192,6 +192,24 @@ const resetPassword = async (req: Request, res: Response) => {
   }
 };
 
+const validateOAuthSession = async (req: IUserRequest, res: Response) => {
+  try {
+    const { userId } = req;
+
+    const user = await User.findById(userId);
+    if (!user) return res.status(404).json({ message: "User not found!" });
+
+    const accessToken = generateAccessToken({ id: user._id.toString(), role: user.role });
+    const refreshToken = generateRefreshToken({ id: user._id.toString(), role: user.role });
+
+    const hasSubmittedResume = !!user.resume;
+
+    res.status(200).json({ message: "Login Successful", has_submitted_resume: hasSubmittedResume, userRole: user.role, token: { accessToken, refreshToken } });
+  } catch (error) {
+    handleErrors({ res, error });
+  }
+};
+
 const getProfile = async (req: IUserRequest, res: Response) => {
   try {
     const { userId } = req;
@@ -265,4 +283,4 @@ const generateNewToken = async (req: IUserRequest, res: Response) => {
   }
 };
 
-export { testApi, createUser, validateEmail, loginUser, forgotPassword, resetPassword, generateNewToken, getProfile, updateProfile };
+export { testApi, createUser, validateEmail, loginUser, forgotPassword, resetPassword, validateOAuthSession, generateNewToken, getProfile, updateProfile };
