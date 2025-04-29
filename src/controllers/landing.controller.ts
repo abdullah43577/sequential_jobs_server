@@ -9,7 +9,7 @@ const getLandingJobs = async function (req: Request, res: Response) {
 
     const query = countryName ? { country: new RegExp(`^${countryName}$`, "i") } : {};
 
-    const jobs = await Job.find(query).populate({ path: "employer", select: "organisation_name" }).sort({ createdAt: -1 });
+    const jobs = await Job.find(query).populate("employer", "organisation_name").sort({ createdAt: -1 });
     res.status(200).json(jobs);
   } catch (error) {
     handleErrors({ res, error });
@@ -21,7 +21,7 @@ const getCompanyJobs = async function (req: Request, res: Response) {
     const { username } = req.params;
     if (!username) return res.status(400).json({ message: "Company username is required" });
 
-    const jobs = await Job.find({ username }).populate({ path: "employer", select: "organisation_name" }).sort({ createdAt: -1 });
+    const jobs = await Job.find({ username }).populate("employer", "organisation_name").sort({ createdAt: -1 });
     res.status(200).json(jobs);
   } catch (error) {
     handleErrors({ res, error });
