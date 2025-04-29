@@ -28,8 +28,8 @@ export const getDomainHost = function (req: Request) {
       ph: "Philippines",
     };
 
-    return subdomainToCountry[subdomain] || "United States";
+    return subdomainToCountry[subdomain] || null;
   }
 
-  return "United States";
+  return null;
 };

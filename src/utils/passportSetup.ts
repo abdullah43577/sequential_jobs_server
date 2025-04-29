@@ -25,7 +25,6 @@ export const passportSetup = function () {
             if (existingUser.isLocked) {
               return done(null, false, { message: "Your account is locked due to many failed login attempts. Please contact support." });
             } else {
-              console.log("I'm here");
               return done(null, existingUser);
             }
           }
@@ -37,8 +36,6 @@ export const passportSetup = function () {
             existingUser = await User.findOne({ email });
 
             if (existingUser) {
-              console.log("It added the google ID here");
-
               existingUser.googleId = id;
 
               if (!existingUser.has_validated_email) existingUser.has_validated_email = true;
@@ -55,8 +52,6 @@ export const passportSetup = function () {
           }
 
           if (!_json.email_verified) return done(null, false, { message: "Please verify your email with google and try again!!" });
-
-          console.log("i ran here");
 
           const generatedUserName = await generateUsername(name?.givenName || "", name?.familyName || "");
 

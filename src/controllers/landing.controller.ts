@@ -6,7 +6,10 @@ import { getDomainHost } from "../utils/getHostName";
 const getLandingJobs = async function (req: Request, res: Response) {
   try {
     const countryName = getDomainHost(req);
-    const jobs = await Job.find({ country: new RegExp(`^${countryName}$`, "i") }).sort({ createdAt: -1 });
+
+    const query = countryName ? { country: new RegExp(`^${countryName}$`, "i") } : {};
+
+    const jobs = await Job.find(query).sort({ createdAt: -1 });
     res.status(200).json(jobs);
   } catch (error) {
     handleErrors({ res, error });
