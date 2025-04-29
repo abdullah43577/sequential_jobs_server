@@ -2,6 +2,7 @@ import { Request, Response } from "express";
 import { handleErrors } from "../helper/handleErrors";
 import Job from "../models/jobs/jobs.model";
 import { getDomainHost } from "../utils/getHostName";
+import User from "../models/users.model";
 
 const getLandingJobs = async function (req: Request, res: Response) {
   try {
@@ -9,8 +10,22 @@ const getLandingJobs = async function (req: Request, res: Response) {
 
     const query = countryName ? { country: new RegExp(`^${countryName}$`, "i") } : {};
 
-    const jobs = await Job.find(query).populate("employer", "organisation_name").sort({ createdAt: -1 });
+    const jobs = await Job.find(query).populate("employer", "organisation_name").lean().sort({ createdAt: -1 });
+
     res.status(200).json(jobs);
+  } catch (error) {
+    handleErrors({ res, error });
+  }
+};
+
+const getLandingJobById = async function (req: Request, res: Response) {
+  try {
+    const { job_id } = req.query;
+
+    const job = await Job.findById(job_id).populate("employer", "organisation_name");
+    if (!job) return res.status(404).json({ message: "Job not found!" });
+
+    res.status(200).json(job);
   } catch (error) {
     handleErrors({ res, error });
   }
@@ -21,11 +36,15 @@ const getCompanyJobs = async function (req: Request, res: Response) {
     const { username } = req.params;
     if (!username) return res.status(400).json({ message: "Company username is required" });
 
-    const jobs = await Job.find({ username }).populate("employer", "organisation_name").sort({ createdAt: -1 });
+    const user = await User.findOne({ username });
+    if (!user) return res.status(404).json({ message: "Company Account not found!" });
+
+    const jobs = await Job.find({ employer: user._id }).populate("employer", "organisation_name").lean().sort({ createdAt: -1 });
+
     res.status(200).json(jobs);
   } catch (error) {
     handleErrors({ res, error });
   }
 };
 
-export { getLandingJobs, getCompanyJobs };
+export { getLandingJobs, getLandingJobById, getCompanyJobs };

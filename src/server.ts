@@ -15,6 +15,9 @@ import passport from "passport";
 import { passportSetup } from "./utils/passportSetup";
 import session from "express-session";
 import { landingRouter } from "./routes/landingRoutes";
+import Job from "./models/jobs/jobs.model";
+import User from "./models/users.model";
+import { eventsRouter } from "./routes/eventRoutes";
 
 const app = express();
 
@@ -60,6 +63,7 @@ app.use("/api/auth", authRouter);
 app.use("/api/notifications", notificationRouter);
 app.use("/api/employer", companyRouter);
 app.use("/api/seeker", seekerRouter);
+app.use("/api/events", eventsRouter);
 
 app.use("*", (req: Request, res: Response) => {
   res.status(404).json({
@@ -77,6 +81,8 @@ const server = app.listen(PORT, async () => {
   console.log(`server started on http://localhost:${PORT}`);
 
   // const d = await Job.collection.updateMany({ "applicants.applicant.has_taken_application_test": { $exists: true } }, { $unset: { "applicants.$.has_taken_application_test": false } });
+
+  // await User.collection.updateMany({ profile_pic: { $exists: false } }, { $set: { profile_pic: null } });
   // console.log("I ran");
 });
 
