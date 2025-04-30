@@ -1,4 +1,4 @@
-import { Types } from "mongoose";
+import { Document, Types } from "mongoose";
 import { NotificationStatus, NotificationType } from "../../models/notifications.model";
 
 export interface IUser {
@@ -7,10 +7,13 @@ export interface IUser {
   username: string;
   email: string;
   password: string;
+  bio: string;
   role: "job-seeker" | "company" | "panelist" | "medical-expert" | "admin" | "super-admin";
   phone_no: number;
+  profile_pic: string | null;
   official_phone: number;
   organisation_name: string;
+  organisation_size: number;
   industry: string;
   street_1: string;
   street_2: string;
@@ -63,7 +66,11 @@ export interface IJob {
   generic_skills: string[];
   technical_skills: string[];
   description: string;
-  applicants: { applicant: Types.ObjectId; date_of_application?: Date; status: "applied" | "shortlisted" | "interview_scheduled" | "interview_completed" | "offer_sent" | "hired" | "rejected" }[];
+  applicants: {
+    applicant: Types.ObjectId;
+    date_of_application?: Date;
+    status: "applied" | "shortlisted" | "interview_invite_sent" | "interview_scheduled" | "interview_completed" | "has_offer" | "hired" | "documents_reupload_requested" | "rejected";
+  }[];
   is_live: boolean;
   application_test: Types.ObjectId;
   cut_off_points: {
@@ -114,10 +121,11 @@ export interface IInterview {
     interview_duration: string;
     available_date_time: {};
   }[];
-  panelists: string[];
+  meetingLink: string;
+  panelists: { email: string; rating_scale: Map<string, number | string> }[];
   invitation_letter: string;
-  candidates: { candidate: Types.ObjectId; scheduled_date_time?: { date: Date; start_time: string; end_time: string }; status?: "pending" | "confirmed" | "completed" | "canceled"; rating_scale?: Map<string, number> }[];
-  // stage: "set_rating_scale" | "set_interview" | "panelist_invite" | "panelist_letter_invitation" | "panelist_invite_confirmation" | "applicants_invite";
+  candidates: { candidate: Types.ObjectId; scheduled_date_time?: { date: Date; start_time: string; end_time: string }; interview_score?: number; status?: "pending" | "confirmed" | "completed" | "canceled"; rating_scale?: Map<string, number> }[];
+  stage: "set_rating_scale" | "set_interview" | "panelist_letter_invitation" | "panelist_invite_confirmation" | "applicants_invite";
 }
 
 export interface ICalendar {
@@ -144,7 +152,14 @@ export interface ITestSubmission {
 
 export interface IDocumentation {
   job: Types.ObjectId;
-  invitation_letter: string;
-  contract_agreement_file: string;
-  documents: Map<string, string>;
+  candidates: { candidate: Types.ObjectId; invitation_letter: string; contract_agreement_file: String; documents: Map<string, string> }[];
+}
+
+export interface IMedical {
+  job: Types.ObjectId;
+  employer: Types.ObjectId;
+  medical_time_slot: { date: Date; start_time: string; end_time: string; medical_duration: string; available_date_time: Record<string, any>[] };
+  address: string;
+  medicalists: string[];
+  candidates: { candidate: Types.ObjectId; scheduled_date_time?: Record<string, any>; medical_documents?: Map<string, string>; status?: "pending" | "completed" | "canceled" }[];
 }

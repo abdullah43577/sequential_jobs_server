@@ -13,44 +13,50 @@ const cache = new NodeCache({ stdTTL: 600, checkperiod: 120 });
 const getAllJobTests = async function (req: IUserRequest, res: Response) {
   try {
     const { userId } = req;
-    const cacheKey = `candidate_job_test_${userId}`;
-    const cachedTests = cache.get(cacheKey);
-    if (cachedTests) return res.status(200).json(cachedTests);
 
     const jobTests = await JobTest.find({ candidates_invited: { $in: userId } })
-      .populate<{
-        job_test: {
+      .select("job employer job_test updatedAt")
+      .populate("job", "job_title")
+      .populate("employer", "organisation_name")
+      .lean<
+        {
           _id: string;
-          instruction: string;
-          questions: {
-            _id: string;
-            question_type: "multiple_choice" | "yes/no" | "text";
-            options: string[];
-            score: number;
-            correct_answer: string;
-          }[];
-          type: "application_test" | "job_test";
-        };
-      }>("job_test")
-      .lean();
+          job: { job_title: string };
+          employer: { organisation_name: string };
+          job_test: string;
+          updatedAt: Date; // This shows updatedAt is at the root level
+        }[]
+      >();
 
-    const formattedResponse = jobTests.map(test => {
-      if (typeof test.job_test === "object") {
-        const { _id, instruction, questions, type } = test.job_test;
-
-        const filteredQuestions = questions.map(({ correct_answer, score, ...rest }) => rest);
+    const formattedResponse = await Promise.all(
+      jobTests.map(async test => {
+        const hasTakenJobTest = await TestSubmission.findOne({ applicant: userId, test: test.job_test });
 
         return {
-          job_test_id: _id,
-          instruction,
-          questions: filteredQuestions,
-          type,
+          job_test_id: test.job_test, //* the ref to the actual global Test Schema
+          job_title: test.job.job_title,
+          organisation_name: test.employer.organisation_name,
+          updatedAt: test.updatedAt,
+          has_taken_job_test: !!hasTakenJobTest,
         };
-      }
-    });
+      })
+    );
 
-    cache.set(cacheKey, formattedResponse);
+    // cache.set(cacheKey, formattedResponse);
     return res.status(200).json(formattedResponse);
+  } catch (error) {
+    handleErrors({ res, error });
+  }
+};
+
+const getJobTestDetails = async function (req: IUserRequest, res: Response) {
+  try {
+    const { test_id } = req.query;
+
+    const test = await Test.findById(test_id).select("instruction questions type").lean();
+    if (!test) return res.status(404).json({ message: "Test with specified ID not found!" });
+
+    res.status(200).json(test);
   } catch (error) {
     handleErrors({ res, error });
   }
@@ -74,6 +80,10 @@ const submitJobTest = async function (req: IUserRequest, res: Response) {
       return { ...answer, is_correct: isCorrect };
     });
 
+    //* check if submission has occurred before
+    const submissions = await TestSubmission.findOne({ test: job_test_id, applicant: userId });
+    if (submissions) return res.status(400).json({ message: "You've already submitted this test" });
+
     const submission = await TestSubmission.create({
       test: job_test_id,
       job: test.job,
@@ -89,4 +99,4 @@ const submitJobTest = async function (req: IUserRequest, res: Response) {
   }
 };
 
-export { getAllJobTests, submitJobTest };
+export { getAllJobTests, getJobTestDetails, submitJobTest };

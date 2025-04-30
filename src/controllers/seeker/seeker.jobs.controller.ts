@@ -58,16 +58,38 @@ const getAllJobs = async function (req: IUserRequest, res: Response) {
 
 const getJobDetails = async function (req: IUserRequest, res: Response) {
   try {
+    const { userId } = req;
     const { job_id } = req.params;
 
     // const cacheKey = `single_job_cache__${job_id}`;
     // const cachedJob = cache.get(cacheKey);
     // if (cachedJob) return res.status(200).json(cachedJob);
 
-    const job = await Job.findById(job_id).select("employer job_title country state city job_type salary currency_type years_of_exp description application_test").populate("employer application_test");
+    const job = await Job.findById(job_id)
+      .select("employer job_title country state city job_type salary currency_type years_of_exp description application_test applicants createdAt")
+      .populate({ path: "application_test", select: "instruction questions type" })
+      .populate({ path: "employer", select: "organisation_name" })
+      .lean();
     if (!job) return res.status(404).json({ message: "Job with specified ID, not found!" });
 
-    // cache.set(cacheKey, job);
+    // Check if the current user has applied for this job
+    const hasApplied = job.applicants?.some(data => data.applicant.toString() === userId);
+
+    // Add has_applied property to the job object
+    (job as any).has_applied = hasApplied || false;
+
+    //* check if user has taken application test
+    const testSubmission = await TestSubmission.findOne({ job: job_id, applicant: userId })
+      .populate({
+        path: "test",
+        select: "type",
+        match: { type: "application_test" },
+      })
+      .lean();
+
+    (job as any).has_taken_application_test = !!testSubmission;
+
+    // cache.set(cacheKey, jobObject);
 
     res.status(200).json(job);
   } catch (error) {
@@ -110,10 +132,10 @@ const getApplicationTest = async function (req: IUserRequest, res: Response) {
   try {
     const { job_id } = req.params;
 
-    const cacheKey = `job_application_test__${job_id}`;
+    // const cacheKey = `job_application_test__${job_id}`;
 
-    const cachedTest = cache.get(cacheKey);
-    if (cachedTest) return res.status(200).json({ application_test: cachedTest });
+    // const cachedTest = cache.get(cacheKey);
+    // if (cachedTest) return res.status(200).json({ application_test: cachedTest });
 
     const job = await Job.findById(job_id)
       .populate<{
@@ -145,7 +167,7 @@ const getApplicationTest = async function (req: IUserRequest, res: Response) {
         type,
       };
 
-      cache.set(cacheKey, responseObject);
+      // cache.set(cacheKey, responseObject);
 
       res.status(200).json(responseObject);
     }
@@ -181,6 +203,18 @@ const submitApplicationTest = async function (req: IUserRequest, res: Response) 
       answers: gradedAnswers,
       score: totalScore,
     });
+
+    const candidateStatus = submission.status === "suitable" ? "shortlisted" : "applied";
+
+    //* update candidate status
+    await Job.findOneAndUpdate(
+      { _id: job_id, "applicants.applicant": userId },
+      {
+        $set: {
+          "applicants.$.status": candidateStatus,
+        },
+      }
+    );
 
     res.status(201).json({ message: "Test submitted successfully", submission });
   } catch (error) {

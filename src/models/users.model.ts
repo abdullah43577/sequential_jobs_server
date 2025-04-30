@@ -18,11 +18,13 @@ const userSchema = new Schema<IUser>(
       },
       default: null,
     },
-    username: { type: String, validate: roleBasedValidation("company", "Username") },
+    username: { type: String, validate: roleBasedValidation("company", "Username"), unique: true },
     email: { type: String, required: true, unique: true },
     password: { type: String, default: null },
+    bio: { type: String, default: null },
     role: { type: String, enum: ["job-seeker", "company", "panelist", "medical-expert", "admin", "super-admin"], required: true },
     resume: { type: String, default: null },
+    profile_pic: { type: String, default: null },
 
     phone_no: {
       type: Number,
@@ -38,6 +40,11 @@ const userSchema = new Schema<IUser>(
     organisation_name: {
       type: String,
       validate: roleBasedValidation("company", "Organisation Name"),
+    },
+
+    organisation_size: {
+      type: Number,
+      validate: roleBasedValidation("company", "Organisation Size"),
     },
 
     industry: {

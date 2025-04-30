@@ -1,25 +1,43 @@
 import { Router } from "express";
-import { validateAccessToken, validateCompanySession } from "../../middleware/validateToken";
+import { validateAccessToken, validateCompanySession, validatePanelistSession } from "../../middleware/validateToken";
 import { upload } from "../../utils/multerConfig";
-import { applicationTest, applicationTestCutoff, deleteJob, getApplicationTest, getApplicationTestCutoff, getJob, getJobs, jobPostCreation, toggleJobState } from "../../controllers/employer/employer.jobpost.controller";
+import { applicationTest, applicationTestCutoff, deleteJob, getApplicationTestDraft, getApplicationTestCutoffDraft, getJobDraft, getJobs, jobPostCreation, toggleJobState } from "../../controllers/employer/employer.jobpost.controller";
 import { getApplicantsForJobTest, getDraftCutOff, getDraftQuestion, getInviteMsgDraft, getJobsForJobTest, jobTest, jobTestApplicantsInvite, jobTestCutoff, jobTestInviteMsg } from "../../controllers/employer/employer.jobtest.controller";
-import { handleCreateInterview, handleGradeCandidates, handleInviteCandidates, handleInvitePanelists } from "../../controllers/employer/employer.interview.controller";
-import { getQualifiedCandidates, hireCandidate } from "../../controllers/employer/employer.documentation.controller";
+import {
+  getJobsForInterviews,
+  handleCreateInterview,
+  handleFetchRatingDetailsForPanelists,
+  handleGetCandidates,
+  handleGetInvitationLetter,
+  handleGetPanelistEmails,
+  handleGetRatingScaleDraft,
+  handleGetTimeSlotDrafts,
+  handleGradeCandidate,
+  handleInviteCandidates,
+  handleInvitePanelists,
+} from "../../controllers/employer/employer.interview.controller";
+import { getCandidatesWithAcceptedOffer, getCandidatesWithOffers, getJobsForDocumentation, getQualifiedCandidates, hireCandidate } from "../../controllers/employer/employer.documentation.controller";
+import { getJobsForMedical, setMedicalSchedule } from "../../controllers/employer/medicals/employer.medical.controller";
+import { GetActiveJobs, GetAllJobs, GetAllJobsWithCandidatesHires, TotalApplicantsTable } from "../../controllers/employer/employer.dashboard.controller";
 
 const companyRouter = Router();
 
-// companyRouter.get("/has-applicants", validateAccessToken, validateCompanySession, getJobsWithApplicants);
+//* DASHBOARD
+companyRouter.get("/get_all_jobs_with_applicants", validateAccessToken, validateCompanySession, TotalApplicantsTable);
+companyRouter.get("/get_jobs_with_hires", validateAccessToken, validateCompanySession, GetAllJobsWithCandidatesHires);
+companyRouter.get("/get_all_jobs", validateAccessToken, validateCompanySession, GetAllJobs);
+companyRouter.get("/get_active_jobs", validateAccessToken, validateCompanySession, GetActiveJobs);
 
 //* JOB POST CREATION
 companyRouter.get("/get_employer_jobs", validateAccessToken, validateCompanySession, getJobs);
 companyRouter.delete("/delete_job", validateAccessToken, validateCompanySession, deleteJob);
 companyRouter.put("/toggle_job", validateAccessToken, validateCompanySession, toggleJobState);
 companyRouter.put("/create", validateAccessToken, validateCompanySession, jobPostCreation);
-companyRouter.get("/get_job_info", validateAccessToken, validateCompanySession, getJob);
+companyRouter.get("/get_job_info", validateAccessToken, validateCompanySession, getJobDraft);
 companyRouter.put("/application-test", validateAccessToken, validateCompanySession, applicationTest);
-companyRouter.get("/get_application_test_info", validateAccessToken, validateCompanySession, getApplicationTest);
+companyRouter.get("/get_application_test_info", validateAccessToken, validateCompanySession, getApplicationTestDraft);
 companyRouter.put("/application-test-cutoff", validateAccessToken, validateCompanySession, applicationTestCutoff);
-companyRouter.get("/get_application_test_cutoff", validateAccessToken, validateCompanySession, getApplicationTestCutoff);
+companyRouter.get("/get_application_test_cutoff", validateAccessToken, validateCompanySession, getApplicationTestCutoffDraft);
 
 //* JOB TEST MANAGEMENT
 companyRouter.get("/job_test/jobs", validateAccessToken, validateCompanySession, getJobsForJobTest);
@@ -33,13 +51,27 @@ companyRouter.get("/job-test/get_applicants/:job_id", validateAccessToken, valid
 companyRouter.patch("/job-test/applicant-invite", validateAccessToken, jobTestApplicantsInvite);
 
 //* INTERVIEW MANAGEMENT
+companyRouter.get("/interview/get_jobs", validateAccessToken, validateCompanySession, getJobsForInterviews);
+companyRouter.get("/interview/get_rating_scale/:job_id", validateAccessToken, validateCompanySession, handleGetRatingScaleDraft);
+companyRouter.get("/interview/get_time_slots/:job_id", validateAccessToken, validateCompanySession, handleGetTimeSlotDrafts);
+companyRouter.get("/interview/get_letter/:job_id", validateAccessToken, validateCompanySession, handleGetInvitationLetter);
+companyRouter.get("/interview/get_panelists/:job_id", validateAccessToken, validateCompanySession, handleGetPanelistEmails);
 companyRouter.post("/interview/create", validateAccessToken, validateCompanySession, handleCreateInterview);
-companyRouter.put("/interview/invite_panelists/:interview_id", validateAccessToken, validateCompanySession, handleInvitePanelists);
-companyRouter.put("/interview/invite_candidates/:interview_id", validateAccessToken, validateCompanySession, handleInviteCandidates);
-companyRouter.put("/interview/grade_candidate", validateAccessToken, validateCompanySession, handleGradeCandidates);
+companyRouter.put("/interview/invite_panelists/:job_id", validateAccessToken, validateCompanySession, handleInvitePanelists);
+companyRouter.get("/interview/get_candidates/:job_id", validateAccessToken, validateCompanySession, handleGetCandidates);
+companyRouter.put("/interview/invite_candidates/:job_id", validateAccessToken, validateCompanySession, handleInviteCandidates);
+companyRouter.post("/interview/rating_scale", validateAccessToken, validatePanelistSession, handleFetchRatingDetailsForPanelists);
+companyRouter.put("/interview/grade_candidate", validateAccessToken, validatePanelistSession, handleGradeCandidate);
 
 //* DOCUMENTATION MANAGEMENT
+companyRouter.get("/documentation/get_jobs", validateAccessToken, validateCompanySession, getJobsForDocumentation);
 companyRouter.get("/documentation/get_qualified_candidates", validateAccessToken, validateCompanySession, getQualifiedCandidates);
-companyRouter.post("/documentation/hire_candidate", validateAccessToken, validateCompanySession, upload.single("contract_agreement_file"), hireCandidate);
+companyRouter.post("/documentation/hire_candidate/:job_id", validateAccessToken, validateCompanySession, upload.single("contract_agreement_file"), hireCandidate);
+companyRouter.get("/documentation/get_candidates_with_offers", validateAccessToken, validateCompanySession, getCandidatesWithOffers);
+companyRouter.get("/documentation/get_candidates_with_accepted_offer", validateAccessToken, validateCompanySession, getCandidatesWithAcceptedOffer);
+
+//* MEDICAL MANAGEMENT
+companyRouter.get("/medical/get_jobs", validateAccessToken, validateCompanySession, getJobsForMedical);
+companyRouter.post("/medical/set_medical_schedule", validateAccessToken, validateCompanySession, setMedicalSchedule);
 
 export { companyRouter };

@@ -1,5 +1,5 @@
-import { NextFunction, Response } from "express";
-const { ACCESS_TOKEN_SECRET, REFRESH_TOKEN_SECRET } = process.env;
+import { NextFunction, Request, Response } from "express";
+const { ACCESS_TOKEN_SECRET, REFRESH_TOKEN_SECRET, GOOGLE_VERIFICATION_TOKEN } = process.env;
 import jwt, { Secret } from "jsonwebtoken";
 import { CustomJwtPayload, IUserRequest } from "../interface";
 import { handleErrors } from "../helper/handleErrors";
@@ -35,8 +35,22 @@ const validateRefreshToken = function (req: IUserRequest, res: Response, next: N
 
     if (!refreshToken) return res.status(401).json({ message: "Access Denied, Refresh token not provided!" });
 
-    console.log(refreshToken);
     const { id, role } = jwt.verify(refreshToken, REFRESH_TOKEN_SECRET as Secret) as CustomJwtPayload;
+    req.userId = id;
+    req.role = role;
+    next();
+  } catch (error) {
+    handleErrors({ res, error });
+  }
+};
+
+const validateGoogleVerificationToken = function (req: IUserRequest, res: Response, next: NextFunction) {
+  try {
+    const { tokenId } = req.params;
+    if (!tokenId) return res.status(400).json({ message: "Token ID is required" });
+
+    const { id, role } = jwt.verify(tokenId, GOOGLE_VERIFICATION_TOKEN as Secret) as CustomJwtPayload;
+
     req.userId = id;
     req.role = role;
     next();
@@ -67,4 +81,15 @@ const validateCompanySession = function (req: IUserRequest, res: Response, next:
   }
 };
 
-export { validateAccessToken, validateRefreshToken, validateCompanySession, validateSeekerSession };
+const validatePanelistSession = function (req: IUserRequest, res: Response, next: NextFunction) {
+  try {
+    const { userId, role } = req;
+    if (role !== "panelist") return res.status(401).json({ message: "Unquthorized!, only a panelist is authorized to do this!" });
+
+    next();
+  } catch (error) {
+    handleErrors({ res, error });
+  }
+};
+
+export { validateAccessToken, validateRefreshToken, validateGoogleVerificationToken, validateCompanySession, validateSeekerSession, validatePanelistSession };

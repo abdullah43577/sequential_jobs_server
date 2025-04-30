@@ -16,7 +16,13 @@ const interviewSchema = new Schema<IInterview>(
         available_date_time: [{ type: Object, required: true }],
       },
     ],
-    panelists: [{ type: String, default: [] }],
+    meetingLink: { type: String, required: true },
+    panelists: [
+      {
+        email: { type: String, required: true },
+        rating_scale: { type: Map, of: Schema.Types.Mixed, required: true, default: {} },
+      },
+    ],
     invitation_letter: { type: String, required: true },
     candidates: [
       {
@@ -25,15 +31,17 @@ const interviewSchema = new Schema<IInterview>(
           type: Object,
           default: {},
         },
+        interview_score: { type: Number, default: null },
         status: {
           type: String,
           enum: ["pending", "confirmed", "completed", "canceled"],
           default: "pending",
         },
+        //* used for grading the candidate in response to the rating scale at the top here (it's the total average of all panelists that's recorded here)
         rating_scale: { type: Map, of: Number, required: true, default: {} },
       },
     ],
-    // stage: {type: String, enum: ['set_rating_scale', 'set_interview', 'panelist_invite', 'panelist_letter_invitation', 'panelist_invite_confirmation', '']}
+    stage: { type: String, enum: ["set_rating_scale", "set_interview", "panelist_letter_invitation", "panelist_invite_confirmation", "applicants_invite"], default: "set_rating_scale" },
   },
   { timestamps: true }
 );

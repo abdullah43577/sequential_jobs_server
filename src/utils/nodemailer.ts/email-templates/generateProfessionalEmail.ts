@@ -57,7 +57,7 @@ export const generateProfessionalEmail = function ({ type, title, recipientName,
     <!-- Header Section -->
     <mj-section background-color="#2c3e50" padding="30px 0 20px">
       <mj-column width="100%">
-        <mj-image src="data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIyMDAiIGhlaWdodD0iNTAiIHZpZXdCb3g9IjAgMCAyMDAgNTAiPgogIDxkZWZzPgogICAgPGxpbmVhckdyYWRpZW50IGlkPSJncmFkIiBncmFkaWVudFRyYW5zZm9ybT0icm90YXRlKDQ1KSI+CiAgICAgIDxzdG9wIG9mZnNldD0iMCUiIHN0eWxlPSJzdG9wLWNvbG9yOiM3NGI5ZmY7c3RvcC1vcGFjaXR5OjEiIC8+CiAgICAgIDxzdG9wIG9mZnNldD0iMTAwJSIgc3R5bGU9InN0b3AtY29sb3I6IzM0OThkYjtzdG9wLW9wYWNpdHk6MSIgLz4KICAgIDwvbGluZWFyR3JhZGllbnQ+CiAgPC9kZWZzPgogIDxnIGZpbGw9InVybCgjZ3JhZCkiPgogICAgPGNpcmNsZSBjeD0iMjAiIGN5PSIyNSIgcj0iOCIgZmlsbD0idXJsKCNncmFkKSIgLz4KICAgIDxjaXJjbGUgY3g9IjQwIiBjeT0iMjUiIHI9IjgiIGZpbGw9InVybCgjZ3JhZCkiIC8+CiAgICA8Y2lyY2xlIGN4PSI2MCIgY3k9IjI1IiByPSI4IiBmaWxsPSJ1cmwoI2dyYWQpIiAvPgogIDwvZz4KICA8dGV4dCB4PSI4MCIgeT0iMzAiIGZvbnQtZmFtaWx5PSJBcmlhbCwgSGVsdmV0aWNhLCBzYW5zLXNlcmlmIiBmb250LXNpemU9IjE4IiBmb250LXdlaWdodD0iNjAwIiBmaWxsPSJ3aGl0ZSI+U2VxdWVudGlhbCBKb2JzPC90ZXh0Pgo8L3N2Zz4=" alt="Sequential Jobs" width="200px" padding="0px" />
+       <mj-image src="https://ng.sequentialjobs.com/_next/image?url=%2F_next%2Fstatic%2Fmedia%2Fsequential_logo.1feb9a7d.png&w=384&q=75" alt="Sequential Jobs" width="200px" padding="0px" />
       </mj-column>
     </mj-section>
 

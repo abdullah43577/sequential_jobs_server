@@ -11,6 +11,7 @@ export const JobPostCreationSchema = z.object({
   salary: z.string(),
   currency_type: z.string(),
   years_of_exp: z.string(),
+  payment_frequency: z.enum(["yearly", "monthly", "weekly"]),
   generic_skills: z.array(z.string()),
   technical_skills: z.array(z.string()),
   description: z.string(),
@@ -52,12 +53,35 @@ export const EmployerInterviewManagementSchema = z.object({
           end_time: z.string(),
           break_time: z.string(),
           interview_duration: z.string(),
+        })
+        .required()
+    )
+    .min(1, { message: "Interview time slot must have at least one property" }),
+  meetingLink: z.string(),
+  invitation_letter: z.string(),
+});
+
+export const EmployerMedicalsManagementSchema = z.object({
+  candidate_ids: z.array(z.string()),
+  medical_time_slot: z
+    .array(
+      z
+        .object({
+          date: z.string(),
+          start_time: z.string(),
+          end_time: z.string(),
           medical_duration: z.string(),
         })
         .required()
     )
     .min(1, { message: "Interview time slot must have at least one property" }),
-  panelists: z.array(z.string().email()),
-  invitation_letter: z.string(),
-  // stage: z.enum(["set_rating_scale", "set_interview", "panelist_invite", "paneliset_letter_invitation", "applicants_invite"]),
+  address: z.string(),
+  medicalists: z.array(z.string()).min(1, "An array of medical experts emails must be provided"),
+});
+
+export const PanelistGradeCandidate = z.object({
+  rating_scale: z.record(z.string(), z.number()),
+  panelist_email: z.string().email(),
+  candidate_id: z.string(),
+  job_id: z.string(),
 });

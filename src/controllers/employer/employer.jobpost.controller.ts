@@ -12,7 +12,7 @@ const cache = new NodeCache({ stdTTL: 600, checkperiod: 120 });
 const getJobs = async function (req: IUserRequest, res: Response) {
   try {
     const { userId } = req;
-    const jobs = await Job.find({ employer: userId }).select("job_title createdAt country job_type employment_type salary currency_type application_test stage is_live").lean();
+    const jobs = await Job.find({ employer: userId }).select("job_title createdAt country job_type employment_type salary currency_type payment_frequency application_test stage is_live").lean();
 
     res.status(200).json(jobs);
   } catch (error) {
@@ -80,15 +80,14 @@ const jobPostCreation = async function (req: IUserRequest, res: Response) {
   }
 };
 
-const getJob = async function (req: IUserRequest, res: Response) {
+const getJobDraft = async function (req: IUserRequest, res: Response) {
   try {
     const { job_id } = req.query;
     if (!job_id) return res.status(400).json({ message: "Job ID is required" });
 
-    const job = await Job.findById(job_id).select("job_title country state city job_type employment_type salary currency_type years_of_exp generic_skills technical_skills description").lean();
-    if (!job) return res.status(404).json({ message: "Job not found" });
+    const job = await Job.findById(job_id).select("job_title country state city job_type employment_type salary currency_type payment_frequency years_of_exp generic_skills technical_skills description").lean();
 
-    res.status(200).json(job);
+    res.status(200).json({ success: !!job, job });
   } catch (error) {
     handleErrors({ res, error });
   }
@@ -136,15 +135,17 @@ const applicationTest = async function (req: IUserRequest, res: Response) {
   }
 };
 
-const getApplicationTest = async function (req: IUserRequest, res: Response) {
+const getApplicationTestDraft = async function (req: IUserRequest, res: Response) {
   try {
     const { job_id } = req.query;
     if (!job_id) return res.status(400).json({ message: "Job ID is required" });
 
     const application_test = await Test.findOne({ job: job_id }).select("instruction questions type").lean();
-    if (!application_test) return res.status(404).json({ message: "Application Test not found" });
 
-    res.status(200).json(application_test);
+    res.status(200).json({
+      success: !!application_test,
+      application_test,
+    });
   } catch (error) {
     handleErrors({ res, error });
   }
@@ -152,10 +153,11 @@ const getApplicationTest = async function (req: IUserRequest, res: Response) {
 
 const applicationTestCutoff = async function (req: IUserRequest, res: Response) {
   try {
-    const { cut_off_points, test_id } = cutOffSchema.parse(req.body);
+    const { job_id } = req.query;
+    const { cut_off_points } = cutOffSchema.parse(req.body);
     const { suitable, probable, not_suitable } = cut_off_points;
 
-    const test = await Test.findById(test_id).select("job questions cut_off_points");
+    const test = await Test.findOne({ job: job_id, type: "application_test" }).select("job questions cut_off_points");
     if (!test) return res.status(404).json({ message: "Test not found" });
 
     const total_marks = test.questions.reduce((acc, q) => acc + q.score, 0);
@@ -179,7 +181,7 @@ const applicationTestCutoff = async function (req: IUserRequest, res: Response) 
 
     //* upgrade properties and mark job as LIVE
     test.cut_off_points = cut_off_points;
-    const job = await Job.findById(test.job);
+    const job = await Job.findById(job_id);
     if (!job) return res.status(400).json({ message: "Job with corresponding test ID not found" });
 
     job.is_live = true;
@@ -193,18 +195,17 @@ const applicationTestCutoff = async function (req: IUserRequest, res: Response) 
   }
 };
 
-const getApplicationTestCutoff = async function (req: IUserRequest, res: Response) {
+const getApplicationTestCutoffDraft = async function (req: IUserRequest, res: Response) {
   try {
     const { job_id } = req.query;
     if (!job_id) return res.status(400).json({ message: "Job ID is required" });
 
     const cut_off_points = await Test.findOne({ job: job_id }).select("cut_off_points").lean();
-    if (!cut_off_points) return res.status(404).json({ message: "Application Test not found" });
 
-    res.status(200).json(cut_off_points);
+    res.status(200).json({ success: !!cut_off_points, cut_off_points });
   } catch (error) {
     handleErrors({ res, error });
   }
 };
 
-export { getJobs, deleteJob, toggleJobState, jobPostCreation, getJob, applicationTest, getApplicationTest, applicationTestCutoff, getApplicationTestCutoff };
+export { getJobs, deleteJob, toggleJobState, jobPostCreation, getJobDraft, applicationTest, getApplicationTestDraft, applicationTestCutoff, getApplicationTestCutoffDraft };

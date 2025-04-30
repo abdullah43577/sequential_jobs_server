@@ -1,13 +1,17 @@
 import { Request, Response } from "express";
 import { generateAccessToken, generateRefreshToken } from "../helper/generateToken";
 import { CustomJwtPayload, IUserRequest } from "../interface";
-import { loginValidationSchema, registerValidationSchema } from "../utils/types/authValidatorSchema";
+import { loginValidationSchema, registerValidationSchema, updateProfileSchema } from "../utils/types/authValidatorSchema";
 import User from "../models/users.model";
 import { comparePassword, hashPassword } from "../helper/hashPassword";
 import { handleErrors } from "../helper/handleErrors";
 import { registrationEmail } from "../utils/nodemailer.ts/email-templates/registration-email";
 import { transportMail } from "../utils/nodemailer.ts/transportMail";
 import jwt, { Secret } from "jsonwebtoken";
+import { getBaseUrl } from "../helper/getBaseUrl";
+import { Readable } from "nodemailer/lib/xoauth2";
+import cloudinary from "../utils/cloudinaryConfig";
+import { cleanObject } from "../utils/cleanedObject";
 const { EMAIL_VERIFICATION_TOKEN } = process.env;
 
 const testApi = async (req: Request, res: Response) => {
@@ -62,20 +66,22 @@ const validateEmail = async (req: Request, res: Response) => {
 
     if (!user) return res.status(400).json({ message: "User not found" });
 
+    const baseUrl = getBaseUrl(req);
+
     //* send mail
     const emailTemplateData = {
       title: "Email Verified Successfully!",
       name: user?.first_name,
       message: "Your email has been successfully verified. You can now log in to your account and start exploring.",
       btnTxt: "Login",
-      btnAction: "http://localhost:3000/auth/login",
+      btnAction: `${baseUrl}/auth/login`,
     };
 
     const html = registrationEmail(emailTemplateData);
 
     await transportMail({ email: user.email, subject: "Welcome to Sequential Jobs", message: html.html });
 
-    res.status(200).json({ message: "Email activated successfully" });
+    res.redirect(`https://sequential-jobs.vercel.app/auth/email-activation-success?name=${encodeURIComponent(user.first_name)}`);
   } catch (error) {
     handleErrors({ res, error });
   }
@@ -112,7 +118,9 @@ const loginUser = async (req: Request, res: Response) => {
     const accessToken = generateAccessToken({ id: user._id.toString(), role: user.role });
     const refreshToken = generateRefreshToken({ id: user._id.toString(), role: user.role });
 
-    res.status(200).json({ message: "Login Successful", userRole: user.role, token: { accessToken, refreshToken } });
+    const hasSubmittedResume = !!user.resume;
+
+    res.status(200).json({ message: "Login Successful", has_submitted_resume: hasSubmittedResume, userRole: user.role, token: { accessToken, refreshToken } });
   } catch (error) {
     handleErrors({ res, error });
   }
@@ -130,12 +138,14 @@ const forgotPassword = async (req: Request, res: Response) => {
     //* send email with the OTP for resetting password
     const resetToken = jwt.sign({ id: user._id }, EMAIL_VERIFICATION_TOKEN as Secret, { expiresIn: "10m" });
 
+    const baseUrl = getBaseUrl(req);
+
     const emailTemplateData = {
       title: "Reset Your Password",
       name: user.first_name,
       message: "We received a request to reset your password for your Sequential Jobs account. Click the button below to set a new password. \n\n Reset token expires in 10 minutes \n\n If you didn’t request this, you can safely ignore this email.",
       btnTxt: "Reset Password",
-      btnAction: `http://localhost:3000/auth/reset-password?token=${resetToken}`,
+      btnAction: `${baseUrl}/auth/reset-password?token=${resetToken}`,
     };
 
     const html = registrationEmail(emailTemplateData);
@@ -182,13 +192,80 @@ const resetPassword = async (req: Request, res: Response) => {
   }
 };
 
+const validateOAuthSession = async (req: IUserRequest, res: Response) => {
+  try {
+    const { userId } = req;
+
+    const user = await User.findById(userId);
+    if (!user) return res.status(404).json({ message: "User not found!" });
+
+    const accessToken = generateAccessToken({ id: user._id.toString(), role: user.role });
+    const refreshToken = generateRefreshToken({ id: user._id.toString(), role: user.role });
+
+    const hasSubmittedResume = !!user.resume;
+
+    res.status(200).json({ message: "Login Successful", has_submitted_resume: hasSubmittedResume, userRole: user.role, token: { accessToken, refreshToken } });
+  } catch (error) {
+    handleErrors({ res, error });
+  }
+};
+
 const getProfile = async (req: IUserRequest, res: Response) => {
   try {
     const { userId } = req;
-    const user = await User.findById(userId).select("first_name last_name username email role phone_no official_phone organisation_name industry subscription_tier").lean();
+    const user = await User.findById(userId)
+      .select("first_name last_name username email role phone_no official_phone organisation_name organisation_size industry street_1 street_2 country state postal_code subscription_tier bio profile_pic resume")
+      .lean();
     if (!user) return res.status(404).json({ message: "User record not found!" });
 
     res.status(200).json(user);
+  } catch (error) {
+    handleErrors({ res, error });
+  }
+};
+
+const updateProfile = async (req: IUserRequest, res: Response) => {
+  try {
+    const { userId } = req;
+    const profilePic = req.file;
+
+    const profileBody = updateProfileSchema.parse(req.body);
+
+    const cleanedObject = cleanObject(profileBody);
+
+    const user = await User.findById(userId);
+    if (!user) return res.status(404).json({ message: "User not found!" });
+
+    if (profilePic) {
+      const stream = cloudinary.uploader.upload_stream(
+        {
+          folder: `users/${user.role}/${userId}/profile`,
+          resource_type: "image",
+        },
+        async (error, result) => {
+          if (error) {
+            return res.status(500).json({ error: "Cloudinary upload failed" });
+          }
+
+          if (result?.secure_url) {
+            user.profile_pic = result.secure_url;
+            Object.assign(user, cleanedObject);
+            await user.save();
+
+            return res.status(200).json({ message: "Profile updated successfully", user });
+          }
+        }
+      );
+
+      const bufferStream = new Readable();
+      bufferStream.push(profilePic.buffer);
+      bufferStream.push(null);
+      bufferStream.pipe(stream);
+    } else {
+      Object.assign(user, profileBody);
+      await user.save();
+      res.status(200).json({ message: "Profile updated successfully", user });
+    }
   } catch (error) {
     handleErrors({ res, error });
   }
@@ -206,4 +283,4 @@ const generateNewToken = async (req: IUserRequest, res: Response) => {
   }
 };
 
-export { testApi, createUser, validateEmail, loginUser, forgotPassword, resetPassword, generateNewToken, getProfile };
+export { testApi, createUser, validateEmail, loginUser, forgotPassword, resetPassword, validateOAuthSession, generateNewToken, getProfile, updateProfile };

@@ -5,7 +5,6 @@ import Job from "../../models/jobs/jobs.model";
 import JobTest from "../../models/assessment/jobtest.model";
 import Test from "../../models/jobs/test.model";
 import { handleErrors } from "../../helper/handleErrors";
-import Calendar from "../../models/assessment/calendar.model";
 import User from "../../models/users.model";
 import { EmailTypes, generateProfessionalEmail } from "../../utils/nodemailer.ts/email-templates/generateProfessionalEmail";
 import { transportMail } from "../../utils/nodemailer.ts/transportMail";
@@ -87,9 +86,7 @@ const getDraftQuestion = async function (req: IUserRequest, res: Response) {
 
     const jobTest = await JobTest.findOne({ job: job_id }).select("job_test").populate<{ job_test: { instruction: string; questions: any[] } }>({ path: "job_test", select: "instruction questions" }).lean();
 
-    if (!jobTest) return res.status(404).json({ message: "Job Test record not found" });
-
-    res.status(200).json({ instruction: jobTest.job_test.instruction, questions: jobTest.job_test.questions });
+    res.status(200).json({ success: !!jobTest, jobTest: { instruction: jobTest?.job_test.instruction, questions: jobTest?.job_test.questions } });
   } catch (error) {
     handleErrors({ res, error });
   }
@@ -152,9 +149,7 @@ const getDraftCutOff = async function (req: IUserRequest, res: Response) {
 
     const jobTest = await JobTest.findOne({ job: job_id }).select("job_test").populate<{ job_test: { cut_off_points: Record<string, any> } }>({ path: "job_test", select: "cut_off_points" }).lean();
 
-    if (!jobTest) return res.status(404).json({ message: "Job Test Cutoff record not found!" });
-
-    res.status(200).json(jobTest);
+    res.status(200).json({ success: !!jobTest, jobTest });
   } catch (error) {
     handleErrors({ res, error });
   }
@@ -194,9 +189,7 @@ const getInviteMsgDraft = async function (req: IUserRequest, res: Response) {
 
     const jobTest = await JobTest.findOne({ job: job_id }).select("invitation_letter").lean();
 
-    if (!jobTest) return res.status(404).json({ message: "Job Test Invitation Letter not found" });
-
-    res.status(200).json(jobTest);
+    res.status(200).json({ success: !!jobTest, jobTest });
   } catch (error) {
     handleErrors({ res, error });
   }
@@ -207,7 +200,7 @@ const getApplicantsForJobTest = async function (req: IUserRequest, res: Response
     const { userId } = req;
     const { job_id } = req.params;
 
-    const job = await Job.findById(job_id).select("_id applicants").lean();
+    const job = await Job.findById(job_id).select("_id job_title applicants").lean();
     if (!job) return res.status(404).json({ message: "Job not found!" });
 
     // Fetch all application test submissions for this job
@@ -215,9 +208,9 @@ const getApplicantsForJobTest = async function (req: IUserRequest, res: Response
     if (!jobTest) return res.status(404).json({ message: "Job Test not found" });
 
     const testSubmissions = await TestSubmission.find({ job: job_id })
-      .populate({
+      .populate<{ applicant: { _id: string; first_name: string; last_name: string; email: string; resume: string } }>({
         path: "applicant",
-        select: "first_name last_name email",
+        select: "first_name last_name email resume",
       })
       .lean();
 
@@ -231,7 +224,7 @@ const getApplicantsForJobTest = async function (req: IUserRequest, res: Response
     const testIds = testSubmissions.map(sub => sub.test);
 
     // get all tests with corresponding ID
-    const tests = await Test.find({ _id: { $in: testIds } })
+    const tests = await Test.find({ _id: { $in: testIds }, type: "application_test" })
       .select("questions type")
       .lean();
 
@@ -262,6 +255,7 @@ const getApplicantsForJobTest = async function (req: IUserRequest, res: Response
       });
 
       return {
+        job_title: job.job_title,
         applicant: testResult.applicant,
         test: {
           ...testDetails,
@@ -295,11 +289,11 @@ const jobTestApplicantsInvite = async function (req: IUserRequest, res: Response
 
     const test = await Test.findById(jobTest.job_test)
       .select("_id employer job")
-      .populate<{ employer: { first_name: string; last_name: string } | null }>({
+      .populate<{ employer: { organisation_name: string } }>({
         path: "employer",
-        select: "first_name last_name",
+        select: "organisation_name",
       })
-      .populate<{ job: { job_title: string } | null }>({
+      .populate<{ job: { job_title: string } }>({
         path: "job",
         select: "job_title",
       })
@@ -321,73 +315,73 @@ const jobTestApplicantsInvite = async function (req: IUserRequest, res: Response
       expiresAt: expirationDate,
     }));
 
-    if (newInvites.length > 0) {
-      await Calendar.insertMany(newInvites);
-    }
-
     // Send invitations
     const emailPromises = newInvites.map(async invite => {
-      const user = await User.findById(invite.user);
-      if (!user) return null;
+      try {
+        const user = await User.findById(invite.user);
+        if (!user) return null;
 
-      // Generate a unique test link (you might want to generate a more secure token)
-      const testLink = `http://localhost:8080/job-test/${test._id}`;
+        // Generate a unique test link (you might want to generate a more secure token)
+        const testLink = `http://localhost:8080/job-test/${test._id}`;
 
-      const emailTemplateData = {
-        type: "test" as EmailTypes,
-        title: "Job Assessment Invitation",
-        recipientName: `${user.first_name} ${user.last_name}`,
-        message: `You have been invited to complete a job assessment for the ${test.job?.job_title} position. 
+        const emailTemplateData = {
+          type: "test" as EmailTypes,
+          title: "Job Assessment Invitation",
+          recipientName: `${user.first_name} ${user.last_name}`,
+          message: `You have been invited to complete a job assessment for the ${test.job?.job_title} position. 
         Please click the button below to start the test. This invitation will expire on ${expirationDate.toLocaleDateString()}. \n\n ${jobTest.invitation_letter}`,
-        buttonText: "Start Assessment",
-        buttonAction: testLink,
-        additionalDetails: {
-          date: expirationDate.toLocaleDateString(),
-          time: "Open Until " + expirationDate.toLocaleTimeString(),
-          organizerName: `${test.employer?.first_name} ${test.employer?.last_name}`,
-        },
-      };
+          buttonText: "Start Assessment",
+          buttonAction: testLink,
+          additionalDetails: {
+            date: expirationDate.toLocaleDateString(),
+            time: "Open Until " + expirationDate.toLocaleTimeString(),
+            organizerName: test.employer?.organisation_name,
+          },
+        };
 
-      // Generate email HTML
-      const { html } = generateProfessionalEmail(emailTemplateData);
+        // Generate email HTML
+        const { html } = generateProfessionalEmail(emailTemplateData);
 
-      const subject = `Job Assessment Invitation - ${(test.job as any).job_title}`;
+        const subject = `Job Assessment Invitation - ${(test.job as any).job_title}`;
 
-      // Send email
-      await transportMail({
-        email: user.email,
-        subject,
-        message: html,
-      });
+        // Send email
+        await transportMail({
+          email: user.email,
+          subject,
+          message: html,
+        });
 
-      const message = `${test.employer?.first_name} ${test.employer?.last_name} as invited you to take a job test.`;
+        const message = `${test.employer.organisation_name} as invited you to take a job test.`;
 
-      //* notification
-      await Notification.create({
-        recipient: user._id,
-        sender: userId,
-        type: NotificationType.MESSAGE,
-        title: subject,
-        message,
-        status: NotificationStatus.UNREAD,
-      });
+        //* notification
+        const notification = await Notification.create({
+          recipient: user._id,
+          sender: userId,
+          type: NotificationType.MESSAGE,
+          title: subject,
+          message,
+          status: NotificationStatus.UNREAD,
+        });
 
-      //* socket instance
-      const io = getSocketIO();
+        //* socket instance
+        const io = getSocketIO();
 
-      io.to(user._id.toString()).emit("job_test_invite", {
-        type: "invite",
-        title: subject,
-        message,
-        jobTitle: (test.job as any).job_title,
-        testId: test._id,
-        expiresAt: expirationDate,
-      });
+        io.to(user._id.toString()).emit("notification", {
+          id: notification._id,
+          title: subject,
+          message,
+          status: NotificationStatus.UNREAD,
+          type: NotificationType.MESSAGE,
+          createdAt: notification.createdAt,
+        });
 
-      jobTest.stage = "candidate_invite";
-      jobTest.candidates_invited.push(user._id);
-      await jobTest.save();
-      return;
+        jobTest.stage = "candidate_invite";
+        jobTest.candidates_invited.push(user._id);
+        await jobTest.save();
+        return;
+      } catch (error) {
+        console.error(`Error inviting candidate ${invite.user}:`, error);
+      }
     });
 
     // Wait for all emails to be sent

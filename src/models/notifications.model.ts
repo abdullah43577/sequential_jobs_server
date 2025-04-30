@@ -1,5 +1,6 @@
 import { Schema, model, Types, Model } from "mongoose";
 import { INotification } from "../utils/types/modelTypes";
+import { Document } from "mongoose";
 
 // Enum for notification types
 export enum NotificationType {
@@ -11,6 +12,8 @@ export enum NotificationType {
   APPLICATION_STATUS = "application_status",
   MESSAGE = "message",
   INTERVIEW = "interview",
+  MEDICAL = "medical",
+  DOCUMENT_REQUEST = "document_request",
 }
 
 // Enum for notification status
@@ -19,7 +22,19 @@ export enum NotificationStatus {
   READ = "read",
 }
 
-const notificationSchema = new Schema<INotification>(
+//* for methods
+export interface INotificationDocument extends INotification, Document {
+  markAsRead(): Promise<INotificationDocument>;
+  deleteNotification(): Promise<void>;
+}
+
+//* for statics
+export interface INotificationModel extends Model<INotificationDocument> {
+  markAllAsRead(userId: Types.ObjectId | string): Promise<number>;
+  deleteAllNotifications(user: Types.ObjectId | string): Promise<number>;
+}
+
+const notificationSchema = new Schema<INotificationDocument, INotificationModel>(
   {
     recipient: {
       type: Schema.Types.ObjectId,
@@ -75,6 +90,32 @@ notificationSchema.methods.markAsRead = function () {
   return this.save();
 };
 
-const Notification = model<INotification>("Notification", notificationSchema);
+notificationSchema.statics.markAllAsRead = async function (userId: Types.ObjectId | string) {
+  const result = await this.updateMany(
+    {
+      recipient: userId,
+      status: NotificationStatus.UNREAD,
+    },
+    {
+      $set: {
+        status: NotificationStatus.READ,
+        readAt: new Date(),
+      },
+    }
+  );
+
+  return result.modifiedCount;
+};
+
+notificationSchema.methods.deleteNotification = async function () {
+  return this.deleteOne();
+};
+
+notificationSchema.statics.deleteAllNotifications = async function (userId: Types.ObjectId | string) {
+  const result = await this.deleteMany({ recipient: userId });
+  return result.deletedCount;
+};
+
+const Notification = model<INotificationDocument, INotificationModel>("Notification", notificationSchema);
 
 export default Notification;

@@ -1,17 +1,13 @@
 import moment from "moment";
 
-//   {
-//       "date": "2025-04-10",
-//       "start_time": "09:00 AM",
-//       "end_time": "12:00 PM",
-//       "break_time": "15 mins",
-//       "interview_duration": "45 mins"
-//     }
-
-export const generateAvailableSlots = (date: string, startTime: string, endTime: string, breakTime: string, interviewDuration: string) => {
+export const generateAvailableSlots = (date: string, startTime: string, endTime: string, breakTime: string = "0 min", interviewDuration: string) => {
   const slots = [];
   let start = moment(`${date} ${startTime}`, "YYYY-MM-DD hh:mm A");
   const end = moment(`${date} ${endTime}`, "YYYY-MM-DD hh:mm A");
+
+  if (end.isBefore(start)) {
+    end.add(1, "days");
+  }
 
   // Parse the duration strings properly
   const breakMinutes = parseInt(breakTime.split(" ")[0]);
