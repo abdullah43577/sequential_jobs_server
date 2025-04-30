@@ -81,7 +81,7 @@ const validateEmail = async (req: Request, res: Response) => {
 
     await transportMail({ email: user.email, subject: "Welcome to Sequential Jobs", message: html.html });
 
-    res.redirect(`${getBaseUrl}/auth/email-activation-success?name=${encodeURIComponent(user.first_name)}`);
+    res.redirect(`https://sequential-jobs.vercel.app/auth/email-activation-success?name=${encodeURIComponent(user.first_name)}`);
   } catch (error) {
     handleErrors({ res, error });
   }
