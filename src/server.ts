@@ -16,6 +16,8 @@ import { passportSetup } from "./utils/passportSetup";
 import { landingRouter } from "./routes/landingRoutes";
 import { eventsRouter } from "./routes/eventRoutes";
 import { initializeStripeProducts } from "./utils/initializeStripe";
+import { adminRouter } from "./routes/admin/routes.admin";
+import User from "./models/users.model";
 
 const app = express();
 
@@ -61,6 +63,7 @@ app.use("/api/auth", authRouter);
 app.use("/api/notifications", notificationRouter);
 app.use("/api/employer", companyRouter);
 app.use("/api/seeker", seekerRouter);
+app.use("/api/admin", adminRouter);
 app.use("/api/events", eventsRouter);
 
 app.use("*", (req: Request, res: Response) => {
@@ -77,11 +80,11 @@ app.use("*", (req: Request, res: Response) => {
 const server = app.listen(PORT, async () => {
   await connectDB();
   console.log(`server started on http://localhost:${PORT}`);
-  await initializeStripeProducts();
+  // await initializeStripeProducts();
 
   // const d = await Job.collection.updateMany({ "applicants.applicant.has_taken_application_test": { $exists: true } }, { $unset: { "applicants.$.has_taken_application_test": false } });
 
-  // await User.collection.updateMany({ profile_pic: { $exists: false } }, { $set: { profile_pic: null } });
+  // await User.collection.updateMany({ subscription_start: { $exists: false }, subscription_end: {$exists: false} }, { $set: { subscription_sta: null } });
   // console.log("I ran");
 });
 

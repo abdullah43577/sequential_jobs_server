@@ -22,6 +22,8 @@ export interface IUser {
   city: string;
   postal_code: string;
   subscription_tier: "Sequential Freemium" | "Sequential Standard" | "Sequential Pro" | "Sequential Super Pro";
+  subscription_start: Date;
+  subscription_end: Date;
   googleId: string;
   linkedinId: string;
   failedLoginAttempts: number;

@@ -4,7 +4,6 @@ import mongoose from "mongoose";
 
 export const connectDB = async () => {
   const dbURI2 = `mongodb+srv://${DB_USER}:${DB_PASS}@sequentialcluster.ysuwruz.mongodb.net/${DB_NAME}`;
-  console.log(dbURI2, "db uri here");
   // `mongodb+srv://${DB_USER}:${DB_PASS}@nexiacluster.e8wt9cq.mongodb.net/${DB_NAME}`
   // const dbURI = `mongodb://localhost:27017/${DB_NAME}`; // localhost
 
