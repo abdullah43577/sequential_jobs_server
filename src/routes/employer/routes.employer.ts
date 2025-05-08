@@ -19,7 +19,7 @@ import {
 import { getCandidatesWithAcceptedOffer, getCandidatesWithOffers, getJobsForDocumentation, getQualifiedCandidates, hireCandidate } from "../../controllers/employer/employer.documentation.controller";
 import { getJobsForMedical, setMedicalSchedule } from "../../controllers/employer/medicals/employer.medical.controller";
 import { GetActiveJobs, GetAllJobs, GetAllJobsWithCandidatesHires, TotalApplicantsTable } from "../../controllers/employer/employer.dashboard.controller";
-import { createCheckoutSession, getPricingInfo } from "../../controllers/employer/employer.pricing.controller";
+import { createCheckoutSession, getPricingInfo, handleWebhook } from "../../controllers/employer/employer.pricing.controller";
 
 const companyRouter = Router();
 
@@ -78,5 +78,6 @@ companyRouter.post("/medical/set_medical_schedule", validateAccessToken, validat
 //* PRICING MANAGEMENT
 companyRouter.get("/get_pricing_info", validateAccessToken, validateCompanySession, getPricingInfo);
 companyRouter.post("/payment/create-checkout-session", validateAccessToken, validateCompanySession, createCheckoutSession);
+companyRouter.post("/payment/webhook", handleWebhook);
 
 export { companyRouter };

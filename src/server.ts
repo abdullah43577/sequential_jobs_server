@@ -18,6 +18,7 @@ import { eventsRouter } from "./routes/eventRoutes";
 import { initializeStripeProducts } from "./utils/initializeStripe";
 import { adminRouter } from "./routes/admin/routes.admin";
 import User from "./models/users.model";
+import { initializeWebhookEndpoint } from "./utils/initializeWebhook";
 
 const app = express();
 
@@ -39,22 +40,14 @@ app.use(
     credentials: true,
   })
 );
+
+app.use("/api/employer/payment/webhook", express.raw({ type: "application/json" }));
+
 app.use(express.json({ limit: "10mb" }));
 app.use(express.urlencoded({ extended: false, limit: "10mb" }));
 app.use(cookieParser());
 app.use(helmet());
-// app.use(
-//   session({
-//     secret: SESSION_SECRET as string,
-//     resave: false,
-//     saveUninitialized: false,
-//     cookie: {
-//       maxAge: 24 * 60 * 60 * 1000, // 1 day
-//     },
-//   })
-// );
 app.use(passport.initialize());
-// app.use(passport.session());
 passportSetup();
 
 // routes
@@ -81,10 +74,12 @@ const server = app.listen(PORT, async () => {
   await connectDB();
   console.log(`server started on http://localhost:${PORT}`);
   // await initializeStripeProducts();
+  // await initializeWebhookEndpoint();
+  // console.log("initialized");
 
   // const d = await Job.collection.updateMany({ "applicants.applicant.has_taken_application_test": { $exists: true } }, { $unset: { "applicants.$.has_taken_application_test": false } });
 
-  // await User.collection.updateMany({ subscription_start: { $exists: false }, subscription_end: {$exists: false} }, { $set: { subscription_sta: null } });
+  // await User.collection.updateMany({ stripe_customer_id: { $exists: false }, subscription_status: { $exists: false } }, { $set: { stripe_customer_id: null, subscription_status: "unpaid" } });
   // console.log("I ran");
 });
 

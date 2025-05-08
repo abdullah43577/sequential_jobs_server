@@ -101,6 +101,8 @@ const loginUser = async (req: Request, res: Response) => {
     //* if user account is locked
     if (user.isLocked) return res.status(403).json({ message: "Account is locked due to multiple failed attempts, please contact the administrator" });
 
+    if (user.account_status === "deactivated") return res.status(403).json({ message: "Account is disabled, please contact the administrator!" });
+
     //* validate password
     const isMatch = await comparePassword(password, user.password);
     if (!isMatch) {

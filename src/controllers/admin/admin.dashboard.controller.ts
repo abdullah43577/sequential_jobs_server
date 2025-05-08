@@ -2,17 +2,23 @@ import { Response } from "express";
 import { IUserRequest } from "../../interface";
 import { handleErrors } from "../../helper/handleErrors";
 import User from "../../models/users.model";
+import Job from "../../models/jobs/jobs.model";
+import InterviewMgmt from "../../models/interview/interview.model";
+import Test from "../../models/jobs/test.model";
+import JobTest from "../../models/assessment/jobtest.model";
 
 const getSummaryStats = async function (req: IUserRequest, res: Response) {
   try {
     const users = await User.find({ role: { $nin: ["admin", "super-admin"] } }).lean();
 
     const formattedResponse = users.map(user => ({
+      user_id: user._id,
       name: `${user.first_name} ${user.last_name}`,
       email: user.email,
+      profile_img: user.profile_pic,
       phone: user.role === "company" ? user.official_phone : user.phone_no,
       user_type: user.role,
-      active_status: false,
+      account_status: user.account_status,
       subscription_tier: user.subscription_tier,
       subscription_start: user.subscription_start,
       subscription_end: user.subscription_end,
@@ -20,6 +26,36 @@ const getSummaryStats = async function (req: IUserRequest, res: Response) {
     }));
 
     res.status(200).json(formattedResponse);
+  } catch (error) {
+    handleErrors({ res, error });
+  }
+};
+
+const deactivateAccount = async function (req: IUserRequest, res: Response) {
+  try {
+    const { id } = req.params;
+    if (!id) return res.status(400).json({ message: "User ID is required!" });
+
+    const user = await User.findByIdAndUpdate(id, { account_status: "deactivated" });
+
+    res.status(200).json({ message: `${user?.first_name}'s account has been disabled successfully!` });
+  } catch (error) {
+    handleErrors({ res, error });
+  }
+};
+
+const deleteAccount = async function (req: IUserRequest, res: Response) {
+  try {
+    const { id } = req.params;
+    if (!id) return res.status(400).json({ message: "User ID is required!" });
+
+    await User.findByIdAndDelete(id);
+    await Job.deleteMany({ employer: id });
+    await InterviewMgmt.deleteMany({ employer: id });
+    await Test.deleteMany({ employer: id });
+    await JobTest.deleteMany({ employer: id });
+
+    res.status(200).json({ message: "User Account deleted Succesfully!" });
   } catch (error) {
     handleErrors({ res, error });
   }
@@ -33,4 +69,4 @@ const getSubscriptionInfo = async function (req: IUserRequest, res: Response) {
   }
 };
 
-export { getSummaryStats, getSubscriptionInfo };
+export { getSummaryStats, deactivateAccount, deleteAccount, getSubscriptionInfo };
