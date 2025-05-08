@@ -13,11 +13,9 @@ import { companyRouter } from "./routes/employer/routes.employer";
 import { seekerRouter } from "./routes/seeker/routes.seeker";
 import passport from "passport";
 import { passportSetup } from "./utils/passportSetup";
-import session from "express-session";
 import { landingRouter } from "./routes/landingRoutes";
-import Job from "./models/jobs/jobs.model";
-import User from "./models/users.model";
 import { eventsRouter } from "./routes/eventRoutes";
+import { initializeStripeProducts } from "./utils/initializeStripe";
 
 const app = express();
 
@@ -79,6 +77,7 @@ app.use("*", (req: Request, res: Response) => {
 const server = app.listen(PORT, async () => {
   await connectDB();
   console.log(`server started on http://localhost:${PORT}`);
+  await initializeStripeProducts();
 
   // const d = await Job.collection.updateMany({ "applicants.applicant.has_taken_application_test": { $exists: true } }, { $unset: { "applicants.$.has_taken_application_test": false } });
 

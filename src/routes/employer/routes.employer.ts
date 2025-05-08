@@ -19,6 +19,7 @@ import {
 import { getCandidatesWithAcceptedOffer, getCandidatesWithOffers, getJobsForDocumentation, getQualifiedCandidates, hireCandidate } from "../../controllers/employer/employer.documentation.controller";
 import { getJobsForMedical, setMedicalSchedule } from "../../controllers/employer/medicals/employer.medical.controller";
 import { GetActiveJobs, GetAllJobs, GetAllJobsWithCandidatesHires, TotalApplicantsTable } from "../../controllers/employer/employer.dashboard.controller";
+import { createCheckoutSession, getPricingInfo } from "../../controllers/employer/employer.pricing.controller";
 
 const companyRouter = Router();
 
@@ -73,5 +74,9 @@ companyRouter.get("/documentation/get_candidates_with_accepted_offer", validateA
 //* MEDICAL MANAGEMENT
 companyRouter.get("/medical/get_jobs", validateAccessToken, validateCompanySession, getJobsForMedical);
 companyRouter.post("/medical/set_medical_schedule", validateAccessToken, validateCompanySession, setMedicalSchedule);
+
+//* PRICING MANAGEMENT
+companyRouter.get("/get_pricing_info", validateAccessToken, validateCompanySession, getPricingInfo);
+companyRouter.post("/payment/create-checkout-session", validateAccessToken, validateCompanySession, createCheckoutSession);
 
 export { companyRouter };
