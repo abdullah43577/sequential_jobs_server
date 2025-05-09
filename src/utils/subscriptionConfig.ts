@@ -58,8 +58,20 @@ const FEATURE_ACCESS: FeatureAccess = {
   access90DaysResumePool: ["superPro"],
 } as const;
 
-// Function to check if a user has access to a feature
-export const hasAccess = (feature: keyof typeof FEATURE_ACCESS, userTier: UserTier) => FEATURE_ACCESS[feature]?.includes(userTier);
+// Map from full plan name to tier identifier
+export const fullPlanNameToTier: Record<string, UserTier> = {
+  "Sequential Freemium": "freemium",
+  "Sequential Standard": "standard",
+  "Sequential Pro": "pro",
+  "Sequential Super Pro": "superPro",
+};
+
+// Updated hasAccess function to handle both formats
+export const hasAccess = (feature: keyof typeof FEATURE_ACCESS, userTierOrFullName: string): boolean => {
+  // Convert full plan name to tier if needed
+  const userTier = fullPlanNameToTier[userTierOrFullName] || (userTierOrFullName as UserTier);
+  return FEATURE_ACCESS[feature]?.includes(userTier);
+};
 
 // Define pricing data structure
 export interface PricingPlan {

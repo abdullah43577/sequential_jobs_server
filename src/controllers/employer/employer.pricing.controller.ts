@@ -42,11 +42,6 @@ const createCheckoutSession = async function (req: IUserRequest, res: Response) 
 
     // Convert plan name to tier
     const tierMapping: Record<string, string> = {
-      "Sequential Freemium": "freemium",
-      "Sequential Standard": "standard",
-      "Sequential Professional": "pro",
-      "Sequential Super Professional": "superPro",
-      // Also support the short names for backward compatibility
       Freemium: "freemium",
       Standard: "standard",
       Professional: "pro",
@@ -88,12 +83,11 @@ const createCheckoutSession = async function (req: IUserRequest, res: Response) 
         },
       ],
       mode: "subscription",
-      success_url: `${process.env.FRONTEND_URL}/subscription/success?session_id={CHECKOUT_SESSION_ID}`,
-      cancel_url: `${process.env.FRONTEND_URL}/subscription/cancel`,
+      success_url: `${process.env.FRONTEND_URL}/dashboard/company/features&pricing/thank-you`,
+      cancel_url: `${process.env.FRONTEND_URL}/dashboard/company/features&pricing/error`,
       metadata: {
         userId,
         subscriptionTier: tier,
-        fullPlanName: tierToFullPlanName[tier],
       },
     } as any);
 
@@ -133,10 +127,10 @@ const handleWebhook = async function (req: Request, res: Response) {
 
         const userId = session.metadata?.userId;
         const subscriptionTier = session.metadata?.subscriptionTier;
-        const fullPlanName = session.metadata?.fullPlanName || (subscriptionTier ? tierToFullPlanName[subscriptionTier] : null);
+        const fullPlanName = subscriptionTier ? tierToFullPlanName[subscriptionTier] : null;
         const customerId = session.customer as string;
 
-        if (userId && subscriptionTier && customerId && fullPlanName) {
+        if (userId && subscriptionTier && customerId) {
           await User.findByIdAndUpdate(userId, {
             stripe_customer_id: customerId,
             subscription_status: "pending",
