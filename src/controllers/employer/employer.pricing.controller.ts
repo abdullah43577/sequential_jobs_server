@@ -109,6 +109,11 @@ const createCheckoutSession = async function (req: IUserRequest, res: Response) 
 };
 
 const handleWebhook = async function (req: Request, res: Response) {
+  if (typeof req.body === "object") {
+    const jsonString = JSON.stringify(req.body);
+    req.body = Buffer.from(jsonString);
+  }
+
   // Ensure the request body is available as a raw buffer
   const payload = req.body;
   const sig = req.headers["stripe-signature"] as string;
