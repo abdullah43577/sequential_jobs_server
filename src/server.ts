@@ -15,12 +15,13 @@ import passport from "passport";
 import { passportSetup } from "./utils/passportSetup";
 import { landingRouter } from "./routes/landingRoutes";
 import { eventsRouter } from "./routes/eventRoutes";
-import { initializeStripeProducts } from "./utils/initializeStripe";
 import { adminRouter } from "./routes/admin/routes.admin";
-import User from "./models/users.model";
-import { initializeWebhookEndpoint } from "./utils/initializeWebhook";
+import { handleWebhook } from "./controllers/employer/employer.pricing.controller";
+import bodyParser from "body-parser";
 
 const app = express();
+
+app.post("/api/employer/payment/webhook", bodyParser.raw({ type: "application/json" }), handleWebhook);
 
 app.use(morgan("dev"));
 app.use(
@@ -40,8 +41,6 @@ app.use(
     credentials: true,
   })
 );
-
-app.use("/api/employer/payment/webhook", express.raw({ type: "application/json" }));
 
 app.use(express.json({ limit: "10mb" }));
 app.use(express.urlencoded({ extended: false, limit: "10mb" }));

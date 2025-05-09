@@ -78,6 +78,6 @@ companyRouter.post("/medical/set_medical_schedule", validateAccessToken, validat
 //* PRICING MANAGEMENT
 companyRouter.get("/get_pricing_info", validateAccessToken, validateCompanySession, getPricingInfo);
 companyRouter.post("/payment/create-checkout-session", validateAccessToken, validateCompanySession, createCheckoutSession);
-companyRouter.post("/payment/webhook", handleWebhook);
+// companyRouter.post("/payment/webhook", handleWebhook);
 
 export { companyRouter };

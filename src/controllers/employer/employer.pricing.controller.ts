@@ -83,8 +83,8 @@ const createCheckoutSession = async function (req: IUserRequest, res: Response) 
         },
       ],
       mode: "subscription",
-      success_url: `${process.env.FRONTEND_URL}/dashboard/company/features&pricing/thank-you`,
-      cancel_url: `${process.env.FRONTEND_URL}/dashboard/company/features&pricing/error`,
+      success_url: `${process.env.CLIENT_URL}/dashboard/company/features&pricing/thank-you`,
+      cancel_url: `${process.env.CLIENT_URL}/dashboard/company/features&pricing/error`,
       metadata: {
         userId,
         subscriptionTier: tier,
@@ -109,11 +109,15 @@ const createCheckoutSession = async function (req: IUserRequest, res: Response) 
 
 const handleWebhook = async function (req: Request, res: Response) {
   const sig = req.headers["stripe-signature"] as string;
+  console.log(sig, "sig here");
+  console.log(req.body, "request body here");
+  console.log(STRIPE_WEBHOOK_SECRET, "stripe webhook secret");
 
   let event: Stripe.Event;
 
   try {
     event = stripe.webhooks.constructEvent(req.body, sig, STRIPE_WEBHOOK_SECRET as string);
+    console.log(event, "event here");
   } catch (err: any) {
     console.error("⚠️ Webhook signature verification failed.", err.message);
     return res.status(400).send(`Webhook Error: ${err.message}`);
