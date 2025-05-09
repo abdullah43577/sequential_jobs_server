@@ -1,7 +1,7 @@
 import { Request, Response } from "express";
 import { IUserRequest } from "../../interface";
 import { handleErrors } from "../../helper/handleErrors";
-import { pricingPlans } from "../../utils/subscriptionConfig";
+import { pricingPlans, tierToFullPlanName } from "../../utils/subscriptionConfig";
 import Stripe from "stripe";
 import User from "../../models/users.model";
 import { getStripePriceIds } from "../../utils/initializeStripe";
@@ -42,6 +42,11 @@ const createCheckoutSession = async function (req: IUserRequest, res: Response) 
 
     // Convert plan name to tier
     const tierMapping: Record<string, string> = {
+      "Sequential Freemium": "freemium",
+      "Sequential Standard": "standard",
+      "Sequential Professional": "pro",
+      "Sequential Super Professional": "superPro",
+      // Also support the short names for backward compatibility
       Freemium: "freemium",
       Standard: "standard",
       Professional: "pro",
@@ -88,6 +93,7 @@ const createCheckoutSession = async function (req: IUserRequest, res: Response) 
       metadata: {
         userId,
         subscriptionTier: tier,
+        fullPlanName: tierToFullPlanName[tier],
       },
     } as any);
 
@@ -127,13 +133,14 @@ const handleWebhook = async function (req: Request, res: Response) {
 
         const userId = session.metadata?.userId;
         const subscriptionTier = session.metadata?.subscriptionTier;
+        const fullPlanName = session.metadata?.fullPlanName || (subscriptionTier ? tierToFullPlanName[subscriptionTier] : null);
         const customerId = session.customer as string;
 
-        if (userId && subscriptionTier && customerId) {
+        if (userId && subscriptionTier && customerId && fullPlanName) {
           await User.findByIdAndUpdate(userId, {
             stripe_customer_id: customerId,
             subscription_status: "pending",
-            subscription_tier: subscriptionTier,
+            subscription_tier: fullPlanName,
           });
         }
 

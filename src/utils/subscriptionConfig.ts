@@ -162,3 +162,16 @@ export const updatePricingPlansWithStripePrices = (stripePriceIds: Record<string
 
 // For backward compatibility with code expecting an array
 export let pricingPlansList: PricingPlan[] = Object.values(pricingPlans);
+
+// Define mapping from tier identifiers to full plan names
+export const tierToFullPlanName: Record<string, string> = {
+  freemium: "Sequential Freemium",
+  standard: "Sequential Standard",
+  pro: "Sequential Pro",
+  superPro: "Sequential Super Pro",
+};
+
+// Use this function when you need to convert a tier ID to a full plan name
+export const getFullPlanName = (tier: string): string => {
+  return tierToFullPlanName[tier] || tier;
+};
