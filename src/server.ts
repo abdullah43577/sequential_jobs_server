@@ -2,7 +2,7 @@ import "dotenv/config";
 import express, { Request, Response } from "express";
 import morgan from "morgan";
 import cors from "cors";
-const { PORT } = process.env;
+const { PORT, STRIPE_SECRET_KEY } = process.env;
 import { notificationRouter } from "./routes/notificationRouter";
 import { connectDB } from "./helper/connectDB";
 import cookieParser from "cookie-parser";
@@ -17,6 +17,13 @@ import { landingRouter } from "./routes/landingRoutes";
 import { eventsRouter } from "./routes/eventRoutes";
 import { adminRouter } from "./routes/admin/routes.admin";
 import { handleWebhook } from "./controllers/employer/employer.pricing.controller";
+import Stripe from "stripe";
+import Job from "./models/jobs/jobs.model";
+
+export const stripe = new Stripe(STRIPE_SECRET_KEY as string, {
+  apiVersion: "2025-04-30.basil",
+  timeout: 10000, // 10 seconds
+});
 
 const app = express();
 
@@ -75,7 +82,16 @@ const server = app.listen(PORT, async () => {
   // await initializeWebhookEndpoint();
   // console.log("initialized");
 
-  // const d = await Job.collection.updateMany({ "applicants.applicant.has_taken_application_test": { $exists: true } }, { $unset: { "applicants.$.has_taken_application_test": false } });
+  // const webhooks = await stripe.webhookEndpoints.list();
+
+  // // Iterate through the webhooks to find the secret
+  // webhooks.data.forEach(endpoint => {
+  //   console.log(`Webhook Secret for ${endpoint.url}: ${endpoint.secret}`);
+  // });
+
+  // await Job.collection.updateMany({ status: { $exists: false } }, { $set: { status: "active" } });
+
+  // console.log("done");
 
   // await User.collection.updateMany({ stripe_customer_id: { $exists: false }, subscription_status: { $exists: false } }, { $set: { stripe_customer_id: null, subscription_status: "unpaid" } });
   // console.log("I ran");

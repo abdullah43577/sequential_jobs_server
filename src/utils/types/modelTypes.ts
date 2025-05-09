@@ -77,6 +77,7 @@ export interface IJob {
     status: "applied" | "shortlisted" | "interview_invite_sent" | "interview_scheduled" | "interview_completed" | "has_offer" | "hired" | "documents_reupload_requested" | "rejected";
   }[];
   is_live: boolean;
+  status: "archived" | "flagged" | "active";
   application_test: Types.ObjectId;
   cut_off_points: {
     suitable: { min: string; max: string };

@@ -61,12 +61,4 @@ const deleteAccount = async function (req: IUserRequest, res: Response) {
   }
 };
 
-const getSubscriptionInfo = async function (req: IUserRequest, res: Response) {
-  try {
-    //* OP here
-  } catch (error) {
-    handleErrors({ res, error });
-  }
-};
-
-export { getSummaryStats, deactivateAccount, deleteAccount, getSubscriptionInfo };
+export { getSummaryStats, deactivateAccount, deleteAccount };
