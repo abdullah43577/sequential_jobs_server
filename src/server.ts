@@ -19,6 +19,7 @@ import { adminRouter } from "./routes/admin/routes.admin";
 import { handleWebhook } from "./controllers/employer/employer.pricing.controller";
 import Stripe from "stripe";
 import Job from "./models/jobs/jobs.model";
+import { chatRouter } from "./routes/chats/routes.chatRoutes";
 
 export const stripe = new Stripe(STRIPE_SECRET_KEY as string, {
   apiVersion: "2025-04-30.basil",
@@ -63,6 +64,7 @@ app.use("/api/employer", companyRouter);
 app.use("/api/seeker", seekerRouter);
 app.use("/api/admin", adminRouter);
 app.use("/api/events", eventsRouter);
+app.use("/api/chat", chatRouter);
 
 app.use("*", (req: Request, res: Response) => {
   res.status(404).json({
@@ -78,23 +80,6 @@ app.use("*", (req: Request, res: Response) => {
 const server = app.listen(PORT, async () => {
   await connectDB();
   console.log(`server started on http://localhost:${PORT}`);
-  // await initializeStripeProducts();
-  // await initializeWebhookEndpoint();
-  // console.log("initialized");
-
-  // const webhooks = await stripe.webhookEndpoints.list();
-
-  // // Iterate through the webhooks to find the secret
-  // webhooks.data.forEach(endpoint => {
-  //   console.log(`Webhook Secret for ${endpoint.url}: ${endpoint.secret}`);
-  // });
-
-  // await Job.collection.updateMany({ status: { $exists: true } }, { $set: { status: "active" } }); //
-
-  // console.log("done");
-
-  // await User.collection.updateMany({ stripe_customer_id: { $exists: false }, subscription_status: { $exists: false } }, { $set: { stripe_customer_id: null, subscription_status: "unpaid" } });
-  // console.log("I ran");
 });
 
 initializeSocket(server);
