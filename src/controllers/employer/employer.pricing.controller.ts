@@ -9,6 +9,7 @@ const { STRIPE_SECRET_KEY, STRIPE_WEBHOOK_SECRET } = process.env;
 
 const stripe = new Stripe(STRIPE_SECRET_KEY as string, {
   apiVersion: "2025-04-30.basil",
+  timeout: 10000,
 });
 
 const getPricingInfo = async function (req: IUserRequest, res: Response) {
