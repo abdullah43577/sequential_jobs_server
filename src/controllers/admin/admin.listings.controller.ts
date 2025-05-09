@@ -29,13 +29,14 @@ const getListings = async function (req: IUserRequest, res: Response) {
 
 const updateListingStatus = async function (req: IUserRequest, res: Response) {
   try {
-    const { status, job_id } = req.body;
+    const { id } = req.params;
+    const { status } = req.body;
 
-    if (!status || status.toLowerCase() !== "archived" || status.toLowerCase() !== "flagged") return res.status(400).json({ message: "Job Status is required " });
+    if (!id) return res.status(404).json({ message: "Job ID is required!" });
 
-    if (!job_id) return res.status(404).json({ message: "Job ID is required!" });
+    if (!status || (status.toLowerCase() !== "archived" && status.toLowerCase() !== "flagged")) return res.status(400).json({ message: "Job Status is required " });
 
-    await Job.findByIdAndUpdate(job_id, { status });
+    await Job.findByIdAndUpdate(id, { status, is_live: false });
 
     res.status(200).json({ message: "Listing Updated Successfully!" });
   } catch (error) {
@@ -45,12 +46,16 @@ const updateListingStatus = async function (req: IUserRequest, res: Response) {
 
 const deleteListing = async function (req: IUserRequest, res: Response) {
   try {
-    const { job_id } = req.body;
+    const { id } = req.params;
 
-    if (!job_id) return res.status(404).json({ message: "Job ID is required!" });
+    if (!id) return res.status(404).json({ message: "Job ID is required!" });
+
+    await Job.findByIdAndDelete(id);
+
+    res.status(200).json({ message: "Job Deleted Successfully!" });
   } catch (error) {
     handleErrors({ res, error });
   }
 };
 
-export { getListings, updateListingStatus };
+export { getListings, updateListingStatus, deleteListing };

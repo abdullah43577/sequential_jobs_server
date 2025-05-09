@@ -1,7 +1,7 @@
 import { Router } from "express";
 import { validateAccessToken, validateAdminSession } from "../../middleware/validateToken";
 import { deactivateAccount, deleteAccount, getSummaryStats } from "../../controllers/admin/admin.dashboard.controller";
-import { getListings } from "../../controllers/admin/admin.listings.controller";
+import { deleteListing, getListings, updateListingStatus } from "../../controllers/admin/admin.listings.controller";
 
 const adminRouter = Router();
 
@@ -11,5 +11,7 @@ adminRouter.delete("/user/delete/:id", validateAccessToken, validateAdminSession
 
 //* LISTINGS MANAGEMENT
 adminRouter.get("/get_all_listings", validateAccessToken, validateAdminSession, getListings);
+adminRouter.put("/listing/update/:id", validateAccessToken, validateAdminSession, updateListingStatus);
+adminRouter.delete("/listing/delete/:id", validateAccessToken, validateAdminSession, deleteListing);
 
 export { adminRouter };
