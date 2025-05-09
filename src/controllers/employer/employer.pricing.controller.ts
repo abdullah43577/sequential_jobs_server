@@ -108,18 +108,35 @@ const createCheckoutSession = async function (req: IUserRequest, res: Response) 
 };
 
 const handleWebhook = async function (req: Request, res: Response) {
+  // Ensure the request body is available as a raw buffer
+  const payload = req.body;
   const sig = req.headers["stripe-signature"] as string;
-  console.log(sig, "sig here");
-  console.log(req.body, "request body here");
-  console.log(STRIPE_WEBHOOK_SECRET, "stripe webhook secret");
+
+  if (!sig) {
+    console.error("⚠️ No Stripe signature found in headers");
+    return res.status(400).send("No Stripe signature found");
+  }
+
+  if (!STRIPE_WEBHOOK_SECRET) {
+    console.error("⚠️ STRIPE_WEBHOOK_SECRET is not set in environment variables");
+    return res.status(500).send("Server configuration error");
+  }
 
   let event: Stripe.Event;
 
   try {
-    event = stripe.webhooks.constructEvent(req.body, sig, STRIPE_WEBHOOK_SECRET as string);
-    console.log(event, "event here");
+    // Log the key pieces of information needed for verification (without exposing secrets)
+    console.log(`Attempting to verify webhook with signature: ${sig.substring(0, 10)}...`);
+    console.log(`Webhook secret configured: ${STRIPE_WEBHOOK_SECRET ? "Yes" : "No"}`);
+    console.log(`Payload type: ${typeof payload}`);
+
+    // Verify the event
+    event = stripe.webhooks.constructEvent(payload, sig, STRIPE_WEBHOOK_SECRET);
+
+    console.log(`✅ Webhook verified successfully. Event type: ${event.type}`);
   } catch (err: any) {
-    console.error("⚠️ Webhook signature verification failed.", err.message);
+    console.error(`⚠️ Webhook signature verification failed: ${err.message}`);
+    // Return a 400 error right away
     return res.status(400).send(`Webhook Error: ${err.message}`);
   }
 
@@ -128,18 +145,23 @@ const handleWebhook = async function (req: Request, res: Response) {
     switch (event.type) {
       case "checkout.session.completed": {
         const session = event.data.object as Stripe.Checkout.Session;
+        console.log(`Processing checkout.session.completed for session ${session.id}`);
 
         const userId = session.metadata?.userId;
         const subscriptionTier = session.metadata?.subscriptionTier;
-        const fullPlanName = subscriptionTier ? tierToFullPlanName[subscriptionTier] : null;
+        const fullPlanName = subscriptionTier ? tierToFullPlanName[subscriptionTier as keyof typeof tierToFullPlanName] : null;
         const customerId = session.customer as string;
 
         if (userId && subscriptionTier && customerId) {
+          console.log(`Updating user ${userId} with subscription tier: ${fullPlanName}`);
           await User.findByIdAndUpdate(userId, {
             stripe_customer_id: customerId,
             subscription_status: "pending",
             subscription_tier: fullPlanName,
           });
+          console.log(`User updated successfully`);
+        } else {
+          console.log(`Missing required metadata: userId: ${!!userId}, tier: ${!!subscriptionTier}, customerId: ${!!customerId}`);
         }
 
         break;
@@ -148,16 +170,23 @@ const handleWebhook = async function (req: Request, res: Response) {
       case "invoice.paid": {
         const invoice = event.data.object as Stripe.Invoice;
         const customerId = invoice.customer as string;
+        console.log(`Processing invoice.paid for customer ${customerId}`);
 
         // Find the user by customerId
         const user = await User.findOne({ stripe_customer_id: customerId });
 
         if (user) {
+          const subscriptionEnd = new Date(invoice.lines.data[0]?.period?.end * 1000);
+          console.log(`Updating subscription for user ${user._id} until ${subscriptionEnd}`);
+
           await User.findByIdAndUpdate(user._id, {
             subscription_status: "payment_successful",
             subscription_start: new Date(),
-            subscription_end: new Date(invoice.lines.data[0].period.end * 1000),
+            subscription_end: subscriptionEnd,
           });
+          console.log(`Subscription updated successfully`);
+        } else {
+          console.log(`No user found with customer ID: ${customerId}`);
         }
 
         break;
@@ -166,12 +195,17 @@ const handleWebhook = async function (req: Request, res: Response) {
       case "invoice.payment_failed": {
         const invoice = event.data.object as Stripe.Invoice;
         const customerId = invoice.customer as string;
+        console.log(`Processing invoice.payment_failed for customer ${customerId}`);
 
         const user = await User.findOne({ stripe_customer_id: customerId });
         if (user) {
+          console.log(`Marking subscription as failed for user ${user._id}`);
           await User.findByIdAndUpdate(user._id, {
             subscription_status: "payment_failed",
           });
+          console.log(`User subscription status updated to payment_failed`);
+        } else {
+          console.log(`No user found with customer ID: ${customerId}`);
         }
 
         break;
@@ -181,8 +215,10 @@ const handleWebhook = async function (req: Request, res: Response) {
         console.log(`Unhandled event type ${event.type}`);
     }
 
+    // Return a 200 response to acknowledge receipt of the event
     res.status(200).json({ received: true });
   } catch (error) {
+    console.error(`Error processing webhook ${event.type}:`, error);
     handleErrors({ res, error });
   }
 };
