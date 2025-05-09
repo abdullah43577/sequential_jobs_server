@@ -59,6 +59,17 @@ const validateGoogleVerificationToken = function (req: IUserRequest, res: Respon
   }
 };
 
+const validateAdminSession = function (req: IUserRequest, res: Response, next: NextFunction) {
+  try {
+    const { userId, role } = req;
+    if (role !== "admin" && role !== "super-admin") return res.status(401).json({ message: "Unauthorized!, only an admin is authorized to do this" });
+
+    next();
+  } catch (error) {
+    handleErrors({ res, error });
+  }
+};
+
 const validateSeekerSession = function (req: IUserRequest, res: Response, next: NextFunction) {
   try {
     const { userId, role } = req;
@@ -92,4 +103,4 @@ const validatePanelistSession = function (req: IUserRequest, res: Response, next
   }
 };
 
-export { validateAccessToken, validateRefreshToken, validateGoogleVerificationToken, validateCompanySession, validateSeekerSession, validatePanelistSession };
+export { validateAccessToken, validateRefreshToken, validateGoogleVerificationToken, validateAdminSession, validateCompanySession, validateSeekerSession, validatePanelistSession };

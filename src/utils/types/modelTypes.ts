@@ -21,7 +21,11 @@ export interface IUser {
   state: string;
   city: string;
   postal_code: string;
+  stripe_customer_id: string | null;
   subscription_tier: "Sequential Freemium" | "Sequential Standard" | "Sequential Pro" | "Sequential Super Pro";
+  subscription_status: "pending" | "payment_successful" | "unpaid" | "payment_failed";
+  subscription_start: Date;
+  subscription_end: Date;
   googleId: string;
   linkedinId: string;
   failedLoginAttempts: number;
@@ -31,6 +35,7 @@ export interface IUser {
   expiresAt: Date;
   has_validated_email: boolean;
   resume: string;
+  account_status: "active" | "deactivated";
 }
 
 export interface INotification {
@@ -72,6 +77,7 @@ export interface IJob {
     status: "applied" | "shortlisted" | "interview_invite_sent" | "interview_scheduled" | "interview_completed" | "has_offer" | "hired" | "documents_reupload_requested" | "rejected";
   }[];
   is_live: boolean;
+  status: "archived" | "flagged" | "active";
   application_test: Types.ObjectId;
   cut_off_points: {
     suitable: { min: string; max: string };

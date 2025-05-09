@@ -83,11 +83,20 @@ const userSchema = new Schema<IUser>(
       type: Boolean,
       default: false,
     },
-
+    stripe_customer_id: { type: String, default: null },
     subscription_tier: {
       type: String,
       enum: ["Sequential Freemium", "Sequential Standard", "Sequential Pro", "Sequential Super Pro"],
       default: "Sequential Freemium",
+    },
+    subscription_status: { type: String, enum: ["pending", "payment_successful", "unpaid", "payment_failed"] },
+    subscription_start: {
+      type: Date,
+      default: null,
+    },
+    subscription_end: {
+      type: Date,
+      default: null,
     },
 
     googleId: { type: String, default: null },
@@ -96,6 +105,7 @@ const userSchema = new Schema<IUser>(
     lastLogin: { type: Date, default: Date.now },
     isTemporary: { type: Boolean, default: false },
     expiresAt: { type: Date, default: null },
+    account_status: { type: String, enum: ["active", "deactivated"], default: "active" },
   },
   { timestamps: true }
 );

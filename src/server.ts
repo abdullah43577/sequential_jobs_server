@@ -2,7 +2,7 @@ import "dotenv/config";
 import express, { Request, Response } from "express";
 import morgan from "morgan";
 import cors from "cors";
-const { PORT, SESSION_SECRET } = process.env;
+const { PORT, STRIPE_SECRET_KEY } = process.env;
 import { notificationRouter } from "./routes/notificationRouter";
 import { connectDB } from "./helper/connectDB";
 import cookieParser from "cookie-parser";
@@ -13,13 +13,21 @@ import { companyRouter } from "./routes/employer/routes.employer";
 import { seekerRouter } from "./routes/seeker/routes.seeker";
 import passport from "passport";
 import { passportSetup } from "./utils/passportSetup";
-import session from "express-session";
 import { landingRouter } from "./routes/landingRoutes";
-import Job from "./models/jobs/jobs.model";
-import User from "./models/users.model";
 import { eventsRouter } from "./routes/eventRoutes";
+import { adminRouter } from "./routes/admin/routes.admin";
+import { handleWebhook } from "./controllers/employer/employer.pricing.controller";
+import Stripe from "stripe";
+import Job from "./models/jobs/jobs.model";
+
+export const stripe = new Stripe(STRIPE_SECRET_KEY as string, {
+  apiVersion: "2025-04-30.basil",
+  timeout: 10000, // 10 seconds
+});
 
 const app = express();
+
+app.use("/api/employer/payment/webhook", express.raw({ type: "application/json" }));
 
 app.use(morgan("dev"));
 app.use(
@@ -39,22 +47,12 @@ app.use(
     credentials: true,
   })
 );
+
 app.use(express.json({ limit: "10mb" }));
 app.use(express.urlencoded({ extended: false, limit: "10mb" }));
 app.use(cookieParser());
 app.use(helmet());
-// app.use(
-//   session({
-//     secret: SESSION_SECRET as string,
-//     resave: false,
-//     saveUninitialized: false,
-//     cookie: {
-//       maxAge: 24 * 60 * 60 * 1000, // 1 day
-//     },
-//   })
-// );
 app.use(passport.initialize());
-// app.use(passport.session());
 passportSetup();
 
 // routes
@@ -63,6 +61,7 @@ app.use("/api/auth", authRouter);
 app.use("/api/notifications", notificationRouter);
 app.use("/api/employer", companyRouter);
 app.use("/api/seeker", seekerRouter);
+app.use("/api/admin", adminRouter);
 app.use("/api/events", eventsRouter);
 
 app.use("*", (req: Request, res: Response) => {
@@ -79,10 +78,22 @@ app.use("*", (req: Request, res: Response) => {
 const server = app.listen(PORT, async () => {
   await connectDB();
   console.log(`server started on http://localhost:${PORT}`);
+  // await initializeStripeProducts();
+  // await initializeWebhookEndpoint();
+  // console.log("initialized");
 
-  // const d = await Job.collection.updateMany({ "applicants.applicant.has_taken_application_test": { $exists: true } }, { $unset: { "applicants.$.has_taken_application_test": false } });
+  // const webhooks = await stripe.webhookEndpoints.list();
 
-  // await User.collection.updateMany({ profile_pic: { $exists: false } }, { $set: { profile_pic: null } });
+  // // Iterate through the webhooks to find the secret
+  // webhooks.data.forEach(endpoint => {
+  //   console.log(`Webhook Secret for ${endpoint.url}: ${endpoint.secret}`);
+  // });
+
+  // await Job.collection.updateMany({ status: { $exists: true } }, { $set: { status: "active" } });
+
+  // console.log("done");
+
+  // await User.collection.updateMany({ stripe_customer_id: { $exists: false }, subscription_status: { $exists: false } }, { $set: { stripe_customer_id: null, subscription_status: "unpaid" } });
   // console.log("I ran");
 });
 
