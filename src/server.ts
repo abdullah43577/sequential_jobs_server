@@ -2,7 +2,7 @@ import "dotenv/config";
 import express, { Request, Response } from "express";
 import morgan from "morgan";
 import cors from "cors";
-const { PORT, SESSION_SECRET } = process.env;
+const { PORT } = process.env;
 import { notificationRouter } from "./routes/notificationRouter";
 import { connectDB } from "./helper/connectDB";
 import cookieParser from "cookie-parser";
@@ -17,11 +17,10 @@ import { landingRouter } from "./routes/landingRoutes";
 import { eventsRouter } from "./routes/eventRoutes";
 import { adminRouter } from "./routes/admin/routes.admin";
 import { handleWebhook } from "./controllers/employer/employer.pricing.controller";
-import bodyParser from "body-parser";
 
 const app = express();
 
-app.post("/api/employer/payment/webhook", bodyParser.raw({ type: "application/json" }), handleWebhook);
+app.use("/api/employer/payment/webhook", express.raw({ type: "application/json" }));
 
 app.use(morgan("dev"));
 app.use(
