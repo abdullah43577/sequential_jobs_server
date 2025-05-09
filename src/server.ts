@@ -89,7 +89,7 @@ const server = app.listen(PORT, async () => {
   //   console.log(`Webhook Secret for ${endpoint.url}: ${endpoint.secret}`);
   // });
 
-  // await Job.collection.updateMany({ status: { $exists: true } }, { $set: { status: "active" } });
+  // await Job.collection.updateMany({ status: { $exists: true } }, { $set: { status: "active" } }); //
 
   // console.log("done");
 
