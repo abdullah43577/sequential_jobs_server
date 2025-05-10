@@ -79,23 +79,4 @@ export const passportSetup = function () {
       }
     )
   );
-
-  // storing current user id
-  // passport.serializeUser((user, done) => {
-  //   done(null, (user as any)._id);
-  // });
-
-  // // return user by id when requested
-  // passport.deserializeUser(async (id, done) => {
-  //   try {
-  //     const user = await User.findById(id);
-  //     if (user) {
-  //       done(null, user);
-  //     } else {
-  //       done(null, false);
-  //     }
-  //   } catch (error) {
-  //     done(error, undefined);
-  //   }
-  // });
 };
