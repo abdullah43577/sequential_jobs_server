@@ -9,7 +9,7 @@ import { registrationEmail } from "../utils/nodemailer.ts/email-templates/regist
 import { transportMail } from "../utils/nodemailer.ts/transportMail";
 import jwt, { Secret } from "jsonwebtoken";
 import { getBaseUrl } from "../helper/getBaseUrl";
-import { Readable } from "nodemailer/lib/xoauth2";
+import { Readable } from "stream";
 import cloudinary from "../utils/cloudinaryConfig";
 import { cleanObject } from "../utils/cleanedObject";
 const { EMAIL_VERIFICATION_TOKEN } = process.env;
