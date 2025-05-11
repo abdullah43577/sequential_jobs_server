@@ -9,7 +9,7 @@ const { STRIPE_WEBHOOK_SECRET } = process.env;
 
 const getPricingInfo = async function (req: IUserRequest, res: Response) {
   try {
-    // Get the latest pricing plans which now contain Stripe price IDs
+    // Get the latest pricing plans which now contain Stripe price ID
     const allPricingPlans = Object.values(pricingPlans);
 
     res.status(200).json({
