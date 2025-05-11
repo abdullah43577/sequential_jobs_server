@@ -88,9 +88,9 @@ export interface PricingPlan {
 // These will be used as fallback if the Stripe prices aren't loaded
 export const BASE_PRICES = {
   freemium: 0,
-  standard: 99,
-  pro: 199,
-  superPro: 299,
+  standard: 10,
+  pro: 15,
+  superPro: 169,
 };
 
 // Helper function to get unique benefits for a specific tier

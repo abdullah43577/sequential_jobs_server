@@ -17,6 +17,7 @@ import { landingRouter } from "./routes/landingRoutes";
 import { eventsRouter } from "./routes/eventRoutes";
 import { adminRouter } from "./routes/admin/routes.admin";
 import Stripe from "stripe";
+import { initializeStripeProducts } from "./utils/initializeStripe";
 
 export const stripe = new Stripe(STRIPE_SECRET_KEY as string, {
   apiVersion: "2025-04-30.basil",
@@ -76,6 +77,7 @@ app.use("*", (req: Request, res: Response) => {
 const server = app.listen(PORT, async () => {
   await connectDB();
   console.log(`server started on http://localhost:${PORT}`);
+  // await initializeStripeProducts();
 });
 
 initializeSocket(server);
