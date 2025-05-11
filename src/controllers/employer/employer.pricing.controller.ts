@@ -4,15 +4,11 @@ import { handleErrors } from "../../helper/handleErrors";
 import { pricingPlans, tierToFullPlanName } from "../../utils/subscriptionConfig";
 import Stripe from "stripe";
 import User from "../../models/users.model";
-import { getStripePriceIds } from "../../utils/initializeStripe";
 import { stripe } from "../../server";
 const { STRIPE_WEBHOOK_SECRET } = process.env;
 
 const getPricingInfo = async function (req: IUserRequest, res: Response) {
   try {
-    // Make sure Stripe prices are initialized
-    await getStripePriceIds();
-
     // Get the latest pricing plans which now contain Stripe price IDs
     const allPricingPlans = Object.values(pricingPlans);
 
@@ -105,15 +101,12 @@ const createCheckoutSession = async function (req: IUserRequest, res: Response) 
 };
 
 const handleWebhook = async function (req: Request, res: Response) {
-  if (typeof req.body === "object") {
-    const jsonString = JSON.stringify(req.body);
-    req.body = Buffer.from(jsonString);
-  }
-
   // Ensure the request body is available as a raw buffer
   const payload = req.body;
   const sig = req.headers["stripe-signature"] as string;
 
+  console.log(payload, "request body here");
+  console.log(sig, "signature here");
   if (!sig) {
     console.error("⚠️ No Stripe signature found in headers");
     return res.status(400).send("No Stripe signature found");

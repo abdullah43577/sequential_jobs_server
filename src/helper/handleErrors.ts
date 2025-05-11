@@ -65,11 +65,6 @@ export const handleErrors = function ({ res, error }: IHandleErrors) {
     return res.status(500).json({ message: error.message, error: "Multer Error" });
   }
 
-  // Nodemailer Error
-  if (error.responseCode === 535) {
-    return res.status(535).json({ message: "Nodemailer credentials invalid!" });
-  }
-
   // Generic/Unknown Error
   console.error("Unhandled error:", error);
   return res.status(500).json({

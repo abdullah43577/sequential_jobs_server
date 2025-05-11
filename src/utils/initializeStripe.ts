@@ -20,19 +20,19 @@ export async function initializeStripeProducts() {
         tier: "standard",
         name: "Standard Plan",
         description: "Standard tier with essential features",
-        price: 9900, // $99.00 in cents
+        price: 1000, // $10
       },
       {
         tier: "pro",
         name: "Professional Plan",
         description: "Professional tier with advanced features",
-        price: 19900, // $199.00 in cents
+        price: 1500, // $15
       },
       {
         tier: "superPro",
         name: "Super Professional Plan",
         description: "Super Professional tier with all features",
-        price: 29900, // $299.00 in cents
+        price: 16900, // $169
       },
     ];
 

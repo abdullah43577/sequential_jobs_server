@@ -1,5 +1,5 @@
 import "dotenv/config";
-import nodemailer from "nodemailer";
+import { Resend } from "resend";
 
 export interface transportMailType {
   email: string;
@@ -7,26 +7,18 @@ export interface transportMailType {
   message: any;
 }
 
-const { NODEMAILER_EMAIL, NODEMAILER_PASSWORD, NODEMAILER_REPLYTO_EMAIL } = process.env;
+const { SENDER_EMAIL, REPLYTO_EMAIL, RESEND_API_KEY } = process.env;
 
-const transporter = nodemailer.createTransport({
-  host: "smtp.ipage.com",
-  port: 465,
-  secure: true,
-  auth: {
-    user: NODEMAILER_EMAIL,
-    pass: NODEMAILER_PASSWORD,
-  },
-});
+const resend = new Resend(RESEND_API_KEY);
 
 export async function transportMail(formData: transportMailType) {
   try {
-    const info = await transporter.sendMail({
-      from: NODEMAILER_EMAIL,
-      to: formData.email,
+    const info = await resend.emails.send({
+      from: SENDER_EMAIL as string,
+      to: [formData.email],
       subject: formData.subject,
       html: formData.message,
-      replyTo: NODEMAILER_REPLYTO_EMAIL,
+      replyTo: REPLYTO_EMAIL,
     });
     return info;
   } catch (error) {
