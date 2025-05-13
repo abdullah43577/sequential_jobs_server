@@ -29,8 +29,20 @@ const createUser = async (req: Request, res: Response) => {
     //* hash password
     const hashedPassword = await hashPassword(data.password);
 
+    // Set up trial subscription
+    const trialEndDate = new Date();
+    trialEndDate.setDate(trialEndDate.getDate() + 30); // 30 days from now
+
     //* create user account
-    const user = new User({ ...data, password: hashedPassword });
+    const user = new User({
+      ...data,
+      password: hashedPassword,
+      subscription_tier: "Sequential Super Pro", // Highest plan
+      subscription_status: "trial",
+      subscription_start: new Date(),
+      subscription_end: trialEndDate,
+      is_trial: true,
+    });
     await user.save();
 
     const verificationToken = jwt.sign({ id: user._id }, EMAIL_VERIFICATION_TOKEN as Secret);
@@ -40,7 +52,7 @@ const createUser = async (req: Request, res: Response) => {
       title: "Welcome to Sequential Jobs!",
       name: user.first_name,
       message:
-        "Thank you for creating an account with Sequential Jobs. We're excited to help you find your next opportunity in the tech industry.\n\nTo get started, please verify your email address by clicking the button below. This helps us ensure the security of your account.",
+        "Thank you for creating an account with Sequential Jobs. We're excited to help you find your next opportunity in the tech industry.\n\nYou've been automatically enrolled in our Sequential Super Pro plan for the next 30 days.\n\nTo get started, please verify your email address by clicking the button below. This helps us ensure the security of your account.",
       btnTxt: "Verify Email Address",
       btnAction: `https://sequential-jobs-server.onrender.com/api/auth/verify-email?token=${verificationToken}`,
     };

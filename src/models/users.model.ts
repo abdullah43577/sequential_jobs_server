@@ -89,14 +89,22 @@ const userSchema = new Schema<IUser>(
       enum: ["Sequential Freemium", "Sequential Standard", "Sequential Pro", "Sequential Super Pro"],
       default: "Sequential Freemium",
     },
-    subscription_status: { type: String, enum: ["pending", "payment_successful", "unpaid", "payment_failed"] },
+    subscription_status: { type: String, enum: ["pending", "payment_successful", "unpaid", "payment_failed", "trial"], default: "trial" },
     subscription_start: {
       type: Date,
-      default: null,
+      default: Date.now,
     },
     subscription_end: {
       type: Date,
-      default: null,
+      default: () => {
+        const date = new Date();
+        date.setDate(date.getDate() + 30);
+        return date;
+      },
+    },
+    is_trial: {
+      type: Boolean,
+      default: true,
     },
 
     googleId: { type: String, default: null },

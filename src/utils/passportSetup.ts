@@ -55,6 +55,11 @@ export const passportSetup = function () {
 
           const generatedUserName = await generateUsername(name?.givenName || "", name?.familyName || "");
 
+          // Set up trial period - 30 days from now
+          const currentDate = new Date();
+          const trialEndDate = new Date();
+          trialEndDate.setDate(currentDate.getDate() + 30);
+
           const newUser = new User({
             first_name: name?.givenName,
             lastName: name?.familyName,
@@ -64,6 +69,12 @@ export const passportSetup = function () {
             googleId: id,
             has_validated_email: true,
             organisation_name: name?.givenName,
+            // Add trial subscription details
+            subscription_tier: "Sequential Super Pro", // Highest tier
+            subscription_status: "trial",
+            subscription_start: currentDate,
+            subscription_end: trialEndDate,
+            is_trial: true,
           });
 
           if (role === "company") {

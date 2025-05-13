@@ -1,4 +1,4 @@
-import { Document, Types } from "mongoose";
+import { Types } from "mongoose";
 import { NotificationStatus, NotificationType } from "../../models/notifications.model";
 
 export interface IUser {
@@ -23,9 +23,10 @@ export interface IUser {
   postal_code: string;
   stripe_customer_id: string | null;
   subscription_tier: "Sequential Freemium" | "Sequential Standard" | "Sequential Pro" | "Sequential Super Pro";
-  subscription_status: "pending" | "payment_successful" | "unpaid" | "payment_failed";
+  subscription_status: "pending" | "payment_successful" | "unpaid" | "payment_failed" | "trial";
   subscription_start: Date;
   subscription_end: Date;
+  is_trial: boolean;
   googleId: string;
   linkedinId: string;
   failedLoginAttempts: number;
