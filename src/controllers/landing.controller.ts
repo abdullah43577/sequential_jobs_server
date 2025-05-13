@@ -49,5 +49,5 @@ const getCompanyJobs = async function (req: Request, res: Response) {
     handleErrors({ res, error });
   }
 };
-
+// test
 export { getLandingJobs, getLandingJobById, getCompanyJobs };
