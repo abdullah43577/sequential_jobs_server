@@ -8,7 +8,7 @@ import { connectDB } from "./helper/connectDB";
 import cookieParser from "cookie-parser";
 import helmet from "helmet";
 import { authRouter } from "./routes/authRoutes";
-import { initializeSocket } from "./helper/socket";
+import { getSocketIO, initializeSocket } from "./helper/socket";
 import { companyRouter } from "./routes/employer/routes.employer";
 import { seekerRouter } from "./routes/seeker/routes.seeker";
 import passport from "passport";
@@ -17,7 +17,6 @@ import { landingRouter } from "./routes/landingRoutes";
 import { eventsRouter } from "./routes/eventRoutes";
 import { adminRouter } from "./routes/admin/routes.admin";
 import Stripe from "stripe";
-import { initializeStripeProducts } from "./utils/initializeStripe";
 
 export const stripe = new Stripe(STRIPE_SECRET_KEY as string, {
   apiVersion: "2025-04-30.basil",
@@ -78,6 +77,7 @@ const server = app.listen(PORT, async () => {
   await connectDB();
   console.log(`server started on http://localhost:${PORT}`);
   // await initializeStripeProducts();
+  // setupSubscriptionCronJobs()
 });
 
 initializeSocket(server);

@@ -44,7 +44,7 @@ const getCompanyJobs = async function (req: Request, res: Response) {
 
     const jobs = await Job.find({ employer: user._id }).populate("employer", "organisation_name").lean().sort({ createdAt: -1 });
 
-    res.status(200).json(jobs);
+    res.status(200).json({ profile_img: user.profile_pic, data: jobs });
   } catch (error) {
     handleErrors({ res, error });
   }
