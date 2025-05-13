@@ -17,11 +17,6 @@ import { landingRouter } from "./routes/landingRoutes";
 import { eventsRouter } from "./routes/eventRoutes";
 import { adminRouter } from "./routes/admin/routes.admin";
 import Stripe from "stripe";
-import { initializeStripeProducts } from "./utils/initializeStripe";
-import { setupSubscriptionCronJobs } from "./utils/cron-jobs";
-import User from "./models/users.model";
-import { NotificationStatus, NotificationType } from "./models/notifications.model";
-import { v4 as uuidv4 } from "uuid";
 
 export const stripe = new Stripe(STRIPE_SECRET_KEY as string, {
   apiVersion: "2025-04-30.basil",
@@ -83,54 +78,6 @@ const server = app.listen(PORT, async () => {
   console.log(`server started on http://localhost:${PORT}`);
   // await initializeStripeProducts();
   // setupSubscriptionCronJobs()
-
-  // const currentDate = new Date();
-  // const trialEndDate = new Date();
-  // trialEndDate.setDate(currentDate.getDate() + 30); // 30 days from now
-
-  // await User.collection.updateMany(
-  //   {
-  //     subscription_tier: "Sequential Freemium",
-  //     is_trial: { $exists: false },
-  //     subscription_status: "unpaid",
-  //   },
-  //   {
-  //     $set: {
-  //       subscription_tier: "Sequential Super Pro", // Set to your highest tier
-  //       is_trial: true,
-  //       subscription_status: "trial",
-  //       subscription_start: currentDate,
-  //       subscription_end: trialEndDate,
-  //     },
-  //   }
-  // );
-
-  // console.log("i ran");
-
-  // 68162cc3dcd028def82fdd02
-
-  // const io = getSocketIO();
-
-  // for (let i = 1; i <= 5; i++) {
-  //   const notification = {
-  //     _id: uuidv4(),
-  //     createdAt: new Date().toISOString(),
-  //   };
-
-  //   const subject = `Test Subject ${i}`;
-  //   const message = `This is a demo message number ${i}`;
-
-  //   io.to("68162cc3dcd028def82fdd02").emit("notification", {
-  //     id: notification._id,
-  //     title: subject,
-  //     message,
-  //     status: NotificationStatus.UNREAD,
-  //     type: NotificationType.MESSAGE,
-  //     createdAt: notification.createdAt,
-  //   });
-
-  //   console.log("sending it to their rooms");
-  // }
 });
 
 initializeSocket(server);
