@@ -1,5 +1,5 @@
 import { Router } from "express";
-import { validateAccessToken, validateCompanySession, validatePanelistSession } from "../../middleware/validateToken";
+import { validateAccessToken, validateCompanyAdminSession, validateCompanySession, validatePanelistSession } from "../../middleware/validateToken";
 import { upload } from "../../utils/multerConfig";
 import { applicationTest, applicationTestCutoff, deleteJob, getApplicationTestDraft, getApplicationTestCutoffDraft, getJobDraft, getJobs, jobPostCreation, toggleJobState } from "../../controllers/employer/employer.jobpost.controller";
 import { getApplicantsForJobTest, getDraftCutOff, getDraftQuestion, getInviteMsgDraft, getJobsForJobTest, jobTest, jobTestApplicantsInvite, jobTestCutoff, jobTestInviteMsg } from "../../controllers/employer/employer.jobtest.controller";
@@ -33,11 +33,11 @@ companyRouter.get("/get_active_jobs", validateAccessToken, validateCompanySessio
 companyRouter.get("/get_employer_jobs", validateAccessToken, validateCompanySession, getJobs);
 companyRouter.delete("/delete_job", validateAccessToken, validateCompanySession, deleteJob);
 companyRouter.put("/toggle_job", validateAccessToken, validateCompanySession, toggleJobState);
-companyRouter.put("/create", validateAccessToken, validateCompanySession, jobPostCreation);
-companyRouter.get("/get_job_info", validateAccessToken, validateCompanySession, getJobDraft);
-companyRouter.put("/application-test", validateAccessToken, validateCompanySession, applicationTest);
+companyRouter.put("/create", validateAccessToken, validateCompanyAdminSession, jobPostCreation);
+companyRouter.get("/get_job_info", validateAccessToken, validateCompanyAdminSession, getJobDraft);
+companyRouter.put("/application-test", validateAccessToken, validateCompanyAdminSession, applicationTest);
 companyRouter.get("/get_application_test_info", validateAccessToken, validateCompanySession, getApplicationTestDraft);
-companyRouter.put("/application-test-cutoff", validateAccessToken, validateCompanySession, applicationTestCutoff);
+companyRouter.put("/application-test-cutoff", validateAccessToken, validateCompanyAdminSession, applicationTestCutoff);
 companyRouter.get("/get_application_test_cutoff", validateAccessToken, validateCompanySession, getApplicationTestCutoffDraft);
 
 //* JOB TEST MANAGEMENT
