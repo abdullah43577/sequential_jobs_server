@@ -92,6 +92,17 @@ const validateCompanySession = function (req: IUserRequest, res: Response, next:
   }
 };
 
+const validateCompanyAdminSession = function (req: IUserRequest, res: Response, next: NextFunction) {
+  try {
+    const { role } = req;
+    if (role !== "company" && role !== "admin" && role !== "super-admin") return res.status(401).json({ message: "Unauthorized!, only a company or an admin is authorized to do this" });
+
+    next();
+  } catch (error) {
+    handleErrors({ res, error });
+  }
+};
+
 const validatePanelistSession = function (req: IUserRequest, res: Response, next: NextFunction) {
   try {
     const { userId, role } = req;
@@ -103,4 +114,4 @@ const validatePanelistSession = function (req: IUserRequest, res: Response, next
   }
 };
 
-export { validateAccessToken, validateRefreshToken, validateGoogleVerificationToken, validateAdminSession, validateCompanySession, validateSeekerSession, validatePanelistSession };
+export { validateAccessToken, validateRefreshToken, validateGoogleVerificationToken, validateAdminSession, validateCompanySession, validateCompanyAdminSession, validateSeekerSession, validatePanelistSession };

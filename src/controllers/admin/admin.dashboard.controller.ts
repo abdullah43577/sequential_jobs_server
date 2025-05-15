@@ -11,19 +11,23 @@ const getSummaryStats = async function (req: IUserRequest, res: Response) {
   try {
     const users = await User.find({ role: { $nin: ["admin", "super-admin"] } }).lean();
 
-    const formattedResponse = users.map(user => ({
-      user_id: user._id,
-      name: `${user.first_name} ${user.last_name}`,
-      email: user.email,
-      profile_img: user.profile_pic,
-      phone: user.role === "company" ? user.official_phone : user.phone_no,
-      user_type: user.role,
-      account_status: user.account_status,
-      subscription_tier: user.subscription_tier,
-      subscription_start: user.subscription_start,
-      subscription_end: user.subscription_end,
-      createdAt: (user as any).createdAt,
-    }));
+    const formattedResponse = users.map(user => {
+      const name = user.role === "company" ? user.organisation_name : `${user.first_name} ${user.last_name}`;
+
+      return {
+        user_id: user._id,
+        name,
+        email: user.email,
+        profile_img: user.profile_pic,
+        phone: user.role === "company" ? user.official_phone : user.phone_no,
+        user_type: user.role,
+        account_status: user.account_status,
+        subscription_tier: user.subscription_tier,
+        subscription_start: user.subscription_start,
+        subscription_end: user.subscription_end,
+        createdAt: (user as any).createdAt,
+      };
+    });
 
     res.status(200).json(formattedResponse);
   } catch (error) {

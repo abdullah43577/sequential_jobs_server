@@ -54,25 +54,22 @@ const toggleJobState = async function (req: IUserRequest, res: Response) {
 
 const jobPostCreation = async function (req: IUserRequest, res: Response) {
   try {
-    const { userId } = req;
+    const { userId: current_user_id } = req;
 
     const data = JobPostCreationSchema.parse(req.body);
+
+    //* if user_id is passed in the body use that instead of the user id in the request object as it's used for admins functionality
+    const userId = data.user_id?.length ? data.user_id : current_user_id;
 
     if (data.job_id) {
       const job = await Job.findByIdAndUpdate(data.job_id, data, { returnDocument: "after", runValidators: true }).lean();
 
       if (!job) return res.status(404).json({ message: "Job not found" });
 
-      // Invalidate related cache
-      // cache.del(`applied_jobs_for_${userId}`);
-
       return res.status(200).json({ message: "Job Updated", job });
     }
 
     const job = await Job.create({ ...data, employer: userId, stage: "job_post_creation" });
-
-    // Invalidate related cache
-    // cache.del(`applied_jobs_for_${userId}`);
 
     return res.status(201).json({ message: "Job Created", job });
   } catch (error) {

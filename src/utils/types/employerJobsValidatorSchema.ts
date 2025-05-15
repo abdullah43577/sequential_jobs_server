@@ -1,6 +1,7 @@
 import z from "zod";
 
 export const JobPostCreationSchema = z.object({
+  user_id: z.string().optional(),
   job_id: z.string().optional(),
   job_title: z.string(),
   country: z.string(),

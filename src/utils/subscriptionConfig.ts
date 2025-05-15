@@ -79,13 +79,12 @@ export interface PricingPlan {
   name: string;
   tier: UserTier;
   price: number;
-  stripePrice: string; // Stripe price ID
+  stripePrice: string;
   benefits: string[];
-  includedFeatures?: string; // Optional field to describe included features from lower tiers
+  includedFeatures?: string;
 }
 
 // Define base prices for each tier (in dollars)
-// These will be used as fallback if the Stripe prices aren't loaded
 export const BASE_PRICES = {
   freemium: 0,
   standard: 10,
@@ -100,17 +99,13 @@ const getUniqueBenefitsForTier = (tier: UserTier): string[] => {
   const currentTierIndex = tiers.indexOf(tier);
   const previousTier = currentTierIndex > 0 ? tiers[currentTierIndex - 1] : null;
 
-  // Loop through all features in FEATURE_ACCESS
   for (const [feature, allowedTiers] of Object.entries(FEATURE_ACCESS)) {
-    // Check if this feature is available for the current tier
     if (allowedTiers.includes(tier)) {
-      // Check if this feature is NOT available in the previous tier (making it unique to this tier)
       if (!previousTier || !allowedTiers.includes(previousTier)) {
-        // Convert feature name from camelCase to readable format
         const readableFeature = feature
-          .replace(/([A-Z])/g, " $1") // Insert a space before all capital letters
-          .replace(/([0-9]+)/g, " $1 ") // Insert spaces around numbers
-          .replace(/^./, str => str.toUpperCase()); // Capitalize the first letter
+          .replace(/([A-Z])/g, " $1")
+          .replace(/([0-9]+)/g, " $1 ")
+          .replace(/^./, str => str.toUpperCase());
 
         benefits.push(readableFeature);
       }
