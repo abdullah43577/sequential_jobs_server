@@ -79,7 +79,7 @@ const server = app.listen(PORT, async () => {
   console.log(`server started on http://localhost:${PORT}`);
   //* leave this here it's important to initialize the stripe products
   await initializeStripeProducts();
-  // setupSubscriptionCronJobs()
+  // setupSubscriptionCronJobs() and co
 });
 
 initializeSocket(server);
