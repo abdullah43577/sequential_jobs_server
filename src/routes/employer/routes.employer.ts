@@ -1,7 +1,18 @@
 import { Router } from "express";
 import { validateAccessToken, validateCompanyAdminSession, validateCompanySession, validatePanelistSession } from "../../middleware/validateToken";
 import { upload } from "../../utils/multerConfig";
-import { applicationTest, applicationTestCutoff, deleteJob, getApplicationTestDraft, getApplicationTestCutoffDraft, getJobDraft, getJobs, jobPostCreation, toggleJobState } from "../../controllers/employer/employer.jobpost.controller";
+import {
+  applicationTest,
+  applicationTestCutoff,
+  deleteJob,
+  getApplicationTestDraft,
+  getApplicationTestCutoffDraft,
+  getJobDraft,
+  getJobs,
+  jobPostCreation,
+  toggleJobState,
+  handleBulkUpload,
+} from "../../controllers/employer/employer.jobpost.controller";
 import { getApplicantsForJobTest, getDraftCutOff, getDraftQuestion, getInviteMsgDraft, getJobsForJobTest, jobTest, jobTestApplicantsInvite, jobTestCutoff, jobTestInviteMsg } from "../../controllers/employer/employer.jobtest.controller";
 import {
   getJobsForInterviews,
@@ -24,6 +35,7 @@ import { createCheckoutSession, getPricingInfo, handleWebhook } from "../../cont
 const companyRouter = Router();
 
 //* DASHBOARD
+companyRouter.post("/jobs/bulk_upload", validateAccessToken, validateCompanyAdminSession, upload.single("bulk_jobs"), handleBulkUpload);
 companyRouter.get("/get_all_jobs_with_applicants", validateAccessToken, validateCompanySession, TotalApplicantsTable);
 companyRouter.get("/get_jobs_with_hires", validateAccessToken, validateCompanySession, GetAllJobsWithCandidatesHires);
 companyRouter.get("/get_all_jobs", validateAccessToken, validateCompanySession, GetAllJobs);
