@@ -5,8 +5,53 @@ import { cutOffSchema, JobPostCreationSchema, testSchema } from "../../utils/typ
 import NodeCache from "node-cache";
 import Test from "../../models/jobs/test.model";
 import { handleErrors } from "../../helper/handleErrors";
+import xlsx from "xlsx";
+import fs from "fs";
+import { JobData, processUploadData, TestCutoffData, TestQuestionData } from "../../utils/validateAndFormatJobs";
+import InterviewMgmt from "../../models/interview/interview.model";
+import JobTest from "../../models/assessment/jobtest.model";
 
 const cache = new NodeCache({ stdTTL: 600, checkperiod: 120 });
+
+//* BULK UPLOAD
+const handleBulkUpload = async function (req: IUserRequest, res: Response) {
+  if (!req.file || !req.file.buffer) {
+    return res.status(400).json({ message: "No file uploaded" });
+  }
+
+  const { userId } = req;
+
+  try {
+    // Read the Excel file from buffer
+    const workbook = xlsx.read(req.file.buffer, { type: "buffer" });
+
+    // Parse each sheet
+    const jobsSheet = workbook.Sheets["Jobs"];
+    const testQuestionsSheet = workbook.Sheets["TestQuestions"];
+    const testCutoffsSheet = workbook.Sheets["TestCutoffs"];
+
+    if (!jobsSheet) {
+      return res.status(400).json({ message: "Jobs sheet is missing in the uploaded file" });
+    }
+
+    // Convert sheets to JSON
+    const jobsData = xlsx.utils.sheet_to_json<JobData>(jobsSheet);
+    const testQuestionsData = testQuestionsSheet ? xlsx.utils.sheet_to_json<TestQuestionData>(testQuestionsSheet) : [];
+    const testCutoffsData = testCutoffsSheet ? xlsx.utils.sheet_to_json<TestCutoffData>(testCutoffsSheet) : [];
+
+    // Validate and process data
+    const result = await processUploadData(jobsData, testQuestionsData, testCutoffsData, userId as string);
+
+    return res.status(201).json({
+      message: "Upload successful",
+      jobsCreated: result.jobsCreated,
+      testsCreated: result.testsCreated,
+      errors: result.errors,
+    });
+  } catch (error) {
+    handleErrors({ res, error });
+  }
+};
 
 //* JOB POST CREATION
 const getJobs = async function (req: IUserRequest, res: Response) {
@@ -26,7 +71,9 @@ const deleteJob = async function (req: IUserRequest, res: Response) {
     if (!job_id) return res.status(404).json({ message: "Job ID is required!" });
 
     await Job.findByIdAndDelete(job_id);
-    // await Test.deleteMany({ job: job_id });
+    await Test.deleteMany({ job: job_id });
+    await InterviewMgmt.deleteMany({ job: job_id });
+    await JobTest.deleteMany({ job: job_id });
     res.status(200).json({ message: "Job Deleted Successfully!" });
   } catch (error) {
     handleErrors({ res, error });
@@ -179,6 +226,7 @@ const applicationTestCutoff = async function (req: IUserRequest, res: Response) 
     //* upgrade properties and mark job as LIVE
     test.cut_off_points = cut_off_points;
     const job = await Job.findById(job_id);
+
     if (!job) return res.status(400).json({ message: "Job with corresponding test ID not found" });
 
     job.is_live = true;
@@ -205,4 +253,4 @@ const getApplicationTestCutoffDraft = async function (req: IUserRequest, res: Re
   }
 };
 
-export { getJobs, deleteJob, toggleJobState, jobPostCreation, getJobDraft, applicationTest, getApplicationTestDraft, applicationTestCutoff, getApplicationTestCutoffDraft };
+export { handleBulkUpload, getJobs, deleteJob, toggleJobState, jobPostCreation, getJobDraft, applicationTest, getApplicationTestDraft, applicationTestCutoff, getApplicationTestCutoffDraft };
