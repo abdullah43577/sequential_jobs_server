@@ -171,7 +171,6 @@ const applicationTest = async function (req: IUserRequest, res: Response) {
     job.stage = "set_cv_sorting_question";
     await job.save();
 
-    // await session.commitTransaction();
     return res.status(200).json({ message: "Application test created successfully", application_test_id: test._id });
   } catch (error) {
     // await session.abortTransaction();
