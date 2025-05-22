@@ -226,6 +226,7 @@ const applicationTestCutoff = async function (req: IUserRequest, res: Response) 
     //* upgrade properties and mark job as LIVE
     test.cut_off_points = cut_off_points;
     const job = await Job.findById(job_id);
+
     if (!job) return res.status(400).json({ message: "Job with corresponding test ID not found" });
 
     job.is_live = true;
