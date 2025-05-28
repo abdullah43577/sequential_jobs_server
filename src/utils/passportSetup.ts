@@ -5,6 +5,8 @@ import { generateUsername } from "./generateUserName";
 
 const { GOOGLE_CLIENT_ID, GOOGLE_CLIENT_SECRET, GOOGLE_CALLBACK_URL } = process.env;
 
+// test
+
 export const passportSetup = function () {
   passport.use(
     new GoogleStrategy(
