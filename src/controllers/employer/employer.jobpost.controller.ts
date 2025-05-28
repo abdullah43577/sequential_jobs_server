@@ -87,7 +87,7 @@ const toggleJobState = async function (req: IUserRequest, res: Response) {
 
     if (!job_id) return res.status(400).json({ message: "Job ID is required!" });
 
-    if (!status) return res.status(400).json({ message: "Status is required" });
+    if (status !== false && status !== true) return res.status(400).json({ message: "Status is required" });
 
     if (!job_id) return res.status(404).json({ message: "Job ID is required" });
 
@@ -171,7 +171,6 @@ const applicationTest = async function (req: IUserRequest, res: Response) {
     job.stage = "set_cv_sorting_question";
     await job.save();
 
-    // await session.commitTransaction();
     return res.status(200).json({ message: "Application test created successfully", application_test_id: test._id });
   } catch (error) {
     // await session.abortTransaction();

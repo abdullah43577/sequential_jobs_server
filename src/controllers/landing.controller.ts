@@ -11,7 +11,7 @@ const getLandingJobs = async function (req: Request, res: Response) {
     const query = countryName ? { country: new RegExp(`^${countryName}$`, "i") } : {};
 
     const jobs = await Job.find({ ...query, is_live: true })
-      .populate("employer", "organisation_name")
+      .populate("employer", "organisation_name profile_pic")
       .lean()
       .sort({ createdAt: -1 });
 

@@ -5,7 +5,7 @@ import Job from "../../models/jobs/jobs.model";
 
 const getListings = async function (req: IUserRequest, res: Response) {
   try {
-    const jobs = await Job.find({}).populate<{ employer: { _id: string; organisation_name: string } }>("employer", "organisation_name").lean();
+    const jobs = await Job.find({ is_live: true }).populate<{ employer: { _id: string; organisation_name: string } }>("employer", "organisation_name").lean();
 
     const formattedResponse = jobs.map(job => ({
       job_id: job._id,
