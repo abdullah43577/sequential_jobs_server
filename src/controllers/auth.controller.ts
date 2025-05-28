@@ -80,7 +80,7 @@ const validateEmail = async (req: Request, res: Response) => {
 
     const baseUrl = getBaseUrl(req);
 
-    //* send mail
+    //* send mails
     const emailTemplateData = {
       title: "Email Verified Successfully!",
       name: user?.first_name,
