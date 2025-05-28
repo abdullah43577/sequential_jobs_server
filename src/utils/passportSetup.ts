@@ -3,7 +3,7 @@ import { Strategy as GoogleStrategy } from "passport-google-oauth20";
 import User from "../models/users.model";
 import { generateUsername } from "./generateUserName";
 
-const { GOOGLE_CLIENT_ID, GOOGLE_CLIENT_SECRET } = process.env;
+const { GOOGLE_CLIENT_ID, GOOGLE_CLIENT_SECRET, GOOGLE_CALLBACK_URL } = process.env;
 
 export const passportSetup = function () {
   passport.use(
@@ -11,7 +11,7 @@ export const passportSetup = function () {
       {
         clientID: GOOGLE_CLIENT_ID as string,
         clientSecret: GOOGLE_CLIENT_SECRET as string,
-        callbackURL: process.env["NODE_ENV"] === "development" ? "http://localhost:8080/api/auth/google/callback" : "https://sequential-jobs-server.onrender.com/api/auth/google/callback",
+        callbackURL: GOOGLE_CALLBACK_URL,
         passReqToCallback: true,
       },
       async function (req, _accessToken, _refreshToken, profile, done) {
