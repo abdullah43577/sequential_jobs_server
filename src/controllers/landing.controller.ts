@@ -7,7 +7,7 @@ import User from "../models/users.model";
 const getLandingJobs = async function (req: Request, res: Response) {
   try {
     const countryName = getDomainHost(req);
-    // console.log(countryName, "country name here");
+    console.log(countryName, "country name here");
 
     const query = countryName ? { country: new RegExp(`^${countryName}$`, "i") } : {};
 

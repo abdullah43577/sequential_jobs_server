@@ -23,7 +23,7 @@ const uploadResume = async function (req: IUserRequest, res: Response) {
       },
       async (error, result) => {
         if (error) {
-          return res.status(500).json({ error: "Cloudinary upload failed" });
+          return res.status(500).json({ message: "Cloudinary upload failed" });
         }
 
         if (result?.secure_url) {

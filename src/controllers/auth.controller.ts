@@ -74,16 +74,24 @@ const validateEmail = async (req: Request, res: Response) => {
 
     const { id } = jwt.verify(token as string, EMAIL_VERIFICATION_TOKEN as Secret) as CustomJwtPayload;
 
-    const user = await User.findByIdAndUpdate(id, { has_validated_email: true }, { returnDocument: "after" });
+    const user = await User.findOneAndUpdate({ _id: id, has_validated_email: { $ne: true } }, { has_validated_email: true }, { returnDocument: "after" });
 
-    if (!user) return res.status(400).json({ message: "User not found" });
+    if (!user) {
+      const existingUser = await User.findById(id);
+      if (!existingUser) {
+        return res.status(400).json({ message: "User not found" });
+      }
+
+      // User exists but is already verified - redirect without sending email
+      return res.redirect(`https://sequentialjobs.com/auth/email-activation-success?name=${encodeURIComponent(existingUser.first_name)}`);
+    }
 
     const baseUrl = getBaseUrl(req);
 
-    //* send mails
+    // Send welcome email only for newly verified users
     const emailTemplateData = {
       title: "Email Verified Successfully!",
-      name: user?.first_name,
+      name: user.first_name,
       message: "Your email has been successfully verified. You can now log in to your account and start exploring.",
       btnTxt: "Login",
       btnAction: `${baseUrl}/auth/login`,
@@ -91,7 +99,11 @@ const validateEmail = async (req: Request, res: Response) => {
 
     const html = registrationEmail(emailTemplateData);
 
-    await transportMail({ email: user.email, subject: "Welcome to Sequential Jobs", message: html.html });
+    await transportMail({
+      email: user.email,
+      subject: "Welcome to Sequential Jobs",
+      message: html.html,
+    });
 
     res.redirect(`https://sequentialjobs.com/auth/email-activation-success?name=${encodeURIComponent(user.first_name)}`);
   } catch (error) {
@@ -258,7 +270,8 @@ const updateProfile = async (req: IUserRequest, res: Response) => {
         },
         async (error, result) => {
           if (error) {
-            return res.status(500).json({ error: "Cloudinary upload failed" });
+            console.log(error, "error");
+            return res.status(500).json({ message: "Cloudinary upload failed" });
           }
 
           if (result?.secure_url) {
