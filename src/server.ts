@@ -8,7 +8,7 @@ import { connectDB } from "./helper/connectDB";
 import cookieParser from "cookie-parser";
 import helmet from "helmet";
 import { authRouter } from "./routes/authRoutes";
-import { getSocketIO, initializeSocket } from "./helper/socket";
+import { initializeSocket } from "./helper/socket";
 import { companyRouter } from "./routes/employer/routes.employer";
 import { seekerRouter } from "./routes/seeker/routes.seeker";
 import passport from "passport";
@@ -75,6 +75,7 @@ app.use("*", (req: Request, res: Response) => {
 });
 
 const server = app.listen(PORT, async () => {
+  console.log("Connecting to DB....");
   await connectDB();
   console.log(`server started on http://localhost:${PORT}`);
   //* leave this here it's important to initialize the stripe products
