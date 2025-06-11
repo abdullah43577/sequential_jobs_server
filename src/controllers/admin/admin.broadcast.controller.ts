@@ -1,9 +1,9 @@
 import { Response } from "express";
 import { handleErrors } from "../../helper/handleErrors";
 import { IUserRequest } from "../../interface";
-import Notification, { NotificationStatus, NotificationType } from "../../models/notifications.model";
+import { NotificationStatus, NotificationType } from "../../models/notifications.model";
 import User from "../../models/users.model";
-import { getSocketIO } from "../../helper/socket";
+import { createAndSendNotification } from "../../utils/services/notifications/sendNotification";
 
 const sendBroadcast = async function (req: IUserRequest, res: Response) {
   try {
@@ -16,25 +16,7 @@ const sendBroadcast = async function (req: IUserRequest, res: Response) {
     const user = await User.findById(userId).lean();
     if (!user) return res.status(404).json({ message: "Invalid User ID" });
 
-    const notification = await Notification.create({
-      recipient: userId,
-      sender: adminId,
-      type: NotificationType.MESSAGE,
-      title,
-      message,
-      status: NotificationStatus.UNREAD,
-    });
-
-    const io = getSocketIO();
-
-    io.to(userId.toString()).emit("notification", {
-      id: notification._id,
-      title,
-      message,
-      type: NotificationType.MESSAGE,
-      status: NotificationStatus.UNREAD,
-      createdAt: notification.createdAt,
-    });
+    await createAndSendNotification({ recipient: userId, sender: adminId as string, type: NotificationType.MESSAGE, title, message, status: NotificationStatus.UNREAD });
 
     res.status(200).json({ message: "Broadcast sent" });
   } catch (error) {

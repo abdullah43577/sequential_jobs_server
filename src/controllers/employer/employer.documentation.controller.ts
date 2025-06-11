@@ -4,18 +4,17 @@ import InterviewMgmt from "../../models/interview/interview.model";
 import { handleErrors } from "../../helper/handleErrors";
 import cloudinary from "../../utils/cloudinaryConfig";
 import Documentation from "../../models/documentation.model";
-import { getSocketIO } from "../../helper/socket";
-import Notification, { NotificationStatus, NotificationType } from "../../models/notifications.model";
+import { NotificationStatus, NotificationType } from "../../models/notifications.model";
 import Job from "../../models/jobs/jobs.model";
-import fs from "fs";
-import path from "path";
-import User from "../../models/users.model";
-import TestSubmission from "../../models/jobs/testsubmission.model";
 import { Types } from "mongoose";
 import { Readable } from "stream";
 import { transportMail } from "../../utils/nodemailer.ts/transportMail";
 import { EmailTypes, generateProfessionalEmail } from "../../utils/nodemailer.ts/email-templates/generateProfessionalEmail";
 import { getBaseUrl } from "../../helper/getBaseUrl";
+import { createAndSendNotification } from "../../utils/services/notifications/sendNotification";
+import { sendHireCandidateEmail } from "../../utils/services/emails/hireCandidateEmailService";
+import User from "../../models/users.model";
+import { sendReuploadDocumentEmail } from "../../utils/services/emails/reuploadDocumentEmailService";
 
 //* DOCUMENTATION MANAGEMENT
 const getJobsForDocumentation = async function (req: IUserRequest, res: Response) {
@@ -149,57 +148,32 @@ const hireCandidate = async function (req: IUserRequest, res: Response) {
     });
 
     //* send candidate email and notification
-    const io = getSocketIO();
-
     await Promise.all(
       candidate_ids.map(async id => {
         const user = await User.findById(id);
         if (!user) return;
 
         const subject = `You're Hired! - ${job.job_title}`;
-        const title = "You're Hired! Next Steps for Your New Role";
         const message = `Congratulations! You have been selected for the ${job.job_title} position at ${job.employer.organisation_name}. An official invitation letter has been issued, and you are required to upload the specified documents to complete your onboarding.`;
 
-        // Email content
-        const emailTemplateData = {
-          type: "hire" as EmailTypes,
-          title: "You're Hired!",
-          recipientName: `${user.first_name} ${user.last_name}`,
-          message: `${message}\n\n${invitation_letter}`,
-          buttonText: "View Offer Details",
-          buttonAction: "http://localhost:8080/user/dashboard",
-          additionalDetails: {
-            organizerName: job.employer.organisation_name,
-          },
-        };
-
-        const { html } = generateProfessionalEmail(emailTemplateData);
-
         // Send Email
-        await transportMail({
+        await sendHireCandidateEmail({
           email: user.email,
-          subject,
-          message: html,
+          recipientName: `${user.first_name} ${user.last_name}`,
+          jobTitle: job.job_title,
+          companyName: job.employer.organisation_name,
+          invitationLetter: invitation_letter,
+          dashboardUrl: "http://localhost:8080/user/dashboard",
         });
 
         // Send Notification
-        const notification = await Notification.create({
+        await createAndSendNotification({
           recipient: user._id,
-          sender: userId,
+          sender: userId as string,
           type: NotificationType.APPLICATION_STATUS,
           title: subject,
           message,
           status: NotificationStatus.UNREAD,
-        });
-
-        // Emit socket notification
-        io.to(user._id.toString()).emit("notification", {
-          id: notification._id,
-          title,
-          message,
-          status: NotificationStatus.UNREAD,
-          type: NotificationType.IMPORTANT,
-          createdAt: notification.createdAt,
         });
 
         await Job.updateOne({ _id: job_id, "applicants.applicant": user._id }, { $set: { "applicants.$.status": "has_offer" } });
@@ -353,50 +327,19 @@ const requestReUploadDocuments = async function (req: IUserRequest, res: Respons
     // Prepare email data
     const emailSubject = `Action Required: Re-upload Documents for ${job.job_title} Position`;
 
-    const candidateEmailData = {
-      type: "document_reupload" as EmailTypes,
-      title: "Documents Re-upload Request",
-      recipientName: `${candidate.first_name} ${candidate.last_name}`,
-      message: `${employer.organisation_name} has requested that you re-upload the following documents for your application to the ${job.job_title} position:`,
-      buttonText: "Upload Documents",
-      buttonAction: `${getBaseUrl(req)}/extension/jobs/${job_id}/documentation`,
-      additionalDetails: {
-        // company: employer.organisation_name,
-        // position: job.job_title,
-        // documents: documentsList,
-        // employerMessage: message || "Please re-upload the following documents.",
-        // deadline: "As soon as possible to avoid delays in your application process.",
-      },
-    };
+    const btnUrl = `${getBaseUrl(req)}/extension/jobs/${job_id}/documentation`;
 
-    const { html: candidateHtml } = generateProfessionalEmail(candidateEmailData);
-
-    // Send email to candidate
-    await transportMail({
-      email: candidate.email,
-      subject: emailSubject,
-      message: candidateHtml,
-    });
+    //* send mail
+    await sendReuploadDocumentEmail({ email: candidate.email, first_name: candidate.first_name, last_name: candidate.last_name, job_title: job.job_title, organisation_name: employer.organisation_name, btnUrl });
 
     // Create notification for candidate
-    const candidateNotification = await Notification.create({
-      recipient: candidate_id,
-      sender: userId,
+    await createAndSendNotification({
+      recipient: candidate_id as any,
+      sender: userId as string,
       type: NotificationType.DOCUMENT_REQUEST,
       title: emailSubject,
       message: `${employer.organisation_name} has requested that you re-upload documents for your application to the ${job.job_title} position.`,
       status: NotificationStatus.UNREAD,
-    });
-
-    // Send socket notification to candidate
-    const io = getSocketIO();
-    io.to(candidate_id).emit("notification", {
-      id: candidateNotification._id,
-      title: emailSubject,
-      message: `${employer.organisation_name} has requested that you re-upload documents for your application to the ${job.job_title} position.`,
-      status: NotificationStatus.UNREAD,
-      type: NotificationType.DOCUMENT_REQUEST,
-      createdAt: candidateNotification.createdAt,
     });
 
     // Return success response

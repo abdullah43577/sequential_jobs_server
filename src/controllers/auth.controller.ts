@@ -12,6 +12,10 @@ import { getBaseUrl } from "../helper/getBaseUrl";
 import { Readable } from "stream";
 import cloudinary from "../utils/cloudinaryConfig";
 import { cleanObject } from "../utils/cleanedObject";
+import { sendWelcomeEmail } from "../utils/services/emails/welcomeEmailService";
+import { sendEmailVerificationSuccessEmail } from "../utils/services/emails/emailVerificationService";
+import { sendForgotPasswordEmail } from "../utils/services/emails/forgotPasswordEmailService";
+import { sendResetPasswordEmail } from "../utils/services/emails/resetPasswordEmailService";
 const { EMAIL_VERIFICATION_TOKEN } = process.env;
 
 const testApi = async (req: Request, res: Response) => {
@@ -47,19 +51,14 @@ const createUser = async (req: Request, res: Response) => {
 
     const verificationToken = jwt.sign({ id: user._id }, EMAIL_VERIFICATION_TOKEN as Secret);
 
-    //* send mail
-    const emailTemplateData = {
-      title: "Welcome to Sequential Jobs!",
-      name: user.first_name,
-      message:
-        "Thank you for creating an account with Sequential Jobs. We're excited to help you find your next opportunity in the tech industry.\n\nYou've been automatically enrolled in our Sequential Super Pro plan for the next 30 days.\n\nTo get started, please verify your email address by clicking the button below. This helps us ensure the security of your account.",
-      btnTxt: "Verify Email Address",
-      btnAction: `https://sequential-jobs-server.onrender.com/api/auth/verify-email?token=${verificationToken}`,
-    };
-
-    const html = registrationEmail(emailTemplateData);
-
-    await transportMail({ email: user.email, subject: "Welcome to Sequential Jobs - Please Verify Your Email", message: html.html });
+    //* send welcome email
+    await sendWelcomeEmail({
+      email: user.email,
+      firstName: user.first_name,
+      verificationToken,
+      subscriptionPlan: "Sequential Super Pro",
+      trialDays: 30,
+    });
 
     res.status(201).json({ message: "User Account Created Successfully" });
   } catch (error) {
@@ -88,21 +87,11 @@ const validateEmail = async (req: Request, res: Response) => {
 
     const baseUrl = getBaseUrl(req);
 
-    // Send welcome email only for newly verified users
-    const emailTemplateData = {
-      title: "Email Verified Successfully!",
-      name: user.first_name,
-      message: "Your email has been successfully verified. You can now log in to your account and start exploring.",
-      btnTxt: "Login",
-      btnAction: `${baseUrl}/auth/login`,
-    };
-
-    const html = registrationEmail(emailTemplateData);
-
-    await transportMail({
+    // Send welcome email only for newly verified users using the service
+    await sendEmailVerificationSuccessEmail({
       email: user.email,
-      subject: "Welcome to Sequential Jobs",
-      message: html.html,
+      firstName: user.first_name,
+      baseUrl,
     });
 
     res.redirect(`https://sequentialjobs.com/auth/email-activation-success?name=${encodeURIComponent(user.first_name)}`);
@@ -166,17 +155,7 @@ const forgotPassword = async (req: Request, res: Response) => {
 
     const baseUrl = getBaseUrl(req);
 
-    const emailTemplateData = {
-      title: "Reset Your Password",
-      name: user.first_name,
-      message: "We received a request to reset your password for your Sequential Jobs account. Click the button below to set a new password. \n\n Reset token expires in 10 minutes \n\n If you didn’t request this, you can safely ignore this email.",
-      btnTxt: "Reset Password",
-      btnAction: `${baseUrl}/auth/reset-password?token=${resetToken}`,
-    };
-
-    const html = registrationEmail(emailTemplateData);
-
-    await transportMail({ email: user.email, subject: "Reset Your Password", message: html.html });
+    await sendForgotPasswordEmail({ email: user.email, first_name: user.first_name, baseUrl, resetToken });
 
     res.status(200).json({ message: "Reset Link sent to provided email address" });
   } catch (error) {
@@ -199,18 +178,7 @@ const resetPassword = async (req: Request, res: Response) => {
     if (!user) return res.status(404).json({ message: "User not found!" });
 
     //* send mail
-    const emailTemplateData = {
-      title: "Your Password Has Been Reset",
-      name: user.first_name,
-      message:
-        "Your password for your Sequential Jobs account has been successfully reset. If you made this change, you can safely ignore this message.\n\nIf you did not request this change, please contact our support team immediately at support@sequentialjobs.com.",
-      btnTxt: "Contact Support",
-      btnAction: "mailto:support@sequentialjobs.com",
-    };
-
-    const html = registrationEmail(emailTemplateData);
-
-    await transportMail({ email: user.email, subject: "Your Password Has Been Reset", message: html.html });
+    await sendResetPasswordEmail({ email: user.email, first_name: user.first_name });
 
     res.status(200).json({ message: "Password reset successfully" });
   } catch (error) {

@@ -10,6 +10,8 @@ import { getSocketIO } from "../../helper/socket";
 import Notification, { NotificationStatus, NotificationType } from "../../models/notifications.model";
 import Job from "../../models/jobs/jobs.model";
 import { getBaseUrl } from "../../helper/getBaseUrl";
+import { createAndSendNotification } from "../../utils/services/notifications/sendNotification";
+import { sendAllMedicalEmails } from "../../utils/services/emails/scheduleMedicalEmailService";
 
 const getJobsWithMedicals = async function (req: IUserRequest, res: Response) {
   try {
@@ -114,144 +116,71 @@ const scheduleMedical = async function (req: IUserRequest, res: Response) {
     const candidate = await User.findById(userId).select("first_name last_name email");
     if (!candidate) return res.status(404).json({ message: "Candidate not found!" });
 
-    // Format the selected date and time for email
-    const formattedDate = new Date(scheduled_date_time.date).toLocaleDateString();
-    const timeSlot = `${scheduled_date_time.start_time} - ${scheduled_date_time.end_time}`;
-
     // Extract employer information from the job
     const employer = medicals.job.employer;
 
-    // Prepare email data
-    const emailSubject = `Medical Scheduled: ${candidate.first_name} ${candidate.last_name} for ${medicals.job.job_title} Position`;
+    // Get medical expert information if they exist
+    let medicalExperts: { email: string; firstName: string | undefined; lastName: string | undefined }[] = [];
+    if (medicals.medicalists && medicals.medicalists.length > 0) {
+      const expertPromises = medicals.medicalists.map(async expertEmail => {
+        const expert = await User.findOne({ email: expertEmail }).select("first_name last_name");
+        return {
+          email: expertEmail,
+          firstName: expert?.first_name,
+          lastName: expert?.last_name,
+        };
+      });
+      medicalExperts = await Promise.all(expertPromises);
+    }
 
-    // 1. Send email to the employer
-    const employerEmailData = {
-      type: "medical" as EmailTypes,
-      title: "Medical Appointment Scheduled",
-      recipientName: `${employer.first_name} ${employer.last_name}`,
-      message: `A candidate has scheduled a medical appointment for the ${medicals.job.job_title} position. Please find the details below:`,
-      buttonText: "View Medical Details",
-      buttonAction: `http://localhost:8080/medicals/${medicals._id}`,
-      additionalDetails: {
-        candidate: `${candidate.first_name} ${candidate.last_name}`,
-        date: formattedDate,
-        time: timeSlot,
-        location: medicals.address,
+    // Prepare email data
+    const emailData = {
+      candidate: {
+        id: userId as string,
+        firstName: candidate.first_name,
+        lastName: candidate.last_name,
+        email: candidate.email,
       },
+      employer: {
+        id: employer._id,
+        firstName: employer.first_name,
+        lastName: employer.last_name,
+        email: employer.email,
+        organisationName: employer.organisation_name,
+      },
+      job: {
+        id: medicals.job._id,
+        title: medicals.job.job_title,
+      },
+      medical: {
+        id: medicals._id,
+        address: medicals.address,
+      },
+      scheduledDateTime: {
+        date: scheduled_date_time.date,
+        startTime: scheduled_date_time.start_time,
+        endTime: scheduled_date_time.end_time,
+      },
+      baseUrl: getBaseUrl(req),
     };
 
-    const { html: employerHtml } = generateProfessionalEmail(employerEmailData);
-
-    // Send email to employer
-    await transportMail({
-      email: employer.email,
-      subject: emailSubject,
-      message: employerHtml,
-    });
+    // Send all medical emails
+    await sendAllMedicalEmails(emailData, medicalExperts);
 
     // Create notification for employer
-    const employerNotification = await Notification.create({
-      recipient: employer._id,
-      sender: userId,
+    const formattedDate = new Date(scheduled_date_time.date).toLocaleDateString();
+    const timeSlot = `${scheduled_date_time.start_time} - ${scheduled_date_time.end_time}`;
+
+    await createAndSendNotification({
+      recipient: employer._id as any,
+      sender: userId as string,
       type: NotificationType.MEDICAL,
-      title: emailSubject,
+      title: `Medical Scheduled: ${candidate.first_name} ${candidate.last_name} for ${medicals.job.job_title} Position`,
       message: `${candidate.first_name} ${candidate.last_name} has scheduled a medical appointment for the ${medicals.job.job_title} position on ${formattedDate} at ${timeSlot}.`,
       status: NotificationStatus.UNREAD,
     });
 
-    // Send socket notification to employer
-    const io = getSocketIO();
-    io.to(employer._id.toString()).emit("notification", {
-      id: employerNotification._id,
-      title: emailSubject,
-      message: `${candidate.first_name} ${candidate.last_name} has scheduled a medical appointment for the ${medicals.job.job_title} position.`,
-      status: NotificationStatus.UNREAD,
-      type: NotificationType.MEDICAL,
-      createdAt: employerNotification.createdAt,
-    });
-
-    // 2. Send emails to all medical experts
-    if (medicals.medicalists && medicals.medicalists.length > 0) {
-      const medicalistEmailPromises = medicals.medicalists.map(async medicalistEmail => {
-        try {
-          // Try to find medical expert in the database if you need their name
-          const medical_expert = await User.findOne({ email: medicalistEmail }).select("first_name last_name");
-          const recipientName = medical_expert ? `${medical_expert.first_name} ${medical_expert.last_name}` : "Medical Expert";
-
-          const medicalEmailData = {
-            type: "medical" as EmailTypes,
-            title: "Medical Appointment Scheduled - Expert Information",
-            recipientName: recipientName,
-            message: `A candidate medical appointment has been scheduled for the ${medicals.job.job_title} position at ${employer.organisation_name}. 
-            
-As a medical expert, you'll need to evaluate this candidate after the examination. Please keep the following reference information for your records:
-
-Job ID: ${medicals.job._id}
-Candidate ID: ${userId}
-
-You will need these IDs when submitting your medical evaluation report.`,
-            buttonText: "View Appointment Details",
-            buttonAction: `http://localhost:8080/medicals/${medicals._id}`,
-            additionalDetails: {
-              candidate: `${candidate.first_name} ${candidate.last_name}`,
-              position: medicals.job.job_title,
-              date: formattedDate,
-              time: timeSlot,
-              location: medicals.address,
-              organization: employer.organisation_name,
-              jobId: medicals.job._id,
-              candidateId: userId,
-            },
-          };
-
-          const { html: medicalistHtml } = generateProfessionalEmail(medicalEmailData);
-
-          // Send email to medical expert
-          await transportMail({
-            email: medicalistEmail,
-            subject: emailSubject,
-            message: medicalistHtml,
-          });
-
-          return true;
-        } catch (error) {
-          console.error(`Error sending email to medical expert ${medicalistEmail}:`, error);
-          return false;
-        }
-      });
-
-      // Wait for all medical expert emails to be sent
-      await Promise.allSettled(medicalistEmailPromises);
-    }
-
-    // 3. Send confirmation email to the candidate
-    const candidateEmailData = {
-      type: "medical" as EmailTypes,
-      title: "Medical Appointment Confirmation",
-      recipientName: `${candidate.first_name} ${candidate.last_name}`,
-      message: `Your medical appointment for the ${medicals.job.job_title} position at ${employer.organisation_name} has been scheduled. Please find the details below:`,
-      buttonText: "View Appointment Details",
-      buttonAction: `${getBaseUrl(req)}/extension/medicals/${medicals._id}`,
-      additionalDetails: {
-        position: medicals.job.job_title,
-        company: employer.organisation_name,
-        date: formattedDate,
-        time: timeSlot,
-        location: medicals.address,
-        additionalInfo: "Please ensure you arrive at the medical facility 15 minutes before your scheduled time. Bring any previous medical records or information that might be relevant to your examination.",
-      },
-    };
-
-    const { html: candidateHtml } = generateProfessionalEmail(candidateEmailData);
-
-    // Send confirmation email to candidate
-    await transportMail({
-      email: candidate.email,
-      subject: `Medical Appointment Confirmation: ${medicals.job.job_title} at ${employer.organisation_name}`,
-      message: candidateHtml,
-    });
-
-    //* update job status
+    // Update job status
     await Job.findOneAndUpdate(
       { _id: job_id, "applicants.applicant": userId },
       {

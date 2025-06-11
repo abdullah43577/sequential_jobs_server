@@ -1,9 +1,10 @@
 import { Types } from "mongoose";
-import { getSocketIO } from "../../../helper/socket";
-import Notification, { NotificationStatus, NotificationType } from "../../../models/notifications.model";
+import { NotificationStatus, NotificationType } from "../../../models/notifications.model";
 import User from "../../../models/users.model";
 import { EmailTypes, generateProfessionalEmail } from "../../../utils/nodemailer.ts/email-templates/generateProfessionalEmail";
 import { transportMail } from "../../../utils/nodemailer.ts/transportMail";
+import { createAndSendNotification } from "../../../utils/services/notifications/sendNotification";
+import { sendCandidateMedicalEmail } from "../../../utils/services/emails/candidateMedicalEmailInvite";
 
 interface CandidateInviteParams {
   candidateId: string | Types.ObjectId;
@@ -25,56 +26,14 @@ export const sendCandidateMedicalInvite = async (params: CandidateInviteParams) 
     const medicalInviteLink = `http://localhost:8080/medical-scheduling/${medicalRecordId}`;
     const expirationDate = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000); // Expires in 7 days
 
-    // Prepare email data
-    const emailTemplateData = {
-      type: "invite" as EmailTypes,
-      title: "Medical Assessment Invitation",
-      recipientName: `${candidate.first_name} ${candidate.last_name}`,
-      message: `You have been invited to schedule a medical assessment for the ${jobTitle} position. 
-      Please click the button below to schedule your medical assessment. This invitation will expire on ${expirationDate.toLocaleDateString()}.`,
-      buttonText: "Schedule Medical Assessment",
-      buttonAction: medicalInviteLink,
-      additionalDetails: {
-        date: expirationDate.toLocaleDateString(),
-        time: "Open Until " + expirationDate.toLocaleTimeString(),
-        location: address,
-        organizerName: employerOrgName,
-      },
-    };
+    await sendCandidateMedicalEmail({ email: candidate.email, first_name: candidate.first_name, last_name: candidate.last_name, jobTitle, expirationDate, medicalInviteLink, address, employerOrgName });
 
-    // Generate email HTML
-    const { html } = generateProfessionalEmail(emailTemplateData);
     const subject = `Medical Assessment Invitation - ${jobTitle}`;
-
-    // Send email
-    await transportMail({
-      email: candidate.email,
-      subject,
-      message: html,
-    });
 
     // Create notification
     const message = `${employerOrgName} has invited you to schedule a medical assessment for ${jobTitle} position.`;
 
-    const notification = await Notification.create({
-      recipient: candidateId,
-      sender: employerId,
-      type: NotificationType.MESSAGE,
-      title: subject,
-      message,
-      status: NotificationStatus.UNREAD,
-    });
-
-    // Send socket notification
-    const io = getSocketIO();
-    io.to(candidateId.toString()).emit("notification", {
-      id: notification._id,
-      title: subject,
-      message,
-      status: NotificationStatus.UNREAD,
-      type: NotificationType.MESSAGE,
-      createdAt: notification.createdAt,
-    });
+    await createAndSendNotification({ recipient: candidateId as any, sender: employerId as string, type: NotificationType.MESSAGE, title: subject, message, status: NotificationStatus.UNREAD });
 
     return true;
   } catch (error) {
