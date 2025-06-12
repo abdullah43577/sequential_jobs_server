@@ -1,13 +1,13 @@
 import { Response } from "express";
 import { IUserRequest } from "../../interface";
-import NodeCache from "node-cache";
 import JobTest from "../../models/assessment/jobtest.model";
 import { handleErrors } from "../../helper/handleErrors";
 import { JobTestSubmissionSchema } from "../../utils/types/seekerValidatorSchema";
 import TestSubmission from "../../models/jobs/testsubmission.model";
 import Test from "../../models/jobs/test.model";
-
-const cache = new NodeCache({ stdTTL: 600, checkperiod: 120 });
+import { getBaseUrl } from "../../helper/getBaseUrl";
+import { sendTestSubmissionNotificationEmail } from "../../utils/services/emails/testSubmissionEmailService";
+import User from "../../models/users.model";
 
 //*  TEST MANAGEMENT
 const getAllJobTests = async function (req: IUserRequest, res: Response) {
@@ -67,8 +67,21 @@ const submitJobTest = async function (req: IUserRequest, res: Response) {
     const { userId } = req;
     const { job_test_id, answers } = JobTestSubmissionSchema.parse(req.body);
 
-    const test = await Test.findById(job_test_id);
+    const test = await Test.findById(job_test_id)
+      .populate<{ job: { _id: string; job_title: string } }>({
+        path: "job",
+        select: "job_title",
+      })
+      .populate<{ employer: { _id: string; first_name: string; last_name: string; email: string } }>({
+        path: "employer",
+        select: "first_name last_name email",
+      });
+
     if (!test) return res.status(404).json({ message: "Test not found!" });
+
+    // Get candidate information
+    const candidate = await User.findById(userId).select("first_name last_name");
+    if (!candidate) return res.status(404).json({ message: "Candidate not found!" });
 
     let totalScore = 0;
     const gradedAnswers = answers.map(answer => {
@@ -80,7 +93,7 @@ const submitJobTest = async function (req: IUserRequest, res: Response) {
       return { ...answer, is_correct: isCorrect };
     });
 
-    //* check if submission has occurred before
+    // Check if submission has occurred before
     const submissions = await TestSubmission.findOne({ test: job_test_id, applicant: userId });
     if (submissions) return res.status(400).json({ message: "You've already submitted this test" });
 
@@ -91,6 +104,32 @@ const submitJobTest = async function (req: IUserRequest, res: Response) {
       employer: test.employer,
       answers: gradedAnswers,
       score: totalScore,
+    });
+
+    // Send email to employer
+    await sendTestSubmissionNotificationEmail({
+      employer: {
+        email: test.employer.email,
+        firstName: test.employer.first_name,
+        lastName: test.employer.last_name,
+      },
+      candidate: {
+        firstName: candidate.first_name,
+        lastName: candidate.last_name,
+      },
+      job: {
+        title: test.job.job_title,
+      },
+      test: {
+        title: "Assessment Test",
+        type: "job_test",
+      },
+      submission: {
+        id: submission._id.toString(),
+        score: totalScore,
+        totalQuestions: test.questions.length,
+      },
+      baseUrl: getBaseUrl(req),
     });
 
     return res.status(200).json({ message: "Test submitted successfully", submission });

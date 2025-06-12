@@ -15,6 +15,9 @@ import { Types } from "mongoose";
 import Notification, { NotificationStatus, NotificationType } from "../../models/notifications.model";
 import { getSocketIO } from "../../helper/socket";
 import { guessNameFromEmail } from "../../utils/guessNameFromEmail";
+import { sendPanelistInviteEmail } from "../../utils/services/emails/panelistEmailService";
+import { sendCandidateInviteEmail } from "../../utils/services/emails/interviewCandidatesEmailService";
+import { createAndSendNotification } from "../../utils/services/notifications/sendNotification";
 
 //* INTERVIEW MANAGEMENT
 const getJobsForInterviews = async function (req: IUserRequest, res: Response) {
@@ -154,8 +157,10 @@ const handleInvitePanelists = async function (req: IUserRequest, res: Response) 
 
     const existingEmails = new Set(interview.panelists.map(pan => pan.email));
     const uniquePanelists = panelists.filter(email => !existingEmails.has(email));
+    const existingPanelists = panelists.filter(email => existingEmails.has(email));
 
-    const promises = uniquePanelists.map(async email => {
+    // Process new panelists (with login credentials)
+    const newPanelistPromises = uniquePanelists.map(async email => {
       try {
         const existingPanelist = await User.findOne({ email }).lean();
 
@@ -177,33 +182,13 @@ const handleInvitePanelists = async function (req: IUserRequest, res: Response) 
           });
 
           //* send invite email with temporary credentials
-          const emailData = {
-            type: "invite" as const,
-            title: "You've Been Selected as an Interview Panelist",
+          await sendPanelistInviteEmail({
+            email,
             recipientName: nameGuess.firstName || "Guest",
-            message: `You have been selected as a panelist for upcoming candidate interviews for the position of ${interview.job.job_title}.
-            
-When candidates schedule their interviews, you will receive follow-up emails with specific details including the job ID and candidate ID you'll need when submitting candidate evaluations.
-
-${newPanelist.isTemporary ? `\n\nTemporary Account Credentials:\nEmail: ${email}\nPassword: ${tempPassword}\n\nThis account will expire in 7 days. Please change your password after first login.` : ""}`,
-            buttonText: "Access Interview Panel",
-            buttonAction: `https://login?email=${encodeURIComponent(newPanelist.email)}${newPanelist.isTemporary ? "&temp=true" : ""}`,
-            additionalDetails: {
-              location: "Virtual Interview",
-              organizerName: "Sequential Jobs Team",
-            },
-          };
-
-          // Generate email HTML
-          const { html } = generateProfessionalEmail(emailData);
-
-          const subject = `Panelist Selection - ${interview.job.job_title}`;
-
-          // Send email
-          await transportMail({
-            email: email,
-            subject,
-            message: html,
+            jobTitle: interview.job.job_title,
+            isNewPanelist: true,
+            tempPassword,
+            isTemporary: newPanelist.isTemporary,
           });
 
           const rating_scale_keys = Array.from(interview.rating_scale.keys());
@@ -218,7 +203,25 @@ ${newPanelist.isTemporary ? `\n\nTemporary Account Credentials:\nEmail: ${email}
       }
     });
 
-    await Promise.all(promises);
+    // Process existing panelists (without login credentials)
+    const existingPanelistPromises = existingPanelists.map(async email => {
+      try {
+        const existingUser = await User.findOne({ email }).lean();
+        const nameGuess = existingUser ? { firstName: existingUser.first_name } : guessNameFromEmail(email);
+
+        await sendPanelistInviteEmail({
+          email,
+          recipientName: nameGuess.firstName || "Guest",
+          jobTitle: interview.job.job_title,
+          isNewPanelist: false,
+        });
+      } catch (error) {
+        console.error(`Error sending notification to existing panelist ${email}:`, error);
+      }
+    });
+
+    // Execute all promises
+    await Promise.all([...newPanelistPromises, ...existingPanelistPromises]);
 
     // Save the updated interview document in bulk
     interview.stage = "panelist_invite_confirmation";
@@ -303,32 +306,12 @@ const handleInviteCandidates = async function (req: IUserRequest, res: Response)
         const existingUser = await User.findById(id);
         if (!existingUser) return;
 
-        //* send invite email with temporary credentials
-        const emailData = {
-          type: "invite" as const,
-          title: "You've Been Invited as an Interview Panelist",
-          recipientName: `${existingUser.first_name} ${existingUser.last_name}`,
-          message: `You have been invited for an upcoming interview for the position of ${interview.job.job_title}. Please click the button below to access the interview panel and set your available date and time`,
-          buttonText: "Access Interview Panel",
-          buttonAction: `https://login?email=${encodeURIComponent(existingUser.email)}${existingUser.isTemporary ? "&temp=true" : ""}`,
-          additionalDetails: {
-            date: "formattedDate",
-            time: "formattedTime",
-            location: "Virtual Interview",
-            organizerName: "Sequential Jobs Team",
-          },
-        };
-
-        // Generate email HTML
-        const { html } = generateProfessionalEmail(emailData);
-
-        const subject = `Candidate Interview Invite - ${interview.job.job_title}`;
-
-        // Send email
-        await transportMail({
+        //* send invite email
+        await sendCandidateInviteEmail({
           email: existingUser.email,
-          subject,
-          message: html,
+          recipientName: `${existingUser.first_name} ${existingUser.last_name}`,
+          jobTitle: interview.job.job_title,
+          isTemporary: existingUser.isTemporary,
         });
 
         interview.candidates.push({ candidate: id });
@@ -343,30 +326,12 @@ const handleInviteCandidates = async function (req: IUserRequest, res: Response)
           }
         );
 
-        const message = `${interview.job.employer.organisation_name} as invited you for an interview.`;
+        const subject = `Candidate Interview Invite - ${interview.job.job_title}`;
+        const message = `${interview.job.employer.organisation_name} has invited you for an interview.`;
 
-        //* notification
-        const notification = await Notification.create({
-          recipient: id,
-          sender: userId,
-          type: NotificationType.MESSAGE,
-          title: subject,
-          message,
-          status: NotificationStatus.UNREAD,
-        });
+        //*CREATE AND SEND NOTIFICATION
+        await createAndSendNotification({ recipient: id, sender: userId as string, type: NotificationType.MESSAGE, title: subject, message, status: NotificationStatus.UNREAD });
 
-        //* socket instance
-        const io = getSocketIO();
-
-        io.to(id.toString()).emit("notification", {
-          id: notification._id,
-          title: subject,
-          message,
-          status: NotificationStatus.UNREAD,
-          type: NotificationType.MESSAGE,
-          readAt: notification.readAt,
-          createdAt: notification.createdAt,
-        });
         return;
       } catch (error) {
         console.error(`Error inviting candidate ${id}:`, error);

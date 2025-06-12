@@ -16,6 +16,21 @@ const getNotifications = async function (req: IUserRequest, res: Response) {
   }
 };
 
+const markNotificationRead = async function (req: IUserRequest, res: Response) {
+  try {
+    const { id } = req.params;
+
+    const notification = await Notification.findById(id);
+    if (!notification) return res.status(404).json({ message: "Notification not found" });
+
+    await notification.markAsRead();
+
+    res.status(200).json({ message: "Notification Marked as Read" });
+  } catch (error) {
+    handleErrors({ res, error });
+  }
+};
+
 const markAllNotificationsRead = async function (req: IUserRequest, res: Response) {
   try {
     const { userId } = req;
@@ -32,7 +47,7 @@ const markAllNotificationsRead = async function (req: IUserRequest, res: Respons
 
 const deleteNotification = async function (req: IUserRequest, res: Response) {
   try {
-    const id = req.params;
+    const { id } = req.params;
     const notification = await Notification.findById(id);
     if (!notification) return res.status(404).json({ message: "Notification not found" });
 
@@ -55,4 +70,4 @@ const deleteAllNotifications = async function (req: IUserRequest, res: Response)
   }
 };
 
-export { getNotifications, markAllNotificationsRead, deleteNotification, deleteAllNotifications };
+export { getNotifications, markNotificationRead, markAllNotificationsRead, deleteNotification, deleteAllNotifications };

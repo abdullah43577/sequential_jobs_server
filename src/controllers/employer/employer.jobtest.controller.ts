@@ -11,6 +11,8 @@ import { transportMail } from "../../utils/nodemailer.ts/transportMail";
 import Notification, { NotificationStatus, NotificationType } from "../../models/notifications.model";
 import { getSocketIO } from "../../helper/socket";
 import TestSubmission from "../../models/jobs/testsubmission.model";
+import { createAndSendNotification } from "../../utils/services/notifications/sendNotification";
+import { sendTestApplicantsEmail } from "../../utils/services/emails/testApplicantsEmailInvite";
 
 //* JOB TEST MANAGEMENT
 const getJobsForJobTest = async function (req: IUserRequest, res: Response) {
@@ -324,56 +326,23 @@ const jobTestApplicantsInvite = async function (req: IUserRequest, res: Response
         // Generate a unique test link (you might want to generate a more secure token)
         const testLink = `http://localhost:8080/job-test/${test._id}`;
 
-        const emailTemplateData = {
-          type: "test" as EmailTypes,
-          title: "Job Assessment Invitation",
-          recipientName: `${user.first_name} ${user.last_name}`,
-          message: `You have been invited to complete a job assessment for the ${test.job?.job_title} position. 
-        Please click the button below to start the test. This invitation will expire on ${expirationDate.toLocaleDateString()}. \n\n ${jobTest.invitation_letter}`,
-          buttonText: "Start Assessment",
-          buttonAction: testLink,
-          additionalDetails: {
-            date: expirationDate.toLocaleDateString(),
-            time: "Open Until " + expirationDate.toLocaleTimeString(),
-            organizerName: test.employer?.organisation_name,
-          },
-        };
-
-        // Generate email HTML
-        const { html } = generateProfessionalEmail(emailTemplateData);
+        await sendTestApplicantsEmail({
+          email: user.email,
+          first_name: user.first_name,
+          last_name: user.last_name,
+          job_title: test.job?.job_title,
+          invitation_letter: jobTest.invitation_letter,
+          testLink,
+          expirationDate,
+          organisation_name: test.employer?.organisation_name,
+        });
 
         const subject = `Job Assessment Invitation - ${(test.job as any).job_title}`;
-
-        // Send email
-        await transportMail({
-          email: user.email,
-          subject,
-          message: html,
-        });
 
         const message = `${test.employer.organisation_name} as invited you to take a job test.`;
 
         //* notification
-        const notification = await Notification.create({
-          recipient: user._id,
-          sender: userId,
-          type: NotificationType.MESSAGE,
-          title: subject,
-          message,
-          status: NotificationStatus.UNREAD,
-        });
-
-        //* socket instance
-        const io = getSocketIO();
-
-        io.to(user._id.toString()).emit("notification", {
-          id: notification._id,
-          title: subject,
-          message,
-          status: NotificationStatus.UNREAD,
-          type: NotificationType.MESSAGE,
-          createdAt: notification.createdAt,
-        });
+        await createAndSendNotification({ recipient: user._id, sender: userId as string, type: NotificationType.MESSAGE, title: subject, message, status: NotificationStatus.UNREAD });
 
         jobTest.stage = "candidate_invite";
         jobTest.candidates_invited.push(user._id);

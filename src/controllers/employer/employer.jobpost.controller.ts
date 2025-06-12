@@ -2,7 +2,6 @@ import { Response } from "express";
 import { IUserRequest } from "../../interface";
 import Job from "../../models/jobs/jobs.model";
 import { cutOffSchema, JobPostCreationSchema, testSchema } from "../../utils/types/employerJobsValidatorSchema";
-import NodeCache from "node-cache";
 import Test from "../../models/jobs/test.model";
 import { handleErrors } from "../../helper/handleErrors";
 import xlsx from "xlsx";
@@ -10,8 +9,6 @@ import fs from "fs";
 import { JobData, processUploadData, TestCutoffData, TestQuestionData } from "../../utils/validateAndFormatJobs";
 import InterviewMgmt from "../../models/interview/interview.model";
 import JobTest from "../../models/assessment/jobtest.model";
-
-const cache = new NodeCache({ stdTTL: 600, checkperiod: 120 });
 
 //* BULK UPLOAD
 const handleBulkUpload = async function (req: IUserRequest, res: Response) {

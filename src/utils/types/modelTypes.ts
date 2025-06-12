@@ -46,15 +46,11 @@ export interface INotification {
   title?: string;
   status: NotificationStatus;
   sender?: Types.ObjectId;
-  relatedResource?: {
-    resourceType?: string;
-    resourceId?: Types.ObjectId;
-  };
   isSystemGenerated?: boolean;
-  metadata?: Record<string, any>;
   readAt?: Date;
   createdAt?: Date;
   updatedAt?: Date;
+  // redirectUrl?: string;
 }
 
 export interface IJob {

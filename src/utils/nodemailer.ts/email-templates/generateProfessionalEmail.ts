@@ -1,6 +1,6 @@
 import mjml2html from "mjml";
 
-export type EmailTypes = "invite" | "verification" | "meeting" | "test" | "general";
+export type EmailTypes = "invite" | "verification" | "meeting" | "test" | "general" | "hire";
 
 interface EmailTemplateProps {
   type: EmailTypes;
@@ -22,6 +22,7 @@ export const generateProfessionalEmail = function ({ type, title, recipientName,
 
   // Determine color scheme based on email type
   const colorSchemes = {
+    hire: "#ddd",
     invite: "#3498db", // Blue
     verification: "#2ecc71", // Green
     meeting: "#9b59b6", // Purple
