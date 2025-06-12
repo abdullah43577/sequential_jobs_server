@@ -1,6 +1,5 @@
 import { Response } from "express";
 import { IUserRequest } from "../../interface";
-import NodeCache from "node-cache";
 import Job from "../../models/jobs/jobs.model";
 import { handleErrors } from "../../helper/handleErrors";
 import { ApplicationTestSubmissionSchema } from "../../utils/types/seekerValidatorSchema";
@@ -8,8 +7,8 @@ import Test from "../../models/jobs/test.model";
 import TestSubmission from "../../models/jobs/testsubmission.model";
 import { Types } from "mongoose";
 import User from "../../models/users.model";
-
-const cache = new NodeCache({ stdTTL: 600, checkperiod: 120 });
+import { sendTestSubmissionNotificationEmail } from "../../utils/services/emails/testSubmissionEmailService";
+import { getBaseUrl } from "../../helper/getBaseUrl";
 
 //* JOBS
 const getAllJobs = async function (req: IUserRequest, res: Response) {
@@ -188,7 +187,9 @@ const submitApplicationTest = async function (req: IUserRequest, res: Response) 
 
     const { application_test_id, job_id, answers } = ApplicationTestSubmissionSchema.parse(req.body);
 
-    const test = await Test.findById(application_test_id);
+    const test = await Test.findById(application_test_id)
+      .populate<{ job: { _id: string; job_title: string } }>({ path: "job", select: "job_title" })
+      .populate<{ employer: { _id: string; first_name: string; last_name: string; email: string } }>({ path: "employer", select: "first_name last_name email" });
     if (!test) return res.status(404).json({ message: "Test not found!" });
 
     let totalScore = 0;
@@ -221,6 +222,35 @@ const submitApplicationTest = async function (req: IUserRequest, res: Response) 
         },
       }
     );
+
+    const candidate = await User.findById(userId).select("first_name last_name");
+    if (!candidate) return res.status(404).json({ message: "Candidate not found" });
+
+    // Send email to employer
+    await sendTestSubmissionNotificationEmail({
+      employer: {
+        email: test.employer.email,
+        firstName: test.employer.first_name,
+        lastName: test.employer.last_name,
+      },
+      candidate: {
+        firstName: candidate.first_name,
+        lastName: candidate.last_name,
+      },
+      job: {
+        title: test.job.job_title,
+      },
+      test: {
+        title: "Assessment Test",
+        type: "application_test",
+      },
+      submission: {
+        id: submission._id.toString(),
+        score: totalScore,
+        totalQuestions: test.questions.length,
+      },
+      baseUrl: getBaseUrl(req),
+    });
 
     res.status(201).json({ message: "Test submitted successfully", submission });
   } catch (error) {

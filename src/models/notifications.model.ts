@@ -74,6 +74,11 @@ const notificationSchema = new Schema<INotificationDocument, INotificationModel>
       type: Date,
       default: null,
     },
+
+    // redirectUrl: {
+    //   type: String,
+    //   default: null,
+    // },
   },
   {
     timestamps: true,
