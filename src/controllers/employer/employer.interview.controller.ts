@@ -44,6 +44,32 @@ const getJobsForInterviews = async function (req: IUserRequest, res: Response) {
   }
 };
 
+const getCandidatesInvitedForInterview = async function (req: IUserRequest, res: Response) {
+  try {
+    const { job_id } = req.query;
+    if (!job_id) return res.status(400).json({ message: "Job ID is required" });
+
+    const interview = await InterviewMgmt.findOne({ job: job_id }).select("candidates").populate<{
+      candidates: { candidate: { first_name: string; last_name: string; phone_no: string; resume: string; profile_pic: string; email: string }; interview_score: number }[];
+    }>("candidates.candidate", "first_name last_name phone_no resume profile_pic email");
+
+    if (!interview) return res.status(404).json({ message: "Interview Record not found!" });
+
+    const formattedResponse = interview?.candidates.map(cd => ({
+      name: `${cd.candidate.first_name} ${cd.candidate.last_name}`,
+      phone_no: cd.candidate.phone_no,
+      resume: cd.candidate.resume,
+      interview_score: cd.interview_score,
+      profile_pic: cd.candidate.profile_pic,
+      email: cd.candidate.email,
+    }));
+
+    res.status(200).json(formattedResponse);
+  } catch (error) {
+    handleErrors({ res, error });
+  }
+};
+
 const handleCreateInterview = async function (req: IUserRequest, res: Response) {
   try {
     const { userId } = req;
@@ -491,6 +517,7 @@ const handleGradeCandidate = async function (req: IUserRequest, res: Response) {
 
 export {
   getJobsForInterviews,
+  getCandidatesInvitedForInterview,
   handleCreateInterview,
   handleGetRatingScaleDraft,
   handleGetTimeSlotDrafts,

@@ -26,6 +26,7 @@ import {
   jobTestInviteMsg,
 } from "../../controllers/employer/employer.jobtest.controller";
 import {
+  getCandidatesInvitedForInterview,
   getJobsForInterviews,
   handleCreateInterview,
   handleFetchRatingDetailsForPanelists,
@@ -77,6 +78,7 @@ companyRouter.patch("/job-test/applicant-invite", validateAccessToken, jobTestAp
 
 //* INTERVIEW MANAGEMENT
 companyRouter.get("/interview/get_jobs", validateAccessToken, validateCompanySession, getJobsForInterviews);
+companyRouter.get("/interview/get_candidates_invited_for_interview", validateAccessToken, validateCompanySession, getCandidatesInvitedForInterview);
 companyRouter.get("/interview/get_rating_scale/:job_id", validateAccessToken, validateCompanySession, handleGetRatingScaleDraft);
 companyRouter.get("/interview/get_time_slots/:job_id", validateAccessToken, validateCompanySession, handleGetTimeSlotDrafts);
 companyRouter.get("/interview/get_letter/:job_id", validateAccessToken, validateCompanySession, handleGetInvitationLetter);
