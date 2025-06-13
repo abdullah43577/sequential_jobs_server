@@ -13,8 +13,20 @@ import {
   toggleJobState,
   handleBulkUpload,
 } from "../../controllers/employer/employer.jobpost.controller";
-import { getApplicantsForJobTest, getDraftCutOff, getDraftQuestion, getInviteMsgDraft, getJobsForJobTest, jobTest, jobTestApplicantsInvite, jobTestCutoff, jobTestInviteMsg } from "../../controllers/employer/employer.jobtest.controller";
 import {
+  getApplicantsForJobTest,
+  getCandidatesByTestStatus,
+  getDraftCutOff,
+  getDraftQuestion,
+  getInviteMsgDraft,
+  getJobsForJobTest,
+  jobTest,
+  jobTestApplicantsInvite,
+  jobTestCutoff,
+  jobTestInviteMsg,
+} from "../../controllers/employer/employer.jobtest.controller";
+import {
+  getCandidatesInvitedForInterview,
   getJobsForInterviews,
   handleCreateInterview,
   handleFetchRatingDetailsForPanelists,
@@ -54,6 +66,7 @@ companyRouter.get("/get_application_test_cutoff", validateAccessToken, validateC
 
 //* JOB TEST MANAGEMENT
 companyRouter.get("/job_test/jobs", validateAccessToken, validateCompanySession, getJobsForJobTest);
+companyRouter.get("/job-test/getCandidatesByStatus", validateAccessToken, validateCompanySession, getCandidatesByTestStatus);
 companyRouter.put("/job-test", validateAccessToken, validateCompanySession, jobTest);
 companyRouter.get("/job-test/draft-questions", validateAccessToken, validateCompanySession, getDraftQuestion);
 companyRouter.patch("/job-test/cutoff", validateAccessToken, validateCompanySession, jobTestCutoff);
@@ -65,6 +78,7 @@ companyRouter.patch("/job-test/applicant-invite", validateAccessToken, jobTestAp
 
 //* INTERVIEW MANAGEMENT
 companyRouter.get("/interview/get_jobs", validateAccessToken, validateCompanySession, getJobsForInterviews);
+companyRouter.get("/interview/get_candidates_invited_for_interview", validateAccessToken, validateCompanySession, getCandidatesInvitedForInterview);
 companyRouter.get("/interview/get_rating_scale/:job_id", validateAccessToken, validateCompanySession, handleGetRatingScaleDraft);
 companyRouter.get("/interview/get_time_slots/:job_id", validateAccessToken, validateCompanySession, handleGetTimeSlotDrafts);
 companyRouter.get("/interview/get_letter/:job_id", validateAccessToken, validateCompanySession, handleGetInvitationLetter);

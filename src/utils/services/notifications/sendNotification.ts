@@ -22,7 +22,8 @@ export const createAndSendNotification = async function (data: CreateNotificatio
   });
 
   await sendNotification({
-    id: notification._id as Types.ObjectId,
+    id: notification._id as any,
+    recipient_id: data.recipient,
     title: data.title,
     message: data.message,
     status: data.status,
@@ -36,6 +37,7 @@ export const createAndSendNotification = async function (data: CreateNotificatio
 
 interface NotificationData {
   id: Types.ObjectId;
+  recipient_id: Types.ObjectId;
   title: string;
   message: string;
   status: string;
@@ -44,11 +46,11 @@ interface NotificationData {
   createdAt: Date | undefined;
 }
 
-const sendNotification = async function ({ id, title, message, status, type, readAt, createdAt }: NotificationData) {
+const sendNotification = async function ({ id, recipient_id, title, message, status, type, readAt, createdAt }: NotificationData) {
   const io = getSocketIO();
 
-  io.to(id.toString()).emit("notification", {
-    id,
+  io.to(recipient_id.toString()).emit("notification", {
+    _id: id,
     title,
     message,
     status,

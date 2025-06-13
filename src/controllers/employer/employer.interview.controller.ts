@@ -1,4 +1,4 @@
-import { application, Response } from "express";
+import { Response } from "express";
 import { IUserRequest } from "../../interface";
 import Job from "../../models/jobs/jobs.model";
 import { EmployerInterviewManagementSchema, PanelistGradeCandidate } from "../../utils/types/employerJobsValidatorSchema";
@@ -7,13 +7,10 @@ import InterviewMgmt from "../../models/interview/interview.model";
 import { handleErrors } from "../../helper/handleErrors";
 import { hashPassword } from "../../helper/hashPassword";
 import User from "../../models/users.model";
-import { generateProfessionalEmail } from "../../utils/nodemailer.ts/email-templates/generateProfessionalEmail";
-import { transportMail } from "../../utils/nodemailer.ts/transportMail";
 import crypto from "crypto";
 import TestSubmission from "../../models/jobs/testsubmission.model";
 import { Types } from "mongoose";
-import Notification, { NotificationStatus, NotificationType } from "../../models/notifications.model";
-import { getSocketIO } from "../../helper/socket";
+import { NotificationStatus, NotificationType } from "../../models/notifications.model";
 import { guessNameFromEmail } from "../../utils/guessNameFromEmail";
 import { sendPanelistInviteEmail } from "../../utils/services/emails/panelistEmailService";
 import { sendCandidateInviteEmail } from "../../utils/services/emails/interviewCandidatesEmailService";
@@ -42,6 +39,32 @@ const getJobsForInterviews = async function (req: IUserRequest, res: Response) {
     });
 
     res.status(200).json(formattedJobs);
+  } catch (error) {
+    handleErrors({ res, error });
+  }
+};
+
+const getCandidatesInvitedForInterview = async function (req: IUserRequest, res: Response) {
+  try {
+    const { job_id } = req.query;
+    if (!job_id) return res.status(400).json({ message: "Job ID is required" });
+
+    const interview = await InterviewMgmt.findOne({ job: job_id }).select("candidates").populate<{
+      candidates: { candidate: { first_name: string; last_name: string; phone_no: string; resume: string; profile_pic: string; email: string }; interview_score: number }[];
+    }>("candidates.candidate", "first_name last_name phone_no resume profile_pic email");
+
+    if (!interview) return res.status(404).json({ message: "Interview Record not found!" });
+
+    const formattedResponse = interview?.candidates.map(cd => ({
+      name: `${cd.candidate.first_name} ${cd.candidate.last_name}`,
+      phone_no: cd.candidate.phone_no,
+      resume: cd.candidate.resume,
+      interview_score: cd.interview_score,
+      profile_pic: cd.candidate.profile_pic,
+      email: cd.candidate.email,
+    }));
+
+    res.status(200).json(formattedResponse);
   } catch (error) {
     handleErrors({ res, error });
   }
@@ -155,16 +178,27 @@ const handleInvitePanelists = async function (req: IUserRequest, res: Response) 
     const interview = await InterviewMgmt.findOne({ job: job_id }).populate<{ job: { _id: string; job_title: string } }>("job", "job_title");
     if (!interview) return res.status(400).json({ message: "Interview not found!" });
 
-    const existingEmails = new Set(interview.panelists.map(pan => pan.email));
-    const uniquePanelists = panelists.filter(email => !existingEmails.has(email));
-    const existingPanelists = panelists.filter(email => existingEmails.has(email));
+    //* search for panelists existence across DB
+    const existingUserInDB = await User.find({ email: { $in: panelists } })
+      .select("email first_name")
+      .lean();
+
+    const existingEmailsInDB = new Set(existingUserInDB.map(pan => pan.email));
+    const existingEmailInInterview = new Set(interview.panelists.map(pan => pan.email));
+
+    //* panelists not in DB and haven't been added to this interview before
+    const uniquePanelists = panelists.filter(email => !existingEmailsInDB.has(email) && !existingEmailInInterview.has(email));
+
+    //* panelists that match what's stored in DB for current interview with data sent to this controller
+    const existingPanelists = panelists.filter(email => existingEmailInInterview.has(email));
+
+    let newPanelistPromises: Promise<void>[] = [];
+    let existingPanelistPromises: Promise<void>[] = [];
 
     // Process new panelists (with login credentials)
-    const newPanelistPromises = uniquePanelists.map(async email => {
-      try {
-        const existingPanelist = await User.findOne({ email }).lean();
-
-        if (!existingPanelist) {
+    if (uniquePanelists.length > 0) {
+      newPanelistPromises = uniquePanelists.map(async email => {
+        try {
           const tempPassword = crypto.randomBytes(8).toString("hex");
           const hashedPassword = await hashPassword(tempPassword);
 
@@ -197,28 +231,30 @@ const handleInvitePanelists = async function (req: IUserRequest, res: Response) 
           rating_scale_keys.forEach(key => newScale.set(key, ""));
 
           interview.panelists.push({ email: email, rating_scale: newScale });
+        } catch (error) {
+          console.error(`Error creating and inviting panelist ${email}:`, error);
         }
-      } catch (error) {
-        console.error(`Error creating and inviting panelist ${email}:`, error);
-      }
-    });
+      });
+    }
 
     // Process existing panelists (without login credentials)
-    const existingPanelistPromises = existingPanelists.map(async email => {
-      try {
-        const existingUser = await User.findOne({ email }).lean();
-        const nameGuess = existingUser ? { firstName: existingUser.first_name } : guessNameFromEmail(email);
+    if (existingPanelists.length > 0) {
+      existingPanelistPromises = existingPanelists.map(async email => {
+        try {
+          const existingUser = await User.findOne({ email }).lean();
+          const nameGuess = existingUser ? { firstName: existingUser.first_name } : guessNameFromEmail(email);
 
-        await sendPanelistInviteEmail({
-          email,
-          recipientName: nameGuess.firstName || "Guest",
-          jobTitle: interview.job.job_title,
-          isNewPanelist: false,
-        });
-      } catch (error) {
-        console.error(`Error sending notification to existing panelist ${email}:`, error);
-      }
-    });
+          await sendPanelistInviteEmail({
+            email,
+            recipientName: nameGuess.firstName || "Guest",
+            jobTitle: interview.job.job_title,
+            isNewPanelist: false,
+          });
+        } catch (error) {
+          console.error(`Error sending notification to existing panelist ${email}:`, error);
+        }
+      });
+    }
 
     // Execute all promises
     await Promise.all([...newPanelistPromises, ...existingPanelistPromises]);
@@ -481,6 +517,7 @@ const handleGradeCandidate = async function (req: IUserRequest, res: Response) {
 
 export {
   getJobsForInterviews,
+  getCandidatesInvitedForInterview,
   handleCreateInterview,
   handleGetRatingScaleDraft,
   handleGetTimeSlotDrafts,

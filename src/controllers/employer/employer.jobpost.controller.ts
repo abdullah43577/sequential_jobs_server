@@ -86,11 +86,78 @@ const toggleJobState = async function (req: IUserRequest, res: Response) {
 
     if (status !== false && status !== true) return res.status(400).json({ message: "Status is required" });
 
-    if (!job_id) return res.status(404).json({ message: "Job ID is required" });
+    // Find the job and populate the application_test
+    const job = await Job.findById(job_id).populate<{ application_test: { _id: string; cut_off_points: { suitable: { min: number; max: number }; probable: { min: number; max: number }; not_suitable: { min: number; max: number } } } }>(
+      "application_test"
+    );
 
-    const job = await Job.findByIdAndUpdate(job_id, { is_live: status });
+    if (!job) return res.status(404).json({ message: "Job not found!" });
 
-    res.status(200).json({ message: "Job Updated Successfully!" });
+    // Only validate if trying to set status to true (make job live)
+    if (status === true) {
+      // Step 1: Validate required job fields
+      const requiredJobFields = ["job_title", "country", "state", "city", "job_type", "employment_type", "salary", "currency_type", "years_of_exp", "payment_frequency", "description"];
+
+      const missingFields = requiredJobFields.filter(field => !(job as any)[field]);
+
+      if (missingFields.length > 0) {
+        return res.status(400).json({
+          message: `Please complete job creation. Missing fields: ${missingFields.join(", ")}`,
+        });
+      }
+
+      // Check if skills arrays have content
+      if (!job.generic_skills || job.generic_skills.length === 0) {
+        return res.status(400).json({
+          message: "Please add generic skills to complete job creation",
+        });
+      }
+
+      if (!job.technical_skills || job.technical_skills.length === 0) {
+        return res.status(400).json({
+          message: "Please add technical skills to complete job creation",
+        });
+      }
+
+      // Step 2: Validate application test exists
+      if (!job.application_test) {
+        return res.status(400).json({
+          message: "Please create application test questions before making job live",
+        });
+      }
+
+      // Step 3: Validate cut-off points are set
+      const test = job.application_test;
+
+      if (!test.cut_off_points) {
+        return res.status(400).json({
+          message: "Please set cut-off points to complete job creation",
+        });
+      }
+
+      const { suitable, probable, not_suitable } = test.cut_off_points;
+
+      // Check if all cut-off categories have both min and max values
+      const isSuitableValid = suitable && suitable.min !== null && suitable.max !== null;
+      const isProbableValid = probable && probable.min !== null && probable.max !== null;
+      const isNotSuitableValid = not_suitable && not_suitable.min !== null && not_suitable.max !== null;
+
+      if (!isSuitableValid || !isProbableValid || !isNotSuitableValid) {
+        return res.status(400).json({
+          message: "Please complete setting cut-off points for all categories (suitable, probable, not_suitable) before making job live",
+        });
+      }
+    }
+
+    // Update the job status
+    const updatedJob = await Job.findByIdAndUpdate(job_id, { is_live: status }, { new: true });
+
+    const statusMessage = status ? "Job is now live!" : "Job has been taken offline";
+
+    res.status(200).json({
+      message: statusMessage,
+      job: updatedJob,
+    });
   } catch (error) {
     handleErrors({ res, error });
   }

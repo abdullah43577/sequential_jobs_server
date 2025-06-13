@@ -279,3 +279,5 @@ const generateNewToken = async (req: IUserRequest, res: Response) => {
 };
 
 export { testApi, createUser, validateEmail, loginUser, forgotPassword, resetPassword, validateOAuthSession, generateNewToken, getProfile, updateProfile };
+
+// tests
