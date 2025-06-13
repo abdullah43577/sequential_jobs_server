@@ -13,7 +13,18 @@ import {
   toggleJobState,
   handleBulkUpload,
 } from "../../controllers/employer/employer.jobpost.controller";
-import { getApplicantsForJobTest, getDraftCutOff, getDraftQuestion, getInviteMsgDraft, getJobsForJobTest, jobTest, jobTestApplicantsInvite, jobTestCutoff, jobTestInviteMsg } from "../../controllers/employer/employer.jobtest.controller";
+import {
+  getApplicantsForJobTest,
+  getCandidatesByTestStatus,
+  getDraftCutOff,
+  getDraftQuestion,
+  getInviteMsgDraft,
+  getJobsForJobTest,
+  jobTest,
+  jobTestApplicantsInvite,
+  jobTestCutoff,
+  jobTestInviteMsg,
+} from "../../controllers/employer/employer.jobtest.controller";
 import {
   getJobsForInterviews,
   handleCreateInterview,
@@ -54,6 +65,7 @@ companyRouter.get("/get_application_test_cutoff", validateAccessToken, validateC
 
 //* JOB TEST MANAGEMENT
 companyRouter.get("/job_test/jobs", validateAccessToken, validateCompanySession, getJobsForJobTest);
+companyRouter.get("/job-test/getCandidatesByStatus", validateAccessToken, validateCompanySession, getCandidatesByTestStatus);
 companyRouter.put("/job-test", validateAccessToken, validateCompanySession, jobTest);
 companyRouter.get("/job-test/draft-questions", validateAccessToken, validateCompanySession, getDraftQuestion);
 companyRouter.patch("/job-test/cutoff", validateAccessToken, validateCompanySession, jobTestCutoff);

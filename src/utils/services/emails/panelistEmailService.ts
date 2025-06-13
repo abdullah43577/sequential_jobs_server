@@ -59,7 +59,7 @@ export const createPanelistInviteEmail = (data: PanelistInviteData): EmailResult
   return { html, subject };
 };
 
-export const sendPanelistInviteEmail = async (data: PanelistInviteData): Promise<void> => {
+export const sendPanelistInviteEmail = async (data: PanelistInviteData) => {
   const { html, subject } = createPanelistInviteEmail(data);
 
   await transportMail({

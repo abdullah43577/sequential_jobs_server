@@ -6,10 +6,7 @@ import JobTest from "../../models/assessment/jobtest.model";
 import Test from "../../models/jobs/test.model";
 import { handleErrors } from "../../helper/handleErrors";
 import User from "../../models/users.model";
-import { EmailTypes, generateProfessionalEmail } from "../../utils/nodemailer.ts/email-templates/generateProfessionalEmail";
-import { transportMail } from "../../utils/nodemailer.ts/transportMail";
-import Notification, { NotificationStatus, NotificationType } from "../../models/notifications.model";
-import { getSocketIO } from "../../helper/socket";
+import { NotificationStatus, NotificationType } from "../../models/notifications.model";
 import TestSubmission from "../../models/jobs/testsubmission.model";
 import { createAndSendNotification } from "../../utils/services/notifications/sendNotification";
 import { sendTestApplicantsEmail } from "../../utils/services/emails/testApplicantsEmailInvite";
@@ -35,6 +32,65 @@ const getJobsForJobTest = async function (req: IUserRequest, res: Response) {
     }));
 
     res.status(200).json(jobsWithStage);
+  } catch (error) {
+    handleErrors({ res, error });
+  }
+};
+
+const getCandidatesByTestStatus = async function (req: IUserRequest, res: Response) {
+  try {
+    const { job_id, type } = req.query;
+
+    if (!job_id || !type) return res.status(400).json({ message: "Job ID and Type is required!" });
+
+    const job = await Job.findById(job_id)
+      .select("applicants")
+      .populate<{
+        applicants: { applicant: { _id: string; first_name: string; last_name: string; email: string; resume: string; profile_pic: string; phone_no: string }; date_of_application: string }[];
+      }>("applicants.applicant", "first_name last_name resume profile_pic email phone_no")
+      .lean();
+    if (!job) return res.status(404).json({ message: "Job not found!" });
+
+    const jobApplicants = job.applicants;
+
+    const test = await Test.findOne({ job: job_id, type: "job_test" });
+
+    //* find candidates who have taken the job test
+    const testSubmission = await TestSubmission.find({ test: test?._id, job: job_id })
+      .select("applicant job")
+      .populate<{ applicant: { _id: string; first_name: string; last_name: string; email: string; resume: string; profile_pic: string; phone_no: string } }>("applicant", "first_name last_name resume profile_pic email phone_no");
+
+    const submittedApplicantIds = new Set(testSubmission.map(sub => sub.applicant._id.toString()));
+
+    let candidates = [];
+
+    if (type === "true") {
+      candidates = testSubmission.map(sub => {
+        const data = jobApplicants.find(d => d.applicant._id.toString() === sub.applicant._id.toString());
+
+        return {
+          name: `${sub.applicant.first_name} ${sub.applicant.last_name}`,
+          email: sub.applicant.email,
+          profile_pic: sub.applicant.profile_pic,
+          resume: sub.applicant.resume,
+          phone: sub.applicant.phone_no,
+          date_of_application: data?.date_of_application || "N/A",
+        };
+      });
+    } else {
+      candidates = jobApplicants
+        .filter(app => !submittedApplicantIds.has(app.applicant._id.toString()))
+        .map(app => ({
+          name: `${app.applicant.first_name} ${app.applicant.last_name}`,
+          email: app.applicant.email,
+          profile_pic: app.applicant.profile_pic,
+          resume: app.applicant.resume,
+          phone: app.applicant.phone_no,
+          date_of_application: app.date_of_application,
+        }));
+    }
+
+    return res.status(200).json(candidates);
   } catch (error) {
     handleErrors({ res, error });
   }
@@ -365,4 +421,4 @@ const jobTestApplicantsInvite = async function (req: IUserRequest, res: Response
   }
 };
 
-export { getJobsForJobTest, jobTest, getDraftQuestion, jobTestCutoff, getDraftCutOff, jobTestInviteMsg, getInviteMsgDraft, getApplicantsForJobTest, jobTestApplicantsInvite };
+export { getJobsForJobTest, getCandidatesByTestStatus, jobTest, getDraftQuestion, jobTestCutoff, getDraftCutOff, jobTestInviteMsg, getInviteMsgDraft, getApplicantsForJobTest, jobTestApplicantsInvite };

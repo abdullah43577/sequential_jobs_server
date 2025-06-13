@@ -259,5 +259,3 @@ const submitApplicationTest = async function (req: IUserRequest, res: Response) 
 };
 
 export { getAllJobs, getJobDetails, applyForJob, getApplicationTest, submitApplicationTest };
-
-// test
