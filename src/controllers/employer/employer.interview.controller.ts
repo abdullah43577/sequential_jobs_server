@@ -16,7 +16,7 @@ import { sendPanelistInviteEmail } from "../../utils/services/emails/panelistEma
 import { sendCandidateInviteEmail } from "../../utils/services/emails/interviewCandidatesEmailService";
 import { createAndSendNotification } from "../../utils/services/notifications/sendNotification";
 
-//* INTERVIEW MANAGEMENTs
+//* INTERVIEW MANAGEMENT
 const getJobsForInterviews = async function (req: IUserRequest, res: Response) {
   try {
     const { userId } = req;
