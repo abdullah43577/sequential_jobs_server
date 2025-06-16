@@ -18,7 +18,7 @@ interface SubdomainToCountry {
 }
 
 export const getDomainHost = function (req: Request) {
-  // Get the hostname from the request
+  // Get the hostname from the requests
   const hostname = req.headers.host || "";
 
   console.log(hostname, "host name here");
