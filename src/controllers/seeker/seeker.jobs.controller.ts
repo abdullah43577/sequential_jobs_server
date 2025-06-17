@@ -10,7 +10,7 @@ import User from "../../models/users.model";
 import { sendTestSubmissionNotificationEmail } from "../../utils/services/emails/testSubmissionEmailService";
 import { getBaseUrl } from "../../helper/getBaseUrl";
 
-//* JOBS DATA
+//* JOBS
 const getAllJobs = async function (req: IUserRequest, res: Response) {
   try {
     const { userId } = req;

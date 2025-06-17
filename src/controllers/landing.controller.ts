@@ -1,7 +1,6 @@
 import { Request, Response } from "express";
 import { handleErrors } from "../helper/handleErrors";
 import Job from "../models/jobs/jobs.model";
-import { getDomainHost } from "../utils/getHostName";
 import User from "../models/users.model";
 
 const getLandingJobs = async function (req: Request, res: Response) {
