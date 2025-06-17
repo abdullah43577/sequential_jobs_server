@@ -16,19 +16,26 @@ const getAllJobs = async function (req: IUserRequest, res: Response) {
     const { userId } = req;
     const page = parseInt(req.query.page as string) || 1;
     const limit = parseInt(req.query.limit as string) || 10;
+    const currentCountry = req.query.currentCountry as string;
     const skip = (page - 1) * limit;
 
-    // const cacheKey = `cached_jobs__${userId}__page_${page}`;
+    console.log(currentCountry, "current country filter");
+
+    // Build query with country filter if provided
+    const baseQuery = { is_live: true };
+    const query = currentCountry && currentCountry.trim() ? { ...baseQuery, country: new RegExp(`^${currentCountry.trim()}$`, "i") } : baseQuery;
+
+    // const cacheKey = `cached_jobs__${userId}__page_${page}__country_${currentCountry || 'all'}`;
 
     // const cachedJobs = cache.get(cacheKey);
     // if (cachedJobs) {
     //   return res.status(200).json(cachedJobs);
     // }
 
-    // Get total job count
-    const totalJobs = await Job.countDocuments({ is_live: true });
+    // Get total job count with country filter
+    const totalJobs = await Job.countDocuments(query);
 
-    const jobs = await Job.find({ is_live: true })
+    const jobs = await Job.find(query)
       .select("employer job_title state city employment_type salary payment_frequency currency_type technical_skills applicants")
       .populate("employer", "organisation_name")
       .sort({ createdAt: -1 })
