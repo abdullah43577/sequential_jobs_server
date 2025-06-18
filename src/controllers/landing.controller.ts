@@ -5,7 +5,6 @@ import User from "../models/users.model";
 
 const getLandingJobs = async function (req: Request, res: Response) {
   try {
-    // const countryName = getDomainHost(req);
     const { countryName } = req.query;
     console.log(countryName, "country name here");
 
@@ -50,5 +49,5 @@ const getCompanyJobs = async function (req: Request, res: Response) {
     handleErrors({ res, error });
   }
 };
-// test
+
 export { getLandingJobs, getLandingJobById, getCompanyJobs };

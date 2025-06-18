@@ -125,10 +125,10 @@ const handleGetTimeSlotDrafts = async function (req: IUserRequest, res: Response
     const { job_id } = req.params;
     if (!job_id) return res.status(400).json({ message: "Job ID is required" });
 
-    const interview = await InterviewMgmt.findOne({ job: job_id }).select("interview_time_slot").lean();
+    const interview = await InterviewMgmt.findOne({ job: job_id }).select("interview_time_slot meetingLink").lean();
     if (!interview) return res.status(200).json({ success: false, interview_time_slots: [] });
 
-    res.status(200).json({ success: true, interview_time_slots: interview.interview_time_slot });
+    res.status(200).json({ success: true, interview_time_slots: interview.interview_time_slot, meetingLink: interview.meetingLink });
   } catch (error) {
     handleErrors({ res, error });
   }
