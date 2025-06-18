@@ -1,12 +1,10 @@
 import { Request, Response } from "express";
 import { generateAccessToken, generateRefreshToken } from "../helper/generateToken";
 import { CustomJwtPayload, IUserRequest } from "../interface";
-import { loginValidationSchema, registerValidationSchema, updateProfileSchema } from "../utils/types/authValidatorSchema";
+import { loginValidationSchema, registerValidationSchema, updateJobPreferencesSchema, updateProfileSchema } from "../utils/types/authValidatorSchema";
 import User from "../models/users.model";
 import { comparePassword, hashPassword } from "../helper/hashPassword";
 import { handleErrors } from "../helper/handleErrors";
-import { registrationEmail } from "../utils/nodemailer.ts/email-templates/registration-email";
-import { transportMail } from "../utils/nodemailer.ts/transportMail";
 import jwt, { Secret } from "jsonwebtoken";
 import { getBaseUrl } from "../helper/getBaseUrl";
 import { Readable } from "stream";
@@ -61,6 +59,20 @@ const createUser = async (req: Request, res: Response) => {
     });
 
     res.status(201).json({ message: "User Account Created Successfully" });
+  } catch (error) {
+    handleErrors({ res, error });
+  }
+};
+
+const updateJobPreferences = async (req: IUserRequest, res: Response) => {
+  try {
+    const { userId } = req;
+    const { job_preferences } = updateJobPreferencesSchema.parse(req.body);
+
+    console.log(job_preferences);
+
+    const user = await User.findByIdAndUpdate(userId, { job_preferences });
+    res.status(200).json({ message: "Profile Updated Successfully!" });
   } catch (error) {
     handleErrors({ res, error });
   }
@@ -278,6 +290,4 @@ const generateNewToken = async (req: IUserRequest, res: Response) => {
   }
 };
 
-export { testApi, createUser, validateEmail, loginUser, forgotPassword, resetPassword, validateOAuthSession, generateNewToken, getProfile, updateProfile };
-
-// tests
+export { testApi, createUser, updateJobPreferences, validateEmail, loginUser, forgotPassword, resetPassword, validateOAuthSession, generateNewToken, getProfile, updateProfile };

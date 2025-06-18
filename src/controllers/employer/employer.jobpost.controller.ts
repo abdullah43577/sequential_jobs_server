@@ -5,10 +5,13 @@ import { cutOffSchema, JobPostCreationSchema, testSchema } from "../../utils/typ
 import Test from "../../models/jobs/test.model";
 import { handleErrors } from "../../helper/handleErrors";
 import xlsx from "xlsx";
-import fs from "fs";
 import { JobData, processUploadData, TestCutoffData, TestQuestionData } from "../../utils/validateAndFormatJobs";
 import InterviewMgmt from "../../models/interview/interview.model";
 import JobTest from "../../models/assessment/jobtest.model";
+import User from "../../models/users.model";
+import { createAndSendNotification } from "../../utils/services/notifications/sendNotification";
+import { NotificationStatus, NotificationType } from "../../models/notifications.model";
+import { sendMatchingJobEmail } from "../../utils/services/emails/matchingJobEmailService";
 
 //* BULK UPLOAD
 const handleBulkUpload = async function (req: IUserRequest, res: Response) {
@@ -193,7 +196,7 @@ const getJobDraft = async function (req: IUserRequest, res: Response) {
     const { job_id } = req.query;
     if (!job_id) return res.status(400).json({ message: "Job ID is required" });
 
-    const job = await Job.findById(job_id).select("job_title country state city job_type employment_type salary currency_type payment_frequency years_of_exp generic_skills technical_skills description").lean();
+    const job = await Job.findById(job_id).select("job_title country state city job_type employment_type salary currency_type payment_frequency years_of_exp generic_skills technical_skills description job_category required_experience_level").lean();
 
     res.status(200).json({ success: !!job, job });
   } catch (error) {
@@ -260,6 +263,7 @@ const getApplicationTestDraft = async function (req: IUserRequest, res: Response
 
 const applicationTestCutoff = async function (req: IUserRequest, res: Response) {
   try {
+    const { userId } = req;
     const { job_id } = req.query;
     const { cut_off_points } = cutOffSchema.parse(req.body);
     const { suitable, probable, not_suitable } = cut_off_points;
@@ -296,6 +300,34 @@ const applicationTestCutoff = async function (req: IUserRequest, res: Response) 
     job.stage = "set_cut_off_points";
     await test.save();
     await job.save();
+
+    //* NOTIFY RELEVANT CANDIDATES
+
+    //* find relevant candidates
+    const candidates = await User.find({ role: "job-seeker", "job_preferences.categories": { $in: [job.job_category] } });
+
+    const employer = await User.findById(userId).select<{ _id: string; organisation_name: string }>("organisation_name");
+
+    //* send email to relevant candidates
+    await Promise.all(
+      candidates.map(async cd => {
+        await sendMatchingJobEmail({ email: cd.email, first_name: cd.first_name, last_name: cd.last_name, job_title: job.job_title, organisation_name: employer?.organisation_name as string, btnUrl: "" });
+      })
+    );
+
+    //* send notification to relevant candidates
+    await Promise.all(
+      candidates.map(async cd => {
+        await createAndSendNotification({
+          recipient: cd._id,
+          sender: userId as string,
+          type: NotificationType.INFO,
+          title: "🎯 Job Opportunity Just for You!",
+          message: `We found a job that aligns with your preferences! ${employer?.organisation_name} is hiring for the ${job.job_title} role.`,
+          status: NotificationStatus.UNREAD,
+        });
+      })
+    );
 
     return res.status(200).json({ message: "Cut-off points updated successfully", test });
   } catch (error) {

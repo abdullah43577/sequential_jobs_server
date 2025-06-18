@@ -21,6 +21,11 @@ export interface IUser {
   state: string;
   city: string;
   postal_code: string;
+  job_preferences?: {
+    categories: string[];
+    experience_level: string;
+    preferred_skills: string[];
+  };
   stripe_customer_id: string | null;
   subscription_tier: "Sequential Freemium" | "Sequential Standard" | "Sequential Pro" | "Sequential Super Pro";
   subscription_status: "pending" | "payment_successful" | "unpaid" | "payment_failed" | "trial";
@@ -56,6 +61,8 @@ export interface INotification {
 export interface IJob {
   employer: Types.ObjectId;
   job_title: string;
+  job_category: string;
+  required_experience_level: string;
   country: string;
   state: string;
   city: string;

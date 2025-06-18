@@ -4,6 +4,8 @@ export const JobPostCreationSchema = z.object({
   user_id: z.string().optional(),
   job_id: z.string().optional(),
   job_title: z.string(),
+  job_category: z.string(),
+  required_experience_level: z.string(),
   country: z.string(),
   state: z.string(),
   city: z.string(),

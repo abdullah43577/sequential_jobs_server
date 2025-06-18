@@ -1,11 +1,18 @@
 import { Schema, model } from "mongoose";
 import { IJob } from "../../utils/types/modelTypes";
+import { EXPERIENCE_LEVELS, JOB_CATEGORIES } from "../../utils/jobsHelper";
 
 const jobSchema = new Schema<IJob>(
   {
     employer: { type: Schema.Types.ObjectId, ref: "User", required: true },
 
     job_title: { type: String, trim: true },
+    job_category: { type: String, enum: JOB_CATEGORIES, required: true },
+    required_experience_level: {
+      type: String,
+      enum: EXPERIENCE_LEVELS,
+      required: true,
+    },
     country: { type: String },
     state: { type: String },
     city: { type: String },

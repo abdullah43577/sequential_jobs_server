@@ -92,6 +92,14 @@ export const registerValidationSchema = z
     }
   });
 
+export const updateJobPreferencesSchema = z.object({
+  job_preferences: z.object({
+    categories: z.array(z.string()).min(1, "Select at least one category"),
+    experience_level: z.string().min(1, "Select an experience level"),
+    preferred_skills: z.array(z.string()).min(1, "Add at least one skill"),
+  }),
+});
+
 export const loginValidationSchema = z.object({
   email: z.string().email(),
   password: z.string().min(8, "Password must be at least 8 characters long"),

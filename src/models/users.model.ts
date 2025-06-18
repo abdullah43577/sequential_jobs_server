@@ -1,6 +1,7 @@
 import { Schema, model } from "mongoose";
 import { IUser } from "../utils/types/modelTypes";
 import { roleBasedValidation } from "../helper/roleBasedValidation";
+import { EXPERIENCE_LEVELS, JOB_CATEGORIES } from "../utils/jobsHelper";
 
 const userSchema = new Schema<IUser>(
   {
@@ -77,6 +78,23 @@ const userSchema = new Schema<IUser>(
     postal_code: {
       type: String,
       validate: roleBasedValidation("company", "Postal Code"),
+    },
+
+    job_preferences: {
+      type: {
+        categories: [
+          {
+            type: String,
+            enum: JOB_CATEGORIES,
+          },
+        ],
+        experience_level: {
+          type: String,
+          enum: EXPERIENCE_LEVELS,
+        },
+        preferred_skills: [{ type: String }], // Skills they want to work with
+      },
+      default: null,
     },
 
     has_validated_email: {
