@@ -1,8 +1,12 @@
 import User from "../models/users.model";
 import cron from "node-cron";
+import { sendResumeReminderEmail } from "./services/emails/ResumeReminderEmailService";
+import { createAndSendNotification } from "./services/notifications/sendNotification";
+import { NotificationStatus, NotificationType } from "../models/notifications.model";
+import { sendTrialExpiredEmail } from "./services/emails/TrialExpiredEmailService";
 
 // Function to check and handle expired trial subscriptions
-export const checkTrialSubscriptions = async () => {
+export const checkTrialSubscriptions = async function () {
   try {
     const currentDate = new Date();
 
@@ -13,21 +17,67 @@ export const checkTrialSubscriptions = async () => {
       subscription_end: { $lt: currentDate },
     });
 
-    // Update each expired trial user to freemium
-    for (const user of expiredTrialUsers) {
-      user.subscription_tier = "Sequential Freemium";
-      user.subscription_status = "unpaid";
-      user.is_trial = false;
+    await Promise.all(
+      expiredTrialUsers.map(async user => {
+        user.subscription_tier = "Sequential Freemium";
+        user.subscription_status = "unpaid";
+        user.is_trial = false;
+        await user.save();
 
-      await user.save();
+        //* send email
+        await sendTrialExpiredEmail({
+          email: user.email,
+          first_name: user.first_name,
+          last_name: user.last_name,
+          btnUrl: "",
+        });
 
-      // Optional: Send notification email about trial expiration
-      // await sendTrialExpiredEmail(user.email);
-    }
+        //* send notification
+        await createAndSendNotification({
+          recipient: user._id,
+          sender: "system",
+          title: "⚠️ Your Trial Has Ended",
+          message: "Your free trial period has ended, and your account has been downgraded to the Sequential Freemium plan. You still have access to basic features, but to continue enjoying premium benefits, consider upgrading your subscription.`,",
+          type: NotificationType.MESSAGE,
+          status: NotificationStatus.UNREAD,
+        });
+      })
+    );
 
     console.log(`${expiredTrialUsers.length} trial subscriptions expired and reverted to freemium.`);
   } catch (error) {
     console.error("Error checking trial subscriptions:", error);
+  }
+};
+
+export const RemindJobSeekerToCompleteAcctSetup = async function () {
+  try {
+    //* find all job-seekers without resume
+    const users = await User.find({ role: "job-seeker", resume: null });
+
+    await Promise.all(
+      users.map(async user => {
+        //* send email to seeker
+        await sendResumeReminderEmail({
+          email: user.email,
+          first_name: user.first_name,
+          last_name: user.last_name,
+          btnUrl: "",
+        });
+
+        //* send notification to user
+        await createAndSendNotification({
+          recipient: user._id,
+          sender: "system",
+          title: "📄 Complete Your Profile - Upload Your Resume",
+          message: "You're almost there! Uploading your resume will boost your chances of getting hired and help us match you with better opportunities.",
+          type: NotificationType.MESSAGE,
+          status: NotificationStatus.UNREAD,
+        });
+      })
+    );
+  } catch (error) {
+    console.error("Error reminding job seeker to complete account setup", error);
   }
 };
 
@@ -37,5 +87,13 @@ export const setupSubscriptionCronJobs = () => {
   cron.schedule("0 0 * * *", async () => {
     console.log("Running daily subscription check...");
     await checkTrialSubscriptions();
+  });
+};
+
+// Run every 3 days at 9 AM
+export const setupResumeReminder = () => {
+  cron.schedule("0 9 */3 * *", async () => {
+    console.log("Running daily resume reminder...");
+    await RemindJobSeekerToCompleteAcctSetup();
   });
 };
