@@ -21,6 +21,11 @@ const getAllJobs = async function (req: IUserRequest, res: Response) {
 
     console.log(currentCountry, "current country filter");
 
+    //* GET USER JOB PREFERENCES
+    const user = await User.findById(userId).select("job_preferences");
+
+    const hasJobPreference = !!user?.job_preferences?.categories?.length && !!user.job_preferences.experience_level;
+
     // Build query with country filter if provided
     const baseQuery = { is_live: true };
     const query = currentCountry && currentCountry.trim() ? { ...baseQuery, country: new RegExp(`^${currentCountry.trim()}$`, "i") } : baseQuery;
@@ -58,6 +63,7 @@ const getAllJobs = async function (req: IUserRequest, res: Response) {
       totalJobs,
       totalPages: Math.ceil(totalJobs / limit),
       currentPage: page,
+      hasJobPreference,
     };
 
     // cache.set(cacheKey, responseData);

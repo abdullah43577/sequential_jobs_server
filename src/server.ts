@@ -18,6 +18,7 @@ import { eventsRouter } from "./routes/eventRoutes";
 import { adminRouter } from "./routes/admin/routes.admin";
 import Stripe from "stripe";
 import { initializeStripeProducts } from "./utils/initializeStripe";
+import { setupResumeReminder, setupSubscriptionCronJobs } from "./utils/cron-jobs";
 
 export const stripe = new Stripe(STRIPE_SECRET_KEY as string, {
   apiVersion: "2025-04-30.basil",
@@ -79,13 +80,25 @@ app.use("*", (req: Request, res: Response) => {
   });
 });
 
+const cronJobs = function () {
+  console.log("EXECUTING CRON JOBS....");
+  setupSubscriptionCronJobs();
+  setupResumeReminder();
+};
+
 const server = app.listen(PORT, async () => {
-  console.log("Connecting to DB....");
-  await connectDB();
-  console.log(`server started on http://localhost:${PORT}`);
-  //* leave this here it's important to initialize the stripe products
-  await initializeStripeProducts();
-  // setupSubscriptionCronJobs()
+  try {
+    console.log("Connecting to DB....");
+    await connectDB();
+    console.log(`server started on http://localhost:${PORT}`);
+    //* leave this here it's important to initialize the stripe products
+    await initializeStripeProducts();
+
+    //* EXECUTE CRON JOBS
+    cronJobs();
+  } catch (error) {
+    console.error("Error starting server and connecting to DB", error);
+  }
 });
 
 initializeSocket(server);

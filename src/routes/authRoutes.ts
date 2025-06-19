@@ -1,6 +1,6 @@
 import { Router } from "express";
-import { generateNewToken, loginUser, createUser, forgotPassword, testApi, validateEmail, resetPassword, getProfile, updateProfile, validateOAuthSession } from "../controllers/auth.controller";
-import { validateAccessToken, validateGoogleVerificationToken, validateRefreshToken } from "../middleware/validateToken";
+import { generateNewToken, loginUser, createUser, forgotPassword, testApi, validateEmail, resetPassword, getProfile, updateProfile, validateOAuthSession, updateJobPreferences } from "../controllers/auth.controller";
+import { validateAccessToken, validateGoogleVerificationToken, validateRefreshToken, validateSeekerSession } from "../middleware/validateToken";
 import { upload } from "../utils/multerConfig";
 import passport from "passport";
 import { IUserRequest } from "../interface";
@@ -52,6 +52,7 @@ authRouter.get("/google/callback/validate-session/:tokenId", validateGoogleVerif
 
 authRouter.get("/", testApi);
 authRouter.post("/create-user", createUser);
+authRouter.put("/update_job_preference", validateAccessToken, validateSeekerSession, updateJobPreferences);
 authRouter.get("/verify-email", validateEmail);
 authRouter.post("/login", loginUser);
 authRouter.post("/forgot-password", forgotPassword);
