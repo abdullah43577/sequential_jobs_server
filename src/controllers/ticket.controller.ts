@@ -9,6 +9,8 @@ import { sendTicketUpdateEmail } from "../utils/services/emails/sendTicketUpdate
 import { Readable } from "stream";
 import cloudinary from "../utils/cloudinaryConfig";
 
+//
+
 const createTicket = async function (req: IUserRequest, res: Response) {
   try {
     const { userId } = req;
