@@ -6,19 +6,66 @@ import Ticket from "../models/ticket.model";
 import { sendTicketCreatedEmail } from "../utils/services/emails/sendTicketEmail";
 import User from "../models/users.model";
 import { sendTicketUpdateEmail } from "../utils/services/emails/sendTicketUpdateEmail";
+import { Readable } from "stream";
+import cloudinary from "../utils/cloudinaryConfig";
 
 const createTicket = async function (req: IUserRequest, res: Response) {
   try {
     const { userId } = req;
+    const attachments = req.files as Express.Multer.File[];
     const { type, title, description } = createTicketSchema.parse(req.body);
 
     const user = await User.findById(userId);
-
     if (!user) return res.status(404).json({ message: "User not found!" });
 
-    const ticket = await Ticket.create({ createdBy: userId, type, title, description });
+    // Helper function to upload a single file to Cloudinary
+    const uploadFileToCloudinary = (file: Express.Multer.File): Promise<string> => {
+      return new Promise((resolve, reject) => {
+        const stream = cloudinary.uploader.upload_stream(
+          {
+            folder: `tickets/${userId}/${Date.now()}`,
+            resource_type: "auto",
+          },
+          (error, result) => {
+            if (error) {
+              reject(error);
+            } else if (result?.secure_url) {
+              resolve(result.secure_url);
+            } else {
+              reject(new Error("Upload failed - no URL returned"));
+            }
+          }
+        );
 
-    //* send email to candidate of the new ticket created
+        // Create a readable stream from the buffer and pipe it to Cloudinary
+        const bufferStream = new Readable();
+        bufferStream.push(file.buffer);
+        bufferStream.push(null);
+        bufferStream.pipe(stream);
+      });
+    };
+
+    // Upload all attachments to Cloudinary (if any)
+    let uploadedAttachments: string[] = [];
+    if (attachments && attachments.length > 0) {
+      try {
+        const uploadPromises = attachments.map(file => uploadFileToCloudinary(file));
+        uploadedAttachments = await Promise.all(uploadPromises);
+      } catch (uploadError) {
+        return res.status(500).json({ message: "File upload failed" });
+      }
+    }
+
+    // Create ticket with attachment URLs
+    const ticket = await Ticket.create({
+      createdBy: userId,
+      type,
+      title,
+      description,
+      attachments: uploadedAttachments,
+    });
+
+    // Send email to candidate of the new ticket created
     await sendTicketCreatedEmail({
       email: user.email,
       first_name: user.first_name,
@@ -28,7 +75,9 @@ const createTicket = async function (req: IUserRequest, res: Response) {
       btnUrl: `https://myapp.com/my-tickets/${ticket._id}`,
     });
 
-    res.status(200).json({ message: "Ticket Created Successfully!" });
+    res.status(200).json({
+      message: "Ticket Created Successfully!",
+    });
   } catch (error) {
     handleErrors({ res, error });
   }
