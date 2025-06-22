@@ -1,5 +1,5 @@
 import { Router } from "express";
-import { validateAccessToken, validateCompanySession, validateSeekerSession } from "../../middleware/validateToken";
+import { validateAccessToken, validateSeekerSession } from "../../middleware/validateToken";
 import { upload } from "../../utils/multerConfig";
 import { applyForJob, getAllJobs, getApplicationTest, getJobDetails, submitApplicationTest } from "../../controllers/seeker/seeker.jobs.controller";
 import { uploadResume } from "../../controllers/seeker/seeker.resumemgmt.controller";

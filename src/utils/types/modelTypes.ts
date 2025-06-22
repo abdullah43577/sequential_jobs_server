@@ -173,3 +173,21 @@ export interface IMedical {
   medicalists: string[];
   candidates: { candidate: Types.ObjectId; scheduled_date_time?: Record<string, any>; medical_documents?: Map<string, string>; status?: "pending" | "completed" | "canceled" }[];
 }
+
+export interface ITicket {
+  createdBy: Types.ObjectId;
+  ticketId: string;
+  title: string;
+  description: string;
+  type: "Bug Report" | "Feature Request" | "General Inquiry" | "Complaint";
+  status: "Open" | "In Progress" | "Resolved" | "Closed";
+  attachments: string[]; // URLs or file references
+  comments: {
+    sender: string | Types.ObjectId;
+    message: string;
+    createdAt?: Date;
+  }[];
+  assignedTo?: Types.ObjectId;
+  createdAt: Date;
+  updatedAt: Date;
+}
