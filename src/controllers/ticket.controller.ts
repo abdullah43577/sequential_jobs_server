@@ -34,7 +34,7 @@ const createTicket = async function (req: IUserRequest, res: Response) {
   }
 };
 
-//* GET TICKET CREATED BY USER
+//* GET TICKET CREATED BY USERs
 const getUserTicket = async function (req: IUserRequest, res: Response) {
   try {
     const { userId } = req;
