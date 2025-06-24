@@ -8,13 +8,12 @@ import { NotificationStatus, NotificationType } from "../../models/notifications
 import Job from "../../models/jobs/jobs.model";
 import { Types } from "mongoose";
 import { Readable } from "stream";
-import { transportMail } from "../../utils/nodemailer.ts/transportMail";
-import { EmailTypes, generateProfessionalEmail } from "../../utils/nodemailer.ts/email-templates/generateProfessionalEmail";
-import { getBaseUrl } from "../../helper/getBaseUrl";
 import { createAndSendNotification } from "../../utils/services/notifications/sendNotification";
 import { sendHireCandidateEmail } from "../../utils/services/emails/hireCandidateEmailService";
 import User from "../../models/users.model";
 import { sendReuploadDocumentEmail } from "../../utils/services/emails/reuploadDocumentEmailService";
+
+const { CLIENT_URL } = process.env;
 
 //* DOCUMENTATION MANAGEMENT
 const getJobsForDocumentation = async function (req: IUserRequest, res: Response) {
@@ -327,7 +326,7 @@ const requestReUploadDocuments = async function (req: IUserRequest, res: Respons
     // Prepare email data
     const emailSubject = `Action Required: Re-upload Documents for ${job.job_title} Position`;
 
-    const btnUrl = `${getBaseUrl(req)}/extension/jobs/${job_id}/documentation`;
+    const btnUrl = `${CLIENT_URL}/extension/jobs/${job_id}/documentation`;
 
     //* send mail
     await sendReuploadDocumentEmail({ email: candidate.email, first_name: candidate.first_name, last_name: candidate.last_name, job_title: job.job_title, organisation_name: employer.organisation_name, btnUrl });

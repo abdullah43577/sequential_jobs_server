@@ -4,14 +4,12 @@ import { handleErrors } from "../../helper/handleErrors";
 import MedicalMgmt from "../../models/medicals/medical.model";
 import { scheduleInterviewSchema } from "../../utils/types/seekerValidatorSchema";
 import User from "../../models/users.model";
-import { EmailTypes, generateProfessionalEmail } from "../../utils/nodemailer.ts/email-templates/generateProfessionalEmail";
-import { transportMail } from "../../utils/nodemailer.ts/transportMail";
-import { getSocketIO } from "../../helper/socket";
-import Notification, { NotificationStatus, NotificationType } from "../../models/notifications.model";
+import { NotificationStatus, NotificationType } from "../../models/notifications.model";
 import Job from "../../models/jobs/jobs.model";
-import { getBaseUrl } from "../../helper/getBaseUrl";
 import { createAndSendNotification } from "../../utils/services/notifications/sendNotification";
 import { sendAllMedicalEmails } from "../../utils/services/emails/scheduleMedicalEmailService";
+
+const { CLIENT_URL } = process.env;
 
 const getJobsWithMedicals = async function (req: IUserRequest, res: Response) {
   try {
@@ -161,7 +159,7 @@ const scheduleMedical = async function (req: IUserRequest, res: Response) {
         startTime: scheduled_date_time.start_time,
         endTime: scheduled_date_time.end_time,
       },
-      baseUrl: getBaseUrl(req),
+      baseUrl: CLIENT_URL as string,
     };
 
     // Send all medical emails

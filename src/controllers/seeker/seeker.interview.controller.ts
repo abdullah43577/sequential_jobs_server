@@ -3,15 +3,14 @@ import { handleErrors } from "../../helper/handleErrors";
 import { IUserRequest } from "../../interface";
 import InterviewMgmt from "../../models/interview/interview.model";
 import { scheduleInterviewSchema } from "../../utils/types/seekerValidatorSchema";
-import Notification, { NotificationStatus, NotificationType } from "../../models/notifications.model";
-import { transportMail } from "../../utils/nodemailer.ts/transportMail";
-import { EmailTypes, generateProfessionalEmail } from "../../utils/nodemailer.ts/email-templates/generateProfessionalEmail";
+import { NotificationStatus, NotificationType } from "../../models/notifications.model";
+
 import User from "../../models/users.model";
-import { getSocketIO } from "../../helper/socket";
 import Job from "../../models/jobs/jobs.model";
-import { getBaseUrl } from "../../helper/getBaseUrl";
 import { createAndSendNotification } from "../../utils/services/notifications/sendNotification";
 import { sendAllInterviewEmails } from "../../utils/services/emails/scheduleInterviewEmailService";
+
+const { CLIENT_URL } = process.env;
 
 //* INTERVIEW MANAGEMENT
 const getJobsWithoutScheduledInterview = async function (req: IUserRequest, res: Response) {
@@ -149,7 +148,7 @@ const scheduleInterview = async function (req: IUserRequest, res: Response) {
         startTime: scheduled_date_time.start_time,
         endTime: scheduled_date_time.end_time,
       },
-      baseUrl: getBaseUrl(req),
+      baseUrl: CLIENT_URL as string,
     };
 
     // Send all interview emails
