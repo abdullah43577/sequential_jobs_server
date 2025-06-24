@@ -40,7 +40,8 @@ export interface IUser {
   isTemporary: boolean;
   expiresAt: Date;
   has_validated_email: boolean;
-  resume: string;
+  resume: string | null;
+  resumeId: string | null;
   account_status: "active" | "deactivated";
 }
 

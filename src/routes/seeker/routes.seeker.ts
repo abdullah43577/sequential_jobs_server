@@ -2,7 +2,7 @@ import { Router } from "express";
 import { validateAccessToken, validateSeekerSession } from "../../middleware/validateToken";
 import { upload } from "../../utils/multerConfig";
 import { applyForJob, getAllJobs, getApplicationTest, getJobDetails, submitApplicationTest } from "../../controllers/seeker/seeker.jobs.controller";
-import { uploadResume } from "../../controllers/seeker/seeker.resumemgmt.controller";
+import { deleteResume, uploadResume } from "../../controllers/seeker/seeker.resumemgmt.controller";
 import { getAllJobTests, getJobTestDetails, submitJobTest } from "../../controllers/seeker/seeker.testmgmt.controller";
 import { getInterviewInfo, getJobsWithoutScheduledInterview, getJobsWithScheduledInterview, scheduleInterview } from "../../controllers/seeker/seeker.interview.controller";
 import { getJobsFormatForDocumentation, submitDocuments, updateApplicantStatus } from "../../controllers/seeker/seeker.documentation.controller";
@@ -28,6 +28,7 @@ seekerRouter.post("/submit_application_test", validateAccessToken, validateSeeke
 
 //* RESUME MANAGEMENT
 seekerRouter.put("/profile/update", validateAccessToken, validateSeekerSession, upload.single("resume"), uploadResume);
+seekerRouter.delete("/profile/resume/delete", validateAccessToken, validateSeekerSession, deleteResume);
 
 //* TEST MANAGEMENT
 seekerRouter.get("/get_job_tests", validateAccessToken, validateSeekerSession, getAllJobTests);

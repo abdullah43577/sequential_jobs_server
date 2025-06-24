@@ -25,6 +25,7 @@ const userSchema = new Schema<IUser>(
     bio: { type: String, default: null },
     role: { type: String, enum: ["job-seeker", "company", "panelist", "medical-expert", "admin", "super-admin"], required: true },
     resume: { type: String, default: null },
+    resumeId: { type: String, default: null },
     profile_pic: { type: String, default: null },
 
     phone_no: {

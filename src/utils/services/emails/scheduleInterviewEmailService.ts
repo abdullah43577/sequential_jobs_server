@@ -49,7 +49,7 @@ const generateEmployerEmailData = (data: InterviewEmailData) => {
     recipientName: `${data.employer.firstName} ${data.employer.lastName}`,
     message: `A candidate has scheduled an interview for the ${data.job.title} position. Please find the details below:`,
     buttonText: "View Interview Details",
-    buttonAction: `${data.baseUrl}/interviews/${data.interview.id}`,
+    buttonAction: `${data.baseUrl}/dashboard/company/interview-management/${data.interview.id}`,
     additionalDetails: {
       candidate: `${data.candidate.firstName} ${data.candidate.lastName}`,
       date: formattedDate,

@@ -6,7 +6,6 @@ import User from "../models/users.model";
 import { comparePassword, hashPassword } from "../helper/hashPassword";
 import { handleErrors } from "../helper/handleErrors";
 import jwt, { Secret } from "jsonwebtoken";
-import { getBaseUrl } from "../helper/getBaseUrl";
 import { Readable } from "stream";
 import cloudinary from "../utils/cloudinaryConfig";
 import { cleanObject } from "../utils/cleanedObject";
@@ -14,7 +13,7 @@ import { sendWelcomeEmail } from "../utils/services/emails/welcomeEmailService";
 import { sendEmailVerificationSuccessEmail } from "../utils/services/emails/emailVerificationService";
 import { sendForgotPasswordEmail } from "../utils/services/emails/forgotPasswordEmailService";
 import { sendResetPasswordEmail } from "../utils/services/emails/resetPasswordEmailService";
-const { EMAIL_VERIFICATION_TOKEN } = process.env;
+const { EMAIL_VERIFICATION_TOKEN, CLIENT_URL } = process.env;
 
 const testApi = async (req: Request, res: Response) => {
   res.status(200).json({ message: "SERVERS ARE LIVE!!!" });
@@ -97,7 +96,7 @@ const validateEmail = async (req: Request, res: Response) => {
       return res.redirect(`https://sequentialjobs.com/auth/email-activation-success?name=${encodeURIComponent(existingUser.first_name)}`);
     }
 
-    const baseUrl = getBaseUrl(req);
+    const baseUrl = CLIENT_URL as string;
 
     // Send welcome email only for newly verified users using the service
     await sendEmailVerificationSuccessEmail({
@@ -165,7 +164,7 @@ const forgotPassword = async (req: Request, res: Response) => {
     //* send email with the OTP for resetting password
     const resetToken = jwt.sign({ id: user._id }, EMAIL_VERIFICATION_TOKEN as Secret, { expiresIn: "10m" });
 
-    const baseUrl = getBaseUrl(req);
+    const baseUrl = CLIENT_URL as string;
 
     await sendForgotPasswordEmail({ email: user.email, first_name: user.first_name, baseUrl, resetToken });
 

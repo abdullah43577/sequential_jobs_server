@@ -5,9 +5,10 @@ import { handleErrors } from "../../helper/handleErrors";
 import { JobTestSubmissionSchema } from "../../utils/types/seekerValidatorSchema";
 import TestSubmission from "../../models/jobs/testsubmission.model";
 import Test from "../../models/jobs/test.model";
-import { getBaseUrl } from "../../helper/getBaseUrl";
 import { sendTestSubmissionNotificationEmail } from "../../utils/services/emails/testSubmissionEmailService";
 import User from "../../models/users.model";
+
+const { CLIENT_URL } = process.env;
 
 //*  TEST MANAGEMENT
 const getAllJobTests = async function (req: IUserRequest, res: Response) {
@@ -129,7 +130,7 @@ const submitJobTest = async function (req: IUserRequest, res: Response) {
         score: totalScore,
         totalQuestions: test.questions.length,
       },
-      baseUrl: getBaseUrl(req),
+      baseUrl: CLIENT_URL as string,
     });
 
     return res.status(200).json({ message: "Test submitted successfully", submission });
