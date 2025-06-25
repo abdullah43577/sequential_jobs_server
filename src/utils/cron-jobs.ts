@@ -35,11 +35,12 @@ export const checkTrialSubscriptions = async function () {
         //* send notification
         await createAndSendNotification({
           recipient: user._id,
-          sender: "system",
+          sender: null as any,
           title: "⚠️ Your Trial Has Ended",
           message: "Your free trial period has ended, and your account has been downgraded to the Sequential Freemium plan. You still have access to basic features, but to continue enjoying premium benefits, consider upgrading your subscription.`,",
           type: NotificationType.MESSAGE,
           status: NotificationStatus.UNREAD,
+          isSystemGenerated: true,
         });
       })
     );
