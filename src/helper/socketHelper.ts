@@ -3,14 +3,14 @@ import { Types } from "mongoose";
 // types/socket.ts
 export interface SocketUser {
   id: string;
-  role: "user" | "admin";
+  role: "job-seeker" | "company" | "admin" | "super-admin";
 }
 
 // Message payload interfaces
 export interface SendMessagePayload {
   conversationId: Types.ObjectId;
   sender: Types.ObjectId;
-  senderType: "user" | "admin";
+  senderType: "job-seeker" | "company" | "admin" | "super-admin";
   message: string;
   sentAt?: string; // ISO string, server can override
 }
@@ -19,7 +19,7 @@ export interface MessageResponse {
   messageId: Types.ObjectId;
   conversationId: Types.ObjectId;
   sender: Types.ObjectId;
-  senderType: "user" | "admin";
+  senderType: "job-seeker" | "company" | "admin" | "super-admin";
   message: string;
   sentAt: string;
   isFromAI: boolean;
@@ -28,6 +28,7 @@ export interface MessageResponse {
 // Chat initiation interfaces
 export interface InitiateChatPayload {
   initialMessage?: string;
+  senderType: "job-seeker" | "company" | "admin" | "super-admin";
 }
 
 export interface ChatInitiatedResponse {
@@ -114,7 +115,7 @@ export interface MessageDocument {
   _id: Types.ObjectId;
   conversation: Types.ObjectId;
   senderId?: string;
-  senderType?: "user" | "admin";
+  senderType?: "job-seeker" | "company" | "admin" | "super-admin";
   message: string;
   isFromAI: boolean;
   seen: boolean;

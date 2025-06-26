@@ -68,16 +68,6 @@ export const initializeSocket = function (server: HttpServer): TypedServer {
         const user = await User.findById(socket.data.userId);
         if (!user) return socket.emit("chat-error", { message: "User not found!" });
 
-        // const payload = {
-        //   userId: user._id,
-        //   userName: `${user.first_name} ${user.last_name}`,
-        //   userRole: user.role,
-        //   message: data.initialMessage || "New chat initiated",
-        //   avatar: user.profile_pic,
-        //   conversationId: conversation._id,
-        //   priority: "high" as any,
-        // };
-
         const payload = {
           conversationId: conversation._id,
           userId: user._id,
@@ -85,12 +75,12 @@ export const initializeSocket = function (server: HttpServer): TypedServer {
           userRole: user.role,
           message: data.initialMessage || "New chat initiated",
           avatar: user.profile_pic,
-          priority: "high" as any,
+          priority: user.role === "admin" ? "high" : "normal",
           lastMessageTime: conversation.createdAt,
         };
 
         // NOTIFY SUPPORT POOL ABOUT NEW CHAT
-        socket.to("support-pool").emit("new-chat-request", payload);
+        socket.to("support-pool").emit("new-chat-request", payload as any);
 
         socket.emit("chat-initiated", {
           conversationId: conversation._id,
@@ -208,7 +198,7 @@ export const initializeSocket = function (server: HttpServer): TypedServer {
     //* ==================== RESOLVING CHAT =====================================
     socket.on("resolve-chat", async data => {
       try {
-        if (socket.data.userRole !== "admin") {
+        if (socket.data.userRole !== "admin" && socket.data.userRole !== "super-admin") {
           socket.emit("chat-error", { message: "Only support agents can resolve chats" });
           return;
         }
@@ -271,7 +261,7 @@ async function initiateChat(userId: Types.ObjectId, data: InitiateChatPayload): 
       await createMessage({
         conversation: conversation._id,
         sender: userId,
-        senderType: "user",
+        senderType: data.senderType,
         message: data.initialMessage,
         // messageType: "text",
         isFromAI: false,
@@ -292,7 +282,7 @@ async function acceptChat(conversationId: string, agentId: string): Promise<void
   });
 }
 
-async function createMessage(messageData: { conversation: Types.ObjectId; sender: Types.ObjectId; senderType: "user" | "admin"; message: string; isFromAI: boolean }): Promise<MessageDocument> {
+async function createMessage(messageData: { conversation: Types.ObjectId; sender: Types.ObjectId; senderType: "job-seeker" | "company" | "admin" | "super-admin"; message: string; isFromAI: boolean }): Promise<MessageDocument> {
   try {
     const message = new Message({
       ...messageData,

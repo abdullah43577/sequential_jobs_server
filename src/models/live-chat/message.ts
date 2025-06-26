@@ -3,7 +3,7 @@ import { model, Schema, Types } from "mongoose";
 interface IMessage {
   conversation: Types.ObjectId;
   sender: Types.ObjectId;
-  senderType: "user" | "admin";
+  senderType: "job-seeker" | "company" | "admin" | "super-admin";
   message: string;
   seen: boolean;
   sentAt: Date;
@@ -24,8 +24,8 @@ const messageSchema = new Schema<IMessage>(
     },
     senderType: {
       type: String,
-      enum: ["user", "admin"],
-      default: "user",
+      enum: ["job-seeker", "company", "admin", "super-admin"],
+      required: true,
     },
     message: {
       type: String,

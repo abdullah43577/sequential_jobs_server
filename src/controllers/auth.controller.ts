@@ -174,6 +174,32 @@ const forgotPassword = async (req: Request, res: Response) => {
   }
 };
 
+const updatePassword = async (req: IUserRequest, res: Response) => {
+  try {
+    const { userId } = req;
+    const { current_password, new_password } = req.body;
+    if (!current_password || !new_password) return res.status(400).json({ message: "Current Password and New Password is required" });
+
+    const user = await User.findById(userId);
+    if (!user) return res.status(404).json({ message: "User not found!" });
+
+    const isMatch = await comparePassword(current_password, user.password);
+
+    if (!isMatch) return res.status(400).json({ message: "Password Invalid" });
+
+    //* hash password
+    const hashedPassword = await hashPassword(new_password);
+
+    user.password = hashedPassword;
+
+    await user.save();
+
+    res.status(200).json({ message: "Password Updated Successfully!" });
+  } catch (error) {
+    handleErrors({ res, error });
+  }
+};
+
 const resetPassword = async (req: Request, res: Response) => {
   try {
     const { token } = req.query;
@@ -289,4 +315,4 @@ const generateNewToken = async (req: IUserRequest, res: Response) => {
   }
 };
 
-export { testApi, createUser, updateJobPreferences, validateEmail, loginUser, forgotPassword, resetPassword, validateOAuthSession, generateNewToken, getProfile, updateProfile };
+export { testApi, createUser, updateJobPreferences, validateEmail, loginUser, forgotPassword, updatePassword, resetPassword, validateOAuthSession, generateNewToken, getProfile, updateProfile };
