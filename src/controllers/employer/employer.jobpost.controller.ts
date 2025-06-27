@@ -205,86 +205,26 @@ const getJobDraft = async function (req: IUserRequest, res: Response) {
 };
 
 const applicationTest = async function (req: IUserRequest, res: Response) {
+  // const session = await mongoose.startSession();
+  // session.startTransaction();
+
   try {
     const { job_id, instruction, questions } = testSchema.parse(req.body);
 
-    const job = await Job.findById(job_id).select("application_test employer stage is_live");
+    const job = await Job.findById(job_id).select("application_test employer stage");
     if (!job) {
       return res.status(404).json({ message: "Job with the specified ID not found" });
     }
 
     let test;
-    let cutoffRecalculated = false;
 
     if (job.application_test) {
-      // Get the existing test to compare total marks
-      const existingTest = await Test.findById(job.application_test).select("questions cut_off_points");
-      const existingTotalMarks = existingTest?.questions.reduce((acc, q) => acc + q.score, 0) || 0;
-      const newTotalMarks = questions.reduce((acc, q) => acc + q.score, 0);
-
-      // Update the test
       test = await Test.findByIdAndUpdate(job.application_test, { instruction, questions }, { returnDocument: "after", runValidators: true });
 
-      if (!test) return res.status(400).json({ message: "Test not found!" });
-
-      // Check if cutoff points need recalculation
-      if (existingTest?.cut_off_points && existingTotalMarks !== newTotalMarks) {
-        // Recalculate cutoff points proportionally
-        const oldCutoff = existingTest.cut_off_points;
-        const ratio = newTotalMarks / existingTotalMarks;
-
-        const newCutoff = {
-          not_suitable: {
-            min: 0,
-            max: Math.floor(oldCutoff.not_suitable.max * ratio),
-          },
-          probable: {
-            min: Math.floor(oldCutoff.not_suitable.max * ratio) + 1,
-            max: Math.floor(oldCutoff.probable.max * ratio),
-          },
-          suitable: {
-            min: Math.floor(oldCutoff.probable.max * ratio) + 1,
-            max: newTotalMarks,
-          },
-        };
-
-        // Validate the new cutoff points make sense
-        if (newCutoff.probable.min <= newCutoff.not_suitable.max || newCutoff.suitable.min <= newCutoff.probable.max) {
-          // If proportional calculation doesn't work, reset to default ranges
-          const third = Math.floor(newTotalMarks / 3);
-          newCutoff.not_suitable = { min: 0, max: third };
-          newCutoff.probable = { min: third + 1, max: third * 2 };
-          newCutoff.suitable = { min: third * 2 + 1, max: newTotalMarks };
-        }
-
-        // Update the cutoff points
-        test.cut_off_points = newCutoff;
-        await test.save();
-        cutoffRecalculated = true;
-
-        // If job was live, you might want to consider making it not live
-        // since the scoring criteria has changed
-        if (job.is_live) {
-          job.is_live = false;
-          job.stage = "set_cut_off_points"; // Reset to cutoff stage for review
-          await job.save();
-        }
-      }
-
-      const response: any = {
-        message: "Application test updated successfully",
-        test,
-      };
-
-      if (cutoffRecalculated) {
-        response.cutoff_recalculated = true;
-        response.warning = job.is_live ? "Cutoff points have been recalculated due to changes in total marks. Job has been taken offline for review." : "Cutoff points have been recalculated due to changes in total marks.";
-      }
-
-      return res.status(200).json(response);
+      // await session.commitTransaction();
+      return res.status(200).json({ message: "Application test updated successfully", test });
     }
 
-    // Create new test (existing logic)
     test = await Test.create({
       job: job_id,
       employer: job.employer,
@@ -296,13 +236,12 @@ const applicationTest = async function (req: IUserRequest, res: Response) {
     // Update the job document to reference the new test
     job.application_test = test._id;
     job.stage = "set_cv_sorting_question";
+    if (job.is_live) job.is_live = false;
     await job.save();
 
-    return res.status(200).json({
-      message: "Application test created successfully",
-      application_test_id: test._id,
-    });
+    return res.status(200).json({ message: "Application test created successfully", application_test_id: test._id });
   } catch (error) {
+    // await session.abortTransaction();
     handleErrors({ res, error });
   }
 };

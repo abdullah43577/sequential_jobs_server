@@ -49,38 +49,3 @@ export const getCompatibleExperienceLevels = (jobRequiredLevel: string) => {
   // For other levels, include current level and below (overqualified candidates)
   return levels.slice(0, jobIndex + 1);
 };
-
-export const recalculateCutoffPoints = (oldCutoff: any, oldTotal: number, newTotal: number) => {
-  if (oldTotal === newTotal) return oldCutoff;
-
-  const ratio = newTotal / oldTotal;
-
-  // Proportional scaling
-  let newCutoff = {
-    not_suitable: {
-      min: 0,
-      max: Math.floor(oldCutoff.not_suitable.max * ratio),
-    },
-    probable: {
-      min: Math.floor(oldCutoff.not_suitable.max * ratio) + 1,
-      max: Math.floor(oldCutoff.probable.max * ratio),
-    },
-    suitable: {
-      min: Math.floor(oldCutoff.probable.max * ratio) + 1,
-      max: newTotal,
-    },
-  };
-
-  // Validate ranges don't overlap
-  if (newCutoff.probable.min <= newCutoff.not_suitable.max || newCutoff.suitable.min <= newCutoff.probable.max) {
-    // Fallback to equal distribution
-    const third = Math.floor(newTotal / 3);
-    newCutoff = {
-      not_suitable: { min: 0, max: third },
-      probable: { min: third + 1, max: third * 2 },
-      suitable: { min: third * 2 + 1, max: newTotal },
-    };
-  }
-
-  return newCutoff;
-};
