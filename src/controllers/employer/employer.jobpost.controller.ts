@@ -13,7 +13,7 @@ import { createAndSendNotification } from "../../utils/services/notifications/se
 import { NotificationStatus, NotificationType } from "../../models/notifications.model";
 import { sendMatchingJobEmail } from "../../utils/services/emails/matchingJobEmailService";
 
-//* BULK UPLOAD
+//* BULK UPLOADs
 const handleBulkUpload = async function (req: IUserRequest, res: Response) {
   if (!req.file || !req.file.buffer) {
     return res.status(400).json({ message: "No file uploaded" });
