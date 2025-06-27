@@ -211,7 +211,7 @@ const applicationTest = async function (req: IUserRequest, res: Response) {
   try {
     const { job_id, instruction, questions } = testSchema.parse(req.body);
 
-    const job = await Job.findById(job_id).select("application_test, employer stage");
+    const job = await Job.findById(job_id).select("application_test employer stage");
     if (!job) {
       return res.status(404).json({ message: "Job with the specified ID not found" });
     }
@@ -236,6 +236,7 @@ const applicationTest = async function (req: IUserRequest, res: Response) {
     // Update the job document to reference the new test
     job.application_test = test._id;
     job.stage = "set_cv_sorting_question";
+    if (job.is_live) job.is_live = false;
     await job.save();
 
     return res.status(200).json({ message: "Application test created successfully", application_test_id: test._id });

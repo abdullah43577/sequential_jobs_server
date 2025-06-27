@@ -1,10 +1,13 @@
 import mongoose from "mongoose";
 import Job from "../models/jobs/jobs.model";
 import Test from "../models/jobs/test.model";
+import { EXPERIENCE_LEVELS, JOB_CATEGORIES } from "./jobsHelper";
 
 export interface JobData {
   JobID: string;
   Title: string;
+  JobCategory: string;
+  RequiredExperienceLevel: string;
   Country: string;
   State: string;
   City: string;
@@ -148,9 +151,23 @@ function formatJobData(jobData: JobData, userId: string) {
     Weekly: "weekly",
   };
 
+  // Validate job category
+  const jobCategory = jobData.JobCategory?.toLowerCase().replace(/\s+/g, "-");
+  if (!JOB_CATEGORIES.includes(jobCategory)) {
+    throw new Error(`Invalid job category: ${jobData.JobCategory}. Must be one of: ${JOB_CATEGORIES.join(", ")}`);
+  }
+
+  // Validate required experience level
+  const experienceLevel = jobData.RequiredExperienceLevel?.toLowerCase();
+  if (!EXPERIENCE_LEVELS.includes(experienceLevel)) {
+    throw new Error(`Invalid experience level: ${jobData.RequiredExperienceLevel}. Must be one of: ${EXPERIENCE_LEVELS.join(", ")}`);
+  }
+
   return {
     employer: userId,
     job_title: jobData.Title,
+    job_category: jobCategory,
+    required_experience_level: experienceLevel,
     country: jobData.Country,
     state: jobData.State,
     city: jobData.City,

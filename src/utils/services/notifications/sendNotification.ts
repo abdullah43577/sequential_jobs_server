@@ -9,6 +9,7 @@ interface CreateNotificationData {
   message: string;
   type: string;
   status: string;
+  isSystemGenerated?: boolean;
 }
 
 export const createAndSendNotification = async function (data: CreateNotificationData) {
@@ -19,6 +20,7 @@ export const createAndSendNotification = async function (data: CreateNotificatio
     title: data.title,
     message: data.message,
     status: data.status,
+    isSystemGenerated: data.isSystemGenerated === true ? data.isSystemGenerated : false,
   });
 
   await sendNotification({
