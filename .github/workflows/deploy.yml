@@ -24,7 +24,7 @@ jobs:
         port: 22
         script: |
           run: echo -e "\033[1mCD into the /var/www/node-seqjob/\033[0m"
-          echo "CD into the /var/www/node-seqjob/"
+          echo "\033[1mCD into the /var/www/node-seqjob/\033[0m"
           cd /var/www/node-seqjob/
 
           echo "Pulling latest update from remote"
