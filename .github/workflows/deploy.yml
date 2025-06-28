@@ -15,7 +15,7 @@ jobs:
 
     steps:
     - name: Deploy to Staging
-      if: github.ref == 'refs/heads/staging'  # Runs only for the staging branch
+      if: github.ref == 'refs/heads/dev'  # Runs only for the staging branch
       uses: appleboy/ssh-action@master
       with:
         host: ${{ secrets.STAGING_HOST }}
