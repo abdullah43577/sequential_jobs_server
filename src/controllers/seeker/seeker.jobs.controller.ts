@@ -85,7 +85,7 @@ const getJobDetails = async function (req: IUserRequest, res: Response) {
     // if (cachedJob) return res.status(200).json(cachedJob);
 
     const job = await Job.findById(job_id)
-      .select("employer job_title country state city job_type salary currency_type years_of_exp description application_test applicants createdAt")
+      .select("employer job_title country state city job_type salary currency_type required_experience_level description application_test applicants createdAt")
       .populate({ path: "application_test", select: "instruction questions type" })
       .populate({ path: "employer", select: "organisation_name" })
       .lean();

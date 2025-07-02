@@ -175,7 +175,6 @@ function formatJobData(jobData: JobData, userId: string) {
     employment_type: employmentTypeMap[jobData.EmploymentType] || jobData.EmploymentType.toLowerCase(),
     salary: Number(jobData.Salary),
     currency_type: jobData.CurrencyType || "USD",
-    years_of_exp: Number(jobData.YearsOfExperience),
     payment_frequency: paymentFrequencyMap[jobData.PaymentFrequency] || jobData.PaymentFrequency.toLowerCase(),
     generic_skills: jobData.GenericSkills ? jobData.GenericSkills.split(",").map(s => s.trim()) : [],
     technical_skills: jobData.TechnicalSkills ? jobData.TechnicalSkills.split(",").map(s => s.trim()) : [],

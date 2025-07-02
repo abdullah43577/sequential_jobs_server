@@ -20,7 +20,6 @@ const jobSchema = new Schema<IJob>(
     employment_type: { type: String, enum: ["full_time", "part_time", "contract"] },
     salary: { type: Number },
     currency_type: { type: String, enum: ["NGN", "USD", "EUR", "CFA", "GBP", "AUD", "CAD"] },
-    years_of_exp: { type: Number },
     payment_frequency: { type: String, enum: ["yearly", "monthly", "weekly"] },
     generic_skills: [{ type: String }],
     technical_skills: [{ type: String }],

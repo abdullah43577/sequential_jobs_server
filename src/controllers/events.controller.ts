@@ -53,7 +53,7 @@ const getSeekerEvents = async function (req: IUserRequest, res: Response) {
           .map(candidate => ({
             type: "interview",
             event_id: interview._id,
-            description: `Interview with ${interview.employer.organisation_name} for the position of ${interview.job.job_title}`,
+            description: `Interview with ${interview.employer.organisation_name} for the position of ${interview.job?.job_title}`,
             scheduled_date_time: candidate.scheduled_date_time ?? null,
             duration: `${candidate.scheduled_date_time?.start_time} - ${candidate.scheduled_date_time?.end_time}`,
             organisation_name: interview.employer.organisation_name,

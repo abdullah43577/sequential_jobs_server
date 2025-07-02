@@ -96,7 +96,7 @@ export const registrationEmail = function ({ title, name, message, btnTxt, btnAc
         </mj-text>
 
         <mj-text font-size="12px" color="#cccccc" align="center" padding="5px 0" css-class="mobile-footer">
-          <a href="#" style="color: #cccccc; text-decoration: underline;">Unsubscribe</a> | <a href="#" style="color: #cccccc; text-decoration: underline;">Privacy Policy</a>
+           <a href="https://sequentialjobs.com/privacy-policy" style="color: #cccccc; text-decoration: underline;">Privacy Policy</a>
         </mj-text>
       </mj-column>
     </mj-section>
