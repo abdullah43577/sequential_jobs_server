@@ -12,6 +12,7 @@ import User from "../../models/users.model";
 import { createAndSendNotification } from "../../utils/services/notifications/sendNotification";
 import { NotificationStatus, NotificationType } from "../../models/notifications.model";
 import { sendMatchingJobEmail } from "../../utils/services/emails/matchingJobEmailService";
+import MedicalMgmt from "../../models/medicals/medical.model";
 
 //* BULK UPLOAD
 const handleBulkUpload = async function (req: IUserRequest, res: Response) {
@@ -74,6 +75,7 @@ const deleteJob = async function (req: IUserRequest, res: Response) {
     await Test.deleteMany({ job: job_id });
     await InterviewMgmt.deleteMany({ job: job_id });
     await JobTest.deleteMany({ job: job_id });
+    await MedicalMgmt.deleteMany({ job: job_id });
     res.status(200).json({ message: "Job Deleted Successfully!" });
   } catch (error) {
     handleErrors({ res, error });
@@ -99,7 +101,7 @@ const toggleJobState = async function (req: IUserRequest, res: Response) {
     // Only validate if trying to set status to true (make job live)
     if (status === true) {
       // Step 1: Validate required job fields
-      const requiredJobFields = ["job_title", "country", "state", "city", "job_type", "employment_type", "salary", "currency_type", "years_of_exp", "payment_frequency", "description"];
+      const requiredJobFields = ["job_title", "country", "state", "city", "job_type", "employment_type", "salary", "currency_type", "required_experience_level", "payment_frequency", "description"];
 
       const missingFields = requiredJobFields.filter(field => !(job as any)[field]);
 
@@ -196,7 +198,7 @@ const getJobDraft = async function (req: IUserRequest, res: Response) {
     const { job_id } = req.query;
     if (!job_id) return res.status(400).json({ message: "Job ID is required" });
 
-    const job = await Job.findById(job_id).select("job_title country state city job_type employment_type salary currency_type payment_frequency years_of_exp generic_skills technical_skills description job_category required_experience_level").lean();
+    const job = await Job.findById(job_id).select("job_title country state city job_type employment_type salary currency_type payment_frequency generic_skills technical_skills description job_category required_experience_level").lean();
 
     res.status(200).json({ success: !!job, job });
   } catch (error) {

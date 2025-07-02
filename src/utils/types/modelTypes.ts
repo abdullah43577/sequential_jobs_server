@@ -71,7 +71,6 @@ export interface IJob {
   employment_type: "full_time" | "part_time" | "contract";
   salary: number;
   currency_type: "NGN" | "USD" | "EUR" | "CFA" | "GBP" | "AUD" | "CAD";
-  years_of_exp: number;
   payment_frequency: "yearly" | "monthly" | "weekly";
   generic_skills: string[];
   technical_skills: string[];
