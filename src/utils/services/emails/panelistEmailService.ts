@@ -25,7 +25,7 @@ const generateNewPanelistEmailData = (data: PanelistInviteData) => ({
   
   ${data.isTemporary && data.tempPassword ? `\n\nTemporary Account Credentials:\nEmail: ${data.email}\nPassword: ${data.tempPassword}\n\nThis account will expire in 7 days. Please change your password after first login.` : ""}`,
   buttonText: "Access Interview Panel",
-  buttonAction: `https://login?email=${encodeURIComponent(data.email)}${data.isTemporary ? "&temp=true" : ""}`,
+  buttonAction: "https://sequentialjobs.com/auth/login",
   additionalDetails: {
     location: "Virtual Interview",
     organizerName: "Sequential Jobs Team",
@@ -42,7 +42,7 @@ const generateExistingPanelistEmailData = (data: PanelistInviteData) => ({
   
   Please use your existing account credentials to access the interview panel.`,
   buttonText: "Access Interview Panel",
-  buttonAction: `https://login?email=${encodeURIComponent(data.email)}`,
+  buttonAction: "https://sequentialjobs.com/auth/login",
   additionalDetails: {
     location: "Virtual Interview",
     organizerName: "Sequential Jobs Team",
