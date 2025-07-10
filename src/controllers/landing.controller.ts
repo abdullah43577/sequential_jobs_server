@@ -79,3 +79,5 @@ const getCompanyJobs = async function (req: Request, res: Response) {
 };
 
 export { getLandingJobs, getLandingJobById, getCompanyJobs };
+
+//
