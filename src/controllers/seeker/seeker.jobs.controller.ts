@@ -20,8 +20,6 @@ const getAllJobs = async function (req: IUserRequest, res: Response) {
     const currentCountry = req.query.currentCountry as string;
     const skip = (page - 1) * limit;
 
-    console.log(currentCountry, "current country filter");
-
     //* GET USER JOB PREFERENCES
     const user = await User.findById(userId).select("job_preferences");
 
@@ -30,13 +28,6 @@ const getAllJobs = async function (req: IUserRequest, res: Response) {
     // Build query with country filter if provided
     const baseQuery = { is_live: true };
     const query = currentCountry && currentCountry.trim() ? { ...baseQuery, country: new RegExp(`^${currentCountry.trim()}$`, "i") } : baseQuery;
-
-    // const cacheKey = `cached_jobs__${userId}__page_${page}__country_${currentCountry || 'all'}`;
-
-    // const cachedJobs = cache.get(cacheKey);
-    // if (cachedJobs) {
-    //   return res.status(200).json(cachedJobs);
-    // }
 
     // Get total job count with country filter
     const totalJobs = await Job.countDocuments(query);
@@ -79,10 +70,6 @@ const getJobDetails = async function (req: IUserRequest, res: Response) {
   try {
     const { userId } = req;
     const { job_id } = req.params;
-
-    // const cacheKey = `single_job_cache__${job_id}`;
-    // const cachedJob = cache.get(cacheKey);
-    // if (cachedJob) return res.status(200).json(cachedJob);
 
     const job = await Job.findById(job_id)
       .select("employer job_title country state city job_type salary currency_type required_experience_level description application_test applicants createdAt")
@@ -273,5 +260,3 @@ const submitApplicationTest = async function (req: IUserRequest, res: Response) 
 };
 
 export { getAllJobs, getJobDetails, applyForJob, getApplicationTest, submitApplicationTest };
-
-// test

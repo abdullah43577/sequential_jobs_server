@@ -81,10 +81,10 @@ export const registrationEmail = function ({ title, name, message, btnTxt, btnAc
     <mj-section background-color="#2c3e50" padding="30px 0">
       <mj-column width="100%">
         <mj-social mode="horizontal" padding="10px 0">
-          <mj-social-element name="facebook" href="https://www.facebook.com/" />
-          <mj-social-element name="twitter" href="https://twitter.com/" />
-          <mj-social-element name="linkedin" href="https://www.linkedin.com/" />
-          <mj-social-element name="instagram" href="https://www.instagram.com/" />
+          <mj-social-element name="facebook" href="https://web.facebook.com/sequential.jobs" />
+          <mj-social-element name="twitter" href="https://x.com/Sequential_Jobs" />
+          <mj-social-element name="linkedin" href="https://www.linkedin.com/company/77684353/admin/dashboard/" />
+          <mj-social-element name="instagram" href="https://www.instagram.com/sequential_jobs/" />
         </mj-social>
 
         <mj-text font-size="16px" color="#ffffff" align="center" padding="5px 0" css-class="mobile-footer">

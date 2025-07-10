@@ -22,7 +22,7 @@ const generateWelcomeEmailData = (data: WelcomeEmailData) => ({
     data.subscriptionPlan && data.trialDays ? `\n\nYou've been automatically enrolled in our ${data.subscriptionPlan} plan for the next ${data.trialDays} days.` : ""
   }\n\nTo get started, please verify your email address by clicking the button below. This helps us ensure the security of your account.`,
   btnTxt: "Verify Email Address",
-  btnAction: data.verificationUrl || `https://sequential-jobs-server.onrender.com/api/auth/verify-email?token=${data.verificationToken}`,
+  btnAction: data.verificationUrl || `https://node-test.sequentialjobs.watchdoglogisticsng.com/api/auth/verify-email?token=${data.verificationToken}`,
 });
 
 export const createWelcomeEmail = (data: WelcomeEmailData): EmailResult => {
