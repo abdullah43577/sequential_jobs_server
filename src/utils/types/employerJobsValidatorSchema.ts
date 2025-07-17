@@ -86,4 +86,5 @@ export const PanelistGradeCandidate = z.object({
   panelist_email: z.string().email(),
   candidate_id: z.string(),
   job_id: z.string(),
+  remark: z.string().optional(),
 });
