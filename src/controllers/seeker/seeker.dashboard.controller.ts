@@ -35,40 +35,41 @@ const getAppliedJobs = async function (req: IUserRequest, res: Response) {
   }
 };
 
-const getInterviewsScheduled = async function (req: IUserRequest, res: Response) {
-  try {
-    const { userId } = req;
+// const getInterviewsScheduled = async function (req: IUserRequest, res: Response) {
+//   try {
+//     const { userId } = req;
 
-    const interviews = await InterviewMgmt.find({ "candidates.candidate": userId })
-      .select("job employer candidates")
-      .populate<{ job: { _id: string; job_title: string; applicants: { applicant: string; date_of_application: string; status: string }[] } }>("job", "job_title applicants")
-      .populate<{ employer: { _id: string; organisation_name: string } }>("employer", "organisation_name")
-      .lean();
+//     const interviews = await InterviewMgmt.find({ "candidates.candidate": userId, "candidates.scheduled_date_time": { $exists: true } })
+//       .select("job employer candidates")
+//       .populate<{ job: { _id: string; job_title: string; applicants: { applicant: string; date_of_application: string; status: string }[] } }>("job", "job_title applicants")
+//       .populate<{ employer: { _id: string; organisation_name: string } }>("employer", "organisation_name")
+//       .lean();
 
-    if (!interviews) return res.status(200).json([]);
+//     if (!interviews) return res.status(200).json([]);
 
-    const formattedResponse = interviews
-      .map(interview => {
-        const applicantEntry = interview.job.applicants.find(app => app.status === "interview_scheduled");
+//     const formattedResponse = interviews
+//       .map(interview => {
+//         const applicantEntry = interview.job.applicants.find(app => app.status === "interview_scheduled");
 
-        if (!applicantEntry) return null;
+//         if (!applicantEntry) return null;
 
-        const dataEntry = interview.candidates.find(cd => cd.candidate.toString() === userId);
+//         const dataEntry = interview.candidates.find(cd => cd.candidate.toString() === userId);
 
-        return {
-          job_title: interview.job.job_title,
-          company_name: interview.employer.organisation_name,
-          interview_attended: dataEntry?.status === "completed",
-          interview_score: dataEntry?.interview_score || "Not Graded",
-        };
-      })
-      .filter(Boolean);
+//         return {
+//           job_title: interview.job.job_title,
+//           company_name: interview.employer.organisation_name,
+//           interview_attended: dataEntry?.status === "completed",
+//           interview_score: dataEntry?.interview_score || "Not Graded",
+//           scheduled_date_time: dataEntry?.scheduled_date_time,
+//         };
+//       })
+//       .filter(Boolean);
 
-    res.status(200).json(formattedResponse);
-  } catch (error) {
-    handleErrors({ res, error });
-  }
-};
+//     res.status(200).json(formattedResponse);
+//   } catch (error) {
+//     handleErrors({ res, error });
+//   }
+// };
 
 const getInterviewsAttended = async function (req: IUserRequest, res: Response) {
   try {
@@ -207,4 +208,4 @@ const getJobOffers = async function (req: IUserRequest, res: Response) {
   }
 };
 
-export { getAppliedJobs, getInterviewsScheduled, getInterviewsAttended, getJobTestsInvite, getJobTestsResult, getJobOffers };
+export { getAppliedJobs, getInterviewsAttended, getJobTestsInvite, getJobTestsResult, getJobOffers };

@@ -412,7 +412,7 @@ const handleFetchRatingDetailsForPanelists = async function (req: IUserRequest, 
 
 const handleGradeCandidate = async function (req: IUserRequest, res: Response) {
   try {
-    const { panelist_email, candidate_id, job_id, rating_scale } = PanelistGradeCandidate.parse(req.body);
+    const { panelist_email, candidate_id, job_id, rating_scale, remark } = PanelistGradeCandidate.parse(req.body);
 
     const interview = await InterviewMgmt.findOne({ job: job_id });
     if (!interview) return res.status(404).json({ message: "Interview Record not found!" });
@@ -427,6 +427,7 @@ const handleGradeCandidate = async function (req: IUserRequest, res: Response) {
 
     // Assign grades to panelist
     panelistEntry.rating_scale = new Map(Object.entries(rating_scale));
+    if (remark?.trim().length) panelistEntry.remark = remark;
 
     const candidateEntry = interview.candidates.find(c => c.candidate.toString() === candidate_id);
     if (!candidateEntry) return res.status(400).json({ message: "Candidate Entry not found" });
@@ -473,47 +474,6 @@ const handleGradeCandidate = async function (req: IUserRequest, res: Response) {
     handleErrors({ res, error });
   }
 };
-
-// const handleGradeCandidates = async function (req: IUserRequest, res: Response) {
-//   try {
-//     const { interview_id, graded_scale, candidate_id } = req.body;
-
-//     if (!interview_id) return res.status(400).json({ message: "Interview ID is required" });
-
-//     if (!graded_scale || typeof graded_scale !== "object" || Object.keys(graded_scale).length === 0) {
-//       return res.status(400).json({ message: "Graded scale is required!" });
-//     }
-
-//     const interview = await InterviewMgmt.findById(interview_id);
-//     if (!interview) return res.status(404).json({ message: "Interview record not found!" });
-
-//     // Find the specific candidate in the interview
-//     const candidateEntry = interview.candidates.find(c => c.candidate.toString() === candidate_id);
-
-//     if (!candidateEntry) {
-//       return res.status(404).json({ message: "Candidate not found in this interview!" });
-//     }
-
-//     // ✅ Validate that the grading criteria match the global rating scale
-//     const globalCriteria = Array.from(interview.rating_scale.keys());
-//     for (const key of Object.keys(graded_scale)) {
-//       if (!globalCriteria.includes(key)) {
-//         return res.status(400).json({ message: `Invalid rating criterion: ${key}` });
-//       }
-//     }
-
-//     // ✅ Store actual ratings in the candidate's rating scale
-//     for (const [key, value] of Object.entries(graded_scale)) {
-//       candidateEntry.rating_scale?.set(key, Number(value));
-//     }
-
-//     await interview.save();
-
-//     res.status(200).json({ message: "Candidate Graded Successfully!" });
-//   } catch (error) {
-//     handleErrors({ res, error });
-//   }
-// };
 
 export {
   getJobsForInterviews,

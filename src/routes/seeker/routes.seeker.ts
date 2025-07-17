@@ -7,13 +7,12 @@ import { getAllJobTests, getJobTestDetails, submitJobTest } from "../../controll
 import { getInterviewInfo, getJobsWithoutScheduledInterview, getJobsWithScheduledInterview, scheduleInterview } from "../../controllers/seeker/seeker.interview.controller";
 import { getJobsFormatForDocumentation, submitDocuments, updateApplicantStatus } from "../../controllers/seeker/seeker.documentation.controller";
 import { getJobsWithMedicals, getJobsWithScheduledMedicals, getMedicalInfo, scheduleMedical } from "../../controllers/seeker/seeker.medical.controller";
-import { getAppliedJobs, getInterviewsAttended, getInterviewsScheduled, getJobOffers, getJobTestsInvite, getJobTestsResult } from "../../controllers/seeker/seeker.dashboard.controller";
+import { getAppliedJobs, getInterviewsAttended, getJobOffers, getJobTestsInvite, getJobTestsResult } from "../../controllers/seeker/seeker.dashboard.controller";
 
 const seekerRouter = Router();
 
 //* DASHBOARD
 seekerRouter.get("/applied-jobs", validateAccessToken, validateSeekerSession, getAppliedJobs);
-seekerRouter.get("/interviews_scheduled", validateAccessToken, validateSeekerSession, getInterviewsScheduled);
 seekerRouter.get("/get_interviews_attended", validateAccessToken, validateSeekerSession, getInterviewsAttended);
 seekerRouter.get("/get_job_test_invites", validateAccessToken, validateSeekerSession, getJobTestsInvite);
 seekerRouter.get("/get_job_test_result", validateAccessToken, validateSeekerSession, getJobTestsResult);

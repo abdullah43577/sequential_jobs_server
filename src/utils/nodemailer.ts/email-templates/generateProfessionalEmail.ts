@@ -144,10 +144,37 @@ export const generateProfessionalEmail = function ({ type, title, recipientName,
     <mj-section background-color="#2c3e50" padding="30px 0">
       <mj-column width="100%">
         <mj-social mode="horizontal" padding="10px 0">
-          <mj-social-element name="facebook" href="https://web.facebook.com/sequential.jobs" />
-          <mj-social-element name="twitter" href="https://x.com/Sequential_Jobs" />
-          <mj-social-element name="linkedin" href="https://www.linkedin.com/company/77684353/admin/dashboard/" />
-          <mj-social-element name="instagram" href="https://www.instagram.com/sequential_jobs/" />
+                <mj-social-element
+            src="https://www.mailjet.com/images/theme/v1/icons/ico-social/facebook.png"
+            href="https://web.facebook.com/sequential.jobs"
+            alt="Facebook"
+            background-color="#3b5998">
+            Facebook
+          </mj-social-element>
+
+          <mj-social-element
+            src="https://www.mailjet.com/images/theme/v1/icons/ico-social/twitter.png"
+            href="https://x.com/Sequential_Jobs"
+            alt="Twitter"
+            background-color="#55acee">
+            Twitter
+          </mj-social-element>
+
+          <mj-social-element
+            src="https://www.mailjet.com/images/theme/v1/icons/ico-social/linkedin.png"
+            href="https://www.linkedin.com/company/77684353"
+            alt="LinkedIn"
+            background-color="#0077b5">
+            LinkedIn
+          </mj-social-element>
+
+          <mj-social-element
+            src="https://www.mailjet.com/images/theme/v1/icons/ico-social/instagram.png"
+            href="https://www.instagram.com/sequential_jobs/"
+            alt="Instagram"
+            background-color="#e1306c">
+            Instagram
+          </mj-social-element>
         </mj-social>
 
         <mj-text font-size="16px" color="#ffffff" align="center" padding="5px 0" css-class="mobile-footer">

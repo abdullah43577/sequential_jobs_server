@@ -21,6 +21,7 @@ const interviewSchema = new Schema<IInterview>(
       {
         email: { type: String, required: true },
         rating_scale: { type: Map, of: Schema.Types.Mixed, required: true, default: {} },
+        remark: { type: String, default: "" },
       },
     ],
     invitation_letter: { type: String, required: true },
