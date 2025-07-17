@@ -209,3 +209,4 @@ const getJobOffers = async function (req: IUserRequest, res: Response) {
 };
 
 export { getAppliedJobs, getInterviewsAttended, getJobTestsInvite, getJobTestsResult, getJobOffers };
+// test
