@@ -102,7 +102,7 @@ companyRouter.get("/medical/get_jobs", validateAccessToken, validateCompanySessi
 companyRouter.post("/medical/set_medical_schedule", validateAccessToken, validateCompanySession, setMedicalSchedule);
 
 //* PRICING MANAGEMENT
-companyRouter.get("/get_pricing_info", validateAccessToken, validateCompanySession, getPricingInfo);
+companyRouter.get("/get_pricing_info", validateAccessToken, validateCompanyAdminSession, getPricingInfo);
 companyRouter.post("/payment/create-checkout-session", validateAccessToken, validateCompanySession, createCheckoutSession);
 companyRouter.post("/payment/webhook", handleWebhook);
 

@@ -30,7 +30,7 @@ type Feature =
 type FeatureAccess = Record<Feature, UserTier[]>;
 
 // Define feature access permissions
-export const FEATURE_ACCESS: FeatureAccess = {
+const FEATURE_ACCESS: FeatureAccess = {
   aiCandidateMatching: ["freemium", "standard", "pro", "superPro"],
   "15daysResumePoolAccess": ["freemium", "standard", "pro", "superPro"],
   technicalKnowledgeTest: ["freemium", "standard", "pro", "superPro"],

@@ -1,7 +1,7 @@
 import { Request, Response } from "express";
 import { IUserRequest } from "../../interface";
 import { handleErrors } from "../../helper/handleErrors";
-import { FEATURE_ACCESS, fullPlanNameToAccess, getUniqueBenefitsForTier, hasAccess } from "../../utils/subscriptionConfig";
+import { fullPlanNameToAccess, getUniqueBenefitsForTier } from "../../utils/subscriptionConfig";
 import Stripe from "stripe";
 import User from "../../models/users.model";
 import { stripe } from "../../server";
@@ -111,7 +111,8 @@ const handleWebhook = async function (req: Request, res: Response) {
   const sig = req.headers["stripe-signature"] as string;
 
   if (!sig) {
-    return res.status(400).send("No Stripe signature found");
+    console.warn("[Webhook] Missing Stripe signature.");
+    return res.status(400).json({ message: "No Stripe signature found" });
   }
 
   let event: Stripe.Event;
@@ -119,7 +120,9 @@ const handleWebhook = async function (req: Request, res: Response) {
   try {
     // Verify and construct the event
     event = stripe.webhooks.constructEvent(req.body, sig, STRIPE_WEBHOOK_SECRET as string);
+    console.log(`[Webhook] Received event: ${event.type}`);
   } catch (err: any) {
+    console.error(`[Webhook] Signature verification failed: ${err.message}`);
     return res.status(400).json({ message: `Webhook Error: ${err.message}` });
   }
 
@@ -134,12 +137,16 @@ const handleWebhook = async function (req: Request, res: Response) {
         const fullPlanName = planName === "Sequential Professional" ? "Sequential Pro" : planName;
         const customerId = session.customer as string;
 
+        console.log(`[Webhook][checkout.session.completed] userId: ${userId}, planName: ${planName}, customerId: ${customerId}`);
+
         if (userId && planName && customerId) {
           await User.findByIdAndUpdate(userId, {
             stripe_customer_id: customerId,
             subscription_status: "pending",
             subscription_tier: fullPlanName,
           });
+
+          console.log(`[Webhook][checkout.session.completed] Updated user ${userId} successfully.`);
         } else {
           console.log(`Missing required metadata: userId: ${!!userId}, tier: ${!!planName}, customerId: ${!!customerId}`);
         }
@@ -150,9 +157,9 @@ const handleWebhook = async function (req: Request, res: Response) {
       case "invoice.paid": {
         const invoice = event.data.object;
         const customerId = invoice.customer as string;
-
-        // Find the user by customerId
         const user = await User.findOne({ stripe_customer_id: customerId });
+
+        console.log(`[Webhook][invoice.paid] Received payment for customerId: ${customerId}`);
 
         if (user) {
           const subscriptionEnd = new Date(invoice.lines.data[0]?.period?.end * 1000);
@@ -162,6 +169,7 @@ const handleWebhook = async function (req: Request, res: Response) {
             subscription_start: new Date(),
             subscription_end: subscriptionEnd,
           });
+          console.log(`[Webhook][invoice.paid] Updated user ${user._id} with successful payment.`);
         } else {
           console.log(`No user found with customer ID: ${customerId}`);
         }
@@ -172,12 +180,15 @@ const handleWebhook = async function (req: Request, res: Response) {
       case "invoice.payment_failed": {
         const invoice = event.data.object;
         const customerId = invoice.customer as string;
-
         const user = await User.findOne({ stripe_customer_id: customerId });
+
+        console.log(`[Webhook][invoice.payment_failed] Payment failed for customerId: ${customerId}`);
+
         if (user) {
           await User.findByIdAndUpdate(user._id, {
             subscription_status: "payment_failed",
           });
+          console.log(`[Webhook][invoice.payment_failed] Marked user ${user._id} as payment_failed.`);
         } else {
           console.log(`No user found with customer ID: ${customerId}`);
         }
