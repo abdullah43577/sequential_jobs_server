@@ -124,7 +124,7 @@ const getJobTestsInvite = async function (req: IUserRequest, res: Response) {
     const formattedResponse = await Promise.all(
       jobTest
         .map(async jobTest => {
-          const testSubmission = await TestSubmission.findOne({ test: jobTest.job_test, job: jobTest.job._id, applicant: userId }).lean();
+          const testSubmission = await TestSubmission.findOne({ test: jobTest?.job_test, job: jobTest?.job?._id, applicant: userId }).lean();
 
           return {
             job_title: jobTest?.job?.job_title,
@@ -157,7 +157,7 @@ const getJobTestsResult = async function (req: IUserRequest, res: Response) {
     const formattedResponse = await Promise.all(
       jobTests
         .map(async jobTest => {
-          const testSubmission = await TestSubmission.findOne({ test: jobTest.job_test, applicant: userId });
+          const testSubmission = await TestSubmission.findOne({ test: jobTest?.job_test, applicant: userId });
 
           const jobEntry = jobTest?.job?.applicants.find(app => app?.applicant?.toString() === userId);
 
@@ -191,7 +191,7 @@ const getJobOffers = async function (req: IUserRequest, res: Response) {
         .map(async job => {
           const documentation = await Documentation.findOne({ job: job._id });
 
-          const documentationEntry = documentation?.candidates.find(cd => cd.candidate.toString() === userId);
+          const documentationEntry = documentation?.candidates.find(cd => cd?.candidate?.toString() === userId);
 
           const applicantEntry = job?.applicants?.find(app => app?.applicant?.toString() === userId);
 
