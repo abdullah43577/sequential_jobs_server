@@ -59,6 +59,7 @@ const deleteListing = async function (req: IUserRequest, res: Response) {
     await InterviewMgmt.deleteMany({ job: id });
     await JobTest.deleteMany({ job: id });
     await MedicalMgmt.deleteMany({ job: id });
+    await Test.deleteMany({ job: id });
 
     res.status(200).json({ message: "Job Deleted Successfully!" });
   } catch (error) {
