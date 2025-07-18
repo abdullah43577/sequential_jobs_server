@@ -18,11 +18,11 @@ const getAppliedJobs = async function (req: IUserRequest, res: Response) {
     if (!jobs) return res.status(200).json([]);
 
     const formattedResponse = jobs.map(job => {
-      const dataEntry = job.applicants.find(app => app.applicant.toString() === userId);
+      const dataEntry = job?.applicants?.find(app => app?.applicant?.toString() === userId);
 
       return {
-        job_title: job.job_title,
-        org_name: job.employer.organisation_name,
+        job_title: job?.job_title,
+        org_name: job?.employer?.organisation_name,
         date_of_application: dataEntry?.date_of_application,
         has_offer_letter: dataEntry?.status === "has_offer",
         application_status: dataEntry?.status,
@@ -87,17 +87,17 @@ const getInterviewsAttended = async function (req: IUserRequest, res: Response) 
 
     const formattedResponse = interviews
       .map(interview => {
-        const applicantEntry = interview.job.applicants.find(app => statuses.includes(app.status));
+        const applicantEntry = interview?.job?.applicants.find(app => statuses.includes(app.status));
 
         if (!applicantEntry) return null;
 
-        const dataEntry = interview.candidates.find(cd => cd.candidate.toString() === userId);
+        const dataEntry = interview?.candidates?.find(cd => cd?.candidate?.toString() === userId);
 
         return {
-          job_title: interview.job.job_title,
-          company_name: interview.employer.organisation_name,
-          job_type: interview.job.job_type,
-          employment_type: interview.job.employment_type,
+          job_title: interview?.job?.job_title,
+          company_name: interview?.employer?.organisation_name,
+          job_type: interview?.job?.job_type,
+          employment_type: interview?.job?.employment_type,
           interview_score: dataEntry?.interview_score || "Not Graded",
         };
       })
@@ -122,16 +122,18 @@ const getJobTestsInvite = async function (req: IUserRequest, res: Response) {
     if (!jobTest) return res.status(200).json([]);
 
     const formattedResponse = await Promise.all(
-      jobTest.map(async jobTest => {
-        const testSubmission = await TestSubmission.findOne({ test: jobTest.job_test, job: jobTest.job._id, applicant: userId }).lean();
+      jobTest
+        .map(async jobTest => {
+          const testSubmission = await TestSubmission.findOne({ test: jobTest.job_test, job: jobTest.job._id, applicant: userId }).lean();
 
-        return {
-          job_title: jobTest.job.job_title,
-          org_name: jobTest.employer.organisation_name,
-          invitation_letter: jobTest.invitation_letter,
-          has_taken_job_test: !!testSubmission,
-        };
-      })
+          return {
+            job_title: jobTest?.job?.job_title,
+            org_name: jobTest?.employer?.organisation_name,
+            invitation_letter: jobTest?.invitation_letter,
+            has_taken_job_test: !!testSubmission,
+          };
+        })
+        .filter(Boolean)
     );
 
     res.status(200).json(formattedResponse);
@@ -153,19 +155,21 @@ const getJobTestsResult = async function (req: IUserRequest, res: Response) {
     if (!jobTests) return res.status(200).json([]);
 
     const formattedResponse = await Promise.all(
-      jobTests.map(async jobTest => {
-        const testSubmission = await TestSubmission.findOne({ test: jobTest.job_test, applicant: userId });
+      jobTests
+        .map(async jobTest => {
+          const testSubmission = await TestSubmission.findOne({ test: jobTest.job_test, applicant: userId });
 
-        const jobEntry = jobTest.job.applicants.find(app => app.applicant.toString() === userId);
+          const jobEntry = jobTest?.job?.applicants.find(app => app?.applicant?.toString() === userId);
 
-        return {
-          job_title: jobTest.job.job_title,
-          org_name: jobTest.employer.organisation_name,
-          job_test_score: testSubmission?.score ?? null,
-          invitation_letter: jobTest.invitation_letter,
-          application_status: jobEntry?.status,
-        };
-      })
+          return {
+            job_title: jobTest?.job?.job_title,
+            org_name: jobTest?.employer?.organisation_name,
+            job_test_score: testSubmission?.score ?? null,
+            invitation_letter: jobTest?.invitation_letter,
+            application_status: jobEntry?.status,
+          };
+        })
+        .filter(Boolean)
     );
 
     res.status(200).json(formattedResponse);
@@ -183,23 +187,25 @@ const getJobOffers = async function (req: IUserRequest, res: Response) {
     if (!jobs) return res.status(200).json([]);
 
     const formattedResponse = await Promise.all(
-      jobs.map(async job => {
-        const documentation = await Documentation.findOne({ job: job._id });
+      jobs
+        .map(async job => {
+          const documentation = await Documentation.findOne({ job: job._id });
 
-        const documentationEntry = documentation?.candidates.find(cd => cd.candidate.toString() === userId);
+          const documentationEntry = documentation?.candidates.find(cd => cd.candidate.toString() === userId);
 
-        const applicantEntry = job.applicants.find(app => app.applicant.toString() === userId);
+          const applicantEntry = job?.applicants?.find(app => app?.applicant?.toString() === userId);
 
-        return {
-          job_title: job.job_title,
-          application_status: applicantEntry?.status,
-          invitation_letter: documentationEntry?.invitation_letter ?? null,
-          contract_agreement_file: documentationEntry?.contract_agreement_file ?? null,
-          documents_to_be_uploaded: documentationEntry?.documents ?? null,
-          job_type: job.job_type,
-          employment_type: job.employment_type,
-        };
-      })
+          return {
+            job_title: job?.job_title,
+            application_status: applicantEntry?.status,
+            invitation_letter: documentationEntry?.invitation_letter ?? null,
+            contract_agreement_file: documentationEntry?.contract_agreement_file ?? null,
+            documents_to_be_uploaded: documentationEntry?.documents ?? null,
+            job_type: job?.job_type,
+            employment_type: job?.employment_type,
+          };
+        })
+        .filter(Boolean)
     );
 
     res.status(200).json(formattedResponse);
