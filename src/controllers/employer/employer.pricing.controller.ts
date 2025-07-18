@@ -1,14 +1,49 @@
 import { Request, Response } from "express";
 import { IUserRequest } from "../../interface";
 import { handleErrors } from "../../helper/handleErrors";
-import { pricingPlans, tierToFullPlanName } from "../../utils/subscriptionConfig";
+import { FEATURE_ACCESS, hasAccess, pricingPlans, tierToFullPlanName } from "../../utils/subscriptionConfig";
 import Stripe from "stripe";
 import User from "../../models/users.model";
 import { stripe } from "../../server";
-const { STRIPE_WEBHOOK_SECRET } = process.env;
+const { STRIPE_WEBHOOK_SECRET, SEQUENTIAL_FREEMIUM, SEQUENTIAL_STANDARD, SEQUENTIAL_PRO, SEQUENTIAL_SUPER_PRO } = process.env;
 
 const getPricingInfo = async function (req: IUserRequest, res: Response) {
   try {
+    //* product IDs
+    // const productIds = [SEQUENTIAL_FREEMIUM, SEQUENTIAL_STANDARD, SEQUENTIAL_PRO, SEQUENTIAL_SUPER_PRO];
+
+    // //* retrieve all pricing plans
+    // const products = await Promise.all(productIds.map(id => stripe.products.retrieve(id as string)));
+
+    // const result = await Promise.all(
+    //   products.map(async product => {
+    //     const prices = await stripe.prices.list({ product: product.id, active: true });
+    //     return {
+    //       id: product.id,
+    //       name: product.name,
+    //       description: product.description,
+    //       prices: prices.data.map(price => ({
+    //         id: price.id,
+    //         currency: price.currency,
+    //         unit_amount: price.unit_amount,
+    //         nickname: price.nickname,
+    //       })),
+    //     };
+    //   })
+    // );
+
+    // const formattedPricing = result.map(data => {
+    //   const features = Object.keys(FEATURE_ACCESS).filter(feature => hasAccess(feature as keyof typeof FEATURE_ACCESS, data.name));
+
+    //   return {
+    //     ...data,
+    //     features,
+    //   };
+    // });
+
+    // // console.log(result, "result here");
+    // res.status(200).json(formattedPricing);
+
     // Get the latest pricing plans which now contain Stripe price ID
     const allPricingPlans = Object.values(pricingPlans);
 

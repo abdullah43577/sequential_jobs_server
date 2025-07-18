@@ -30,7 +30,7 @@ type Feature =
 type FeatureAccess = Record<Feature, UserTier[]>;
 
 // Define feature access permissions
-const FEATURE_ACCESS: FeatureAccess = {
+export const FEATURE_ACCESS: FeatureAccess = {
   aiCandidateMatching: ["freemium", "standard", "pro", "superPro"],
   "15daysResumePoolAccess": ["freemium", "standard", "pro", "superPro"],
   technicalKnowledgeTest: ["freemium", "standard", "pro", "superPro"],
@@ -58,19 +58,29 @@ const FEATURE_ACCESS: FeatureAccess = {
   access90DaysResumePool: ["superPro"],
 } as const;
 
-// Map from full plan name to tier identifier
-export const fullPlanNameToTier: Record<string, UserTier> = {
+//* new code being implemented upon
+const fullPlanNameToAccess: Record<string, UserTier> = {
   "Sequential Freemium": "freemium",
   "Sequential Standard": "standard",
-  "Sequential Pro": "pro",
+  "Sequential Professional": "pro",
   "Sequential Super Pro": "superPro",
 };
 
 // Updated hasAccess function to handle both formats
 export const hasAccess = (feature: keyof typeof FEATURE_ACCESS, userTierOrFullName: string): boolean => {
   // Convert full plan name to tier if needed
-  const userTier = fullPlanNameToTier[userTierOrFullName] || (userTierOrFullName as UserTier);
+  const userTier = fullPlanNameToAccess[userTierOrFullName] || (userTierOrFullName as UserTier);
   return FEATURE_ACCESS[feature]?.includes(userTier);
+};
+
+//* ===================================================================== *//
+
+// Map from full plan name to tier identifier
+export const fullPlanNameToTier: Record<string, UserTier> = {
+  "Sequential Freemium": "freemium",
+  "Sequential Standard": "standard",
+  "Sequential Pro": "pro",
+  "Sequential Super Pro": "superPro",
 };
 
 // Define pricing data structure
