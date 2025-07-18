@@ -223,7 +223,7 @@ const getJobsWithScheduledMedicals = async function (req: IUserRequest, res: Res
         },
       });
 
-    if (!medicals || medicals.length === 0) return res.status(200).json({ message: "No jobs with scheduled medicals found!" });
+    if (!medicals || medicals.length === 0) return res.status(200).json([]);
 
     const jobs = medicals.map(medical => {
       const candidate = medical.candidates.find(c => c.candidate.toString() === userId?.toString());
