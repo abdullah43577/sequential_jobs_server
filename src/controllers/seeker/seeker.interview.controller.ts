@@ -214,13 +214,13 @@ const getJobsWithScheduledInterview = async function (req: IUserRequest, res: Re
     if (!interviews) return res.status(404).json({ message: "No Jobs Matching criteria found!" });
 
     const jobs = interviews.map(interview => {
-      const candidate = interview.candidates.find(c => c.candidate.toString() === userId?.toString());
+      const candidate = interview.candidates.find(c => c?.candidate?.toString() === userId?.toString());
 
       return {
-        company_name: interview.job.employer.organisation_name,
-        job_title: interview.job.job_title,
-        created_at: interview.job.createdAt,
-        job_type: interview.job.job_type,
+        company_name: interview?.job?.employer?.organisation_name,
+        job_title: interview?.job?.job_title,
+        created_at: interview?.job?.createdAt,
+        job_type: interview?.job?.job_type,
         has_attended_interview: candidate?.status,
         scheduled_date_time: candidate?.scheduled_date_time,
       };
