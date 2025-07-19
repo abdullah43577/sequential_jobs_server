@@ -5,6 +5,8 @@ import { fullPlanNameToAccess, getUniqueBenefitsForTier } from "../../utils/subs
 import Stripe from "stripe";
 import User from "../../models/users.model";
 import { stripe } from "../../server";
+import { sendUpgradeConfirmationEmail } from "../../utils/services/emails/sendUpgradeConfirmationEmailService";
+import { sendPaymentFailureEmail } from "../../utils/services/emails/sendPaymentFailureEmailService";
 const { STRIPE_WEBHOOK_SECRET, SEQUENTIAL_FREEMIUM, SEQUENTIAL_STANDARD, SEQUENTIAL_PRO, SEQUENTIAL_SUPER_PRO } = process.env;
 
 const getPricingInfo = async function (req: IUserRequest, res: Response) {
@@ -163,12 +165,21 @@ const handleWebhook = async function (req: Request, res: Response) {
         if (user) {
           const subscriptionEnd = new Date(invoice.lines.data[0]?.period?.end * 1000);
 
-          await User.findByIdAndUpdate(user._id, {
-            subscription_status: "payment_successful",
-            subscription_start: new Date(),
-            subscription_end: subscriptionEnd,
-          });
+          const userInfo = await User.findByIdAndUpdate(
+            user._id,
+            {
+              subscription_status: "payment_successful",
+              subscription_start: new Date(),
+              subscription_end: subscriptionEnd,
+            },
+            { returnDocument: "after" }
+          );
+
           console.log(`[Webhook][invoice.paid] Updated user ${user._id} with successful payment.`);
+
+          await sendUpgradeConfirmationEmail({ email: userInfo?.email as string, first_name: userInfo?.first_name as string, last_name: userInfo?.last_name as string, plan_name: userInfo?.subscription_tier as string, btnUrl: "" });
+
+          console.log("Email Upgrade sent successfully to end user");
         } else {
           console.log(`No user found with customer ID: ${customerId}`);
         }
@@ -184,10 +195,18 @@ const handleWebhook = async function (req: Request, res: Response) {
         console.log(`[Webhook][invoice.payment_failed] Payment failed for customerId: ${customerId}`);
 
         if (user) {
-          await User.findByIdAndUpdate(user._id, {
-            subscription_status: "payment_failed",
-          });
+          const userInfo = await User.findByIdAndUpdate(
+            user._id,
+            {
+              subscription_status: "payment_failed",
+            },
+            { returnDocument: "after" }
+          );
           console.log(`[Webhook][invoice.payment_failed] Marked user ${user._id} as payment_failed.`);
+
+          await sendPaymentFailureEmail({ email: userInfo?.email as string, first_name: userInfo?.first_name as string, last_name: userInfo?.last_name as string, plan_name: userInfo?.subscription_tier as string, btnUrl: "" });
+
+          console.log("Email Upgrade Failure message sent sucecssfully to end user");
         } else {
           console.log(`No user found with customer ID: ${customerId}`);
         }
