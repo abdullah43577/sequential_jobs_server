@@ -34,10 +34,10 @@ const getAllJobTests = async function (req: IUserRequest, res: Response) {
         const hasTakenJobTest = await TestSubmission.findOne({ applicant: userId, test: test.job_test });
 
         return {
-          job_test_id: test.job_test, //* the ref to the actual global Test Schema
-          job_title: test.job.job_title,
-          organisation_name: test.employer.organisation_name,
-          updatedAt: test.updatedAt,
+          job_test_id: test?.job_test, //* the ref to the actual global Test Schema
+          job_title: test?.job?.job_title,
+          organisation_name: test?.employer?.organisation_name,
+          updatedAt: test?.updatedAt,
           has_taken_job_test: !!hasTakenJobTest,
         };
       })

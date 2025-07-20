@@ -17,7 +17,6 @@ import { landingRouter } from "./routes/landingRoutes";
 import { eventsRouter } from "./routes/eventRoutes";
 import { adminRouter } from "./routes/admin/routes.admin";
 import Stripe from "stripe";
-import { initializeStripeProducts } from "./utils/initializeStripe";
 import { setupResumeReminder, setupSubscriptionCronJobs } from "./utils/cron-jobs";
 import { ticketRouter } from "./routes/ticketRoutes";
 
@@ -93,8 +92,6 @@ const server = app.listen(PORT, async () => {
     console.log("Connecting to DB....");
     await connectDB();
     console.log(`server started on http://localhost:${PORT}`);
-    //* leave this here it's important to initialize the stripe products
-    await initializeStripeProducts();
 
     //* EXECUTE CRON JOBS
     cronJobs();

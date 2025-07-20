@@ -39,7 +39,7 @@ import {
   handleInviteCandidates,
   handleInvitePanelists,
 } from "../../controllers/employer/employer.interview.controller";
-import { getCandidatesWithAcceptedOffer, getCandidatesWithOffers, getJobsForDocumentation, getQualifiedCandidates, hireCandidate } from "../../controllers/employer/employer.documentation.controller";
+import { getCandidatesWithAcceptedOffer, getCandidatesWithOffers, getJobsForDocumentation, getQualifiedCandidates, sendCandidateOffer } from "../../controllers/employer/employer.documentation.controller";
 import { getJobsForMedical, setMedicalSchedule } from "../../controllers/employer/medicals/employer.medical.controller";
 import { GetActiveJobs, GetAllJobs, GetAllJobsWithCandidatesHires, TotalApplicantsTable } from "../../controllers/employer/employer.dashboard.controller";
 import { createCheckoutSession, getPricingInfo, handleWebhook } from "../../controllers/employer/employer.pricing.controller";
@@ -93,7 +93,7 @@ companyRouter.put("/interview/grade_candidate", validateAccessToken, validatePan
 //* DOCUMENTATION MANAGEMENT
 companyRouter.get("/documentation/get_jobs", validateAccessToken, validateCompanySession, getJobsForDocumentation);
 companyRouter.get("/documentation/get_qualified_candidates", validateAccessToken, validateCompanySession, getQualifiedCandidates);
-companyRouter.post("/documentation/hire_candidate/:job_id", validateAccessToken, validateCompanySession, upload.single("contract_agreement_file"), hireCandidate);
+companyRouter.post("/documentation/send_offer/:job_id", validateAccessToken, validateCompanySession, upload.single("contract_agreement_file"), sendCandidateOffer);
 companyRouter.get("/documentation/get_candidates_with_offers", validateAccessToken, validateCompanySession, getCandidatesWithOffers);
 companyRouter.get("/documentation/get_candidates_with_accepted_offer", validateAccessToken, validateCompanySession, getCandidatesWithAcceptedOffer);
 
@@ -102,7 +102,7 @@ companyRouter.get("/medical/get_jobs", validateAccessToken, validateCompanySessi
 companyRouter.post("/medical/set_medical_schedule", validateAccessToken, validateCompanySession, setMedicalSchedule);
 
 //* PRICING MANAGEMENT
-companyRouter.get("/get_pricing_info", validateAccessToken, validateCompanySession, getPricingInfo);
+companyRouter.get("/get_pricing_info", validateAccessToken, validateCompanyAdminSession, getPricingInfo);
 companyRouter.post("/payment/create-checkout-session", validateAccessToken, validateCompanySession, createCheckoutSession);
 companyRouter.post("/payment/webhook", handleWebhook);
 

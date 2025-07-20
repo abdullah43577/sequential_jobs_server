@@ -75,6 +75,7 @@ const deleteJob = async function (req: IUserRequest, res: Response) {
     await Test.deleteMany({ job: job_id });
     await InterviewMgmt.deleteMany({ job: job_id });
     await JobTest.deleteMany({ job: job_id });
+    await Test.deleteMany({ job: job_id });
     await MedicalMgmt.deleteMany({ job: job_id });
     res.status(200).json({ message: "Job Deleted Successfully!" });
   } catch (error) {

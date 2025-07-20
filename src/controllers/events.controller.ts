@@ -2,7 +2,6 @@ import { Response } from "express";
 import { IUserRequest } from "../interface";
 import { handleErrors } from "../helper/handleErrors";
 import InterviewMgmt from "../models/interview/interview.model";
-import JobTest from "../models/assessment/jobtest.model";
 import MedicalMgmt from "../models/medicals/medical.model";
 
 const getEmployerEvents = async function (req: IUserRequest, res: Response) {
@@ -18,7 +17,7 @@ const getEmployerEvents = async function (req: IUserRequest, res: Response) {
       .flatMap(interview =>
         interview.candidates.map(candidate => ({
           interview_id: interview._id,
-          description: `Interview with ${interview.employer.organisation_name} for the position of ${interview.job.job_title}`,
+          description: `Interview with ${interview.employer.organisation_name} for the position of ${interview?.job?.job_title}`,
           scheduled_date_time: candidate.scheduled_date_time ?? null,
           duration: `${candidate.scheduled_date_time?.start_time} - ${candidate.scheduled_date_time?.end_time}`,
           organisation_name: interview.employer.organisation_name,
@@ -26,6 +25,8 @@ const getEmployerEvents = async function (req: IUserRequest, res: Response) {
         }))
       )
       .filter(event => Object.values(event.scheduled_date_time || {}).length > 0);
+
+    console.log(events, "events here");
 
     res.status(200).json(events);
   } catch (error) {

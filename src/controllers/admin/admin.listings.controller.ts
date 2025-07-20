@@ -2,6 +2,10 @@ import { Response } from "express";
 import { IUserRequest } from "../../interface";
 import { handleErrors } from "../../helper/handleErrors";
 import Job from "../../models/jobs/jobs.model";
+import Test from "../../models/jobs/test.model";
+import InterviewMgmt from "../../models/interview/interview.model";
+import JobTest from "../../models/assessment/jobtest.model";
+import MedicalMgmt from "../../models/medicals/medical.model";
 
 const getListings = async function (req: IUserRequest, res: Response) {
   try {
@@ -51,6 +55,11 @@ const deleteListing = async function (req: IUserRequest, res: Response) {
     if (!id) return res.status(404).json({ message: "Job ID is required!" });
 
     await Job.findByIdAndDelete(id);
+    await Test.deleteMany({ job: id });
+    await InterviewMgmt.deleteMany({ job: id });
+    await JobTest.deleteMany({ job: id });
+    await MedicalMgmt.deleteMany({ job: id });
+    await Test.deleteMany({ job: id });
 
     res.status(200).json({ message: "Job Deleted Successfully!" });
   } catch (error) {
