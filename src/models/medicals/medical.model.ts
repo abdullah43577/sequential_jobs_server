@@ -21,12 +21,13 @@ const medicalSchema = new Schema<IMedical>({
         type: Object,
         default: {},
       },
-      medical_documents: { type: Map, of: String, default: {} },
+      medical_documents: { type: Map, of: Schema.Types.Mixed, default: {} },
       status: {
         type: String,
         enum: ["pending", "confirmed", "completed", "canceled"],
         default: "pending",
       },
+      remark: { type: String, default: "" },
     },
   ],
 });

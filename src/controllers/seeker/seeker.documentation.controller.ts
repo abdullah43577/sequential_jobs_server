@@ -3,8 +3,6 @@ import { IUserRequest } from "../../interface";
 import Job from "../../models/jobs/jobs.model";
 import { handleErrors } from "../../helper/handleErrors";
 import Documentation from "../../models/documentation.model";
-import fs from "fs";
-import path from "path";
 import cloudinary from "../../utils/cloudinaryConfig";
 import { Readable } from "stream";
 

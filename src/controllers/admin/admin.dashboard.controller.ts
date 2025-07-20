@@ -35,12 +35,15 @@ const getSummaryStats = async function (req: IUserRequest, res: Response) {
   }
 };
 
-const deactivateAccount = async function (req: IUserRequest, res: Response) {
+const updateAccountStatus = async function (req: IUserRequest, res: Response) {
   try {
     const { id } = req.params;
-    if (!id) return res.status(400).json({ message: "User ID is required!" });
+    const { status } = req.body;
 
-    const user = await User.findByIdAndUpdate(id, { account_status: "deactivated" });
+    if (!id) return res.status(400).json({ message: "User ID is required!" });
+    if (!status || !["active", "deactivated"].includes(status)) return res.status(400).json({ message: "Status is required and must either be 'active' or 'deactivated'" });
+
+    const user = await User.findByIdAndUpdate(id, { account_status: status });
 
     res.status(200).json({ message: `${user?.first_name}'s account has been disabled successfully!` });
   } catch (error) {
@@ -65,4 +68,4 @@ const deleteAccount = async function (req: IUserRequest, res: Response) {
   }
 };
 
-export { getSummaryStats, deactivateAccount, deleteAccount };
+export { getSummaryStats, updateAccountStatus, deleteAccount };

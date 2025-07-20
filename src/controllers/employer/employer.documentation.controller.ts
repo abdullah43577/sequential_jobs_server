@@ -97,19 +97,17 @@ const getQualifiedCandidates = async function (req: IUserRequest, res: Response)
   }
 };
 
-const hireCandidate = async function (req: IUserRequest, res: Response) {
+const sendCandidateOffer = async function (req: IUserRequest, res: Response) {
   try {
     const { userId } = req;
     const { job_id } = req.params;
-    // const { invitation_letter, documents, candidate_ids } = req.body;
-    const invitation_letter = req.body.invitation_letter;
-    const documents = JSON.parse(req.body.documents || "{}");
-    const candidate_ids = JSON.parse(req.body.candidate_ids || "[]");
+    const { invitation_letter, documents, candidate_id } = req.body;
+
+    const parsedDocuments = JSON.parse(documents) || "{}";
+
     const documentFile = req.file;
 
-    if (!invitation_letter || Object.keys(documents).length === 0) return res.status(400).json({ message: "Invitation Letter and Document Specifications are required" });
-
-    if (!Array.isArray(candidate_ids)) return res.status(400).json({ message: "Candidate IDs must be an array of valid user IDs" });
+    if (!invitation_letter || Object.keys(parsedDocuments).length === 0 || !candidate_id) return res.status(400).json({ message: "Invitation Letter, Document and Candidate ID Specifications are required" });
 
     if (!documentFile) return res.status(404).json({ message: "No File Uploaded!" });
 
@@ -138,46 +136,52 @@ const hireCandidate = async function (req: IUserRequest, res: Response) {
 
     const response = await streamUpload();
 
-    const candidates: { candidate: string; invitation_letter: string; contract_agreement_file: string; documents: Map<string, string>; status?: string }[] = [];
-    candidate_ids.map(id => candidates.push({ candidate: id, invitation_letter, contract_agreement_file: response.secure_url, documents }));
+    const candidate = { candidate: candidate_id, invitation_letter, contract_agreement_file: response.secure_url, documents: parsedDocuments };
 
-    await Documentation.create({
-      job: job_id,
-      candidates,
-    });
+    const user = await User.findById(candidate_id);
+    if (!user) return res.status(404).json({ message: "User not found!" });
 
-    //* send candidate email and notification
-    await Promise.all(
-      candidate_ids.map(async id => {
-        const user = await User.findById(id);
-        if (!user) return;
+    //* find corresponding documentation if it exists
+    const documentation = await Documentation.findOne({ job: job_id });
 
-        const subject = `You're Hired! - ${job.job_title}`;
-        const message = `Congratulations! You have been selected for the ${job.job_title} position at ${job.employer.organisation_name}. An official invitation letter has been issued, and you are required to upload the specified documents to complete your onboarding.`;
+    if (documentation) {
+      const userHasBeenInvitedBefore = documentation.candidates.some(cd => cd.candidate.toString() === candidate_id);
 
-        // Send Email
-        await sendHireCandidateEmail({
-          email: user.email,
-          recipientName: `${user.first_name} ${user.last_name}`,
-          jobTitle: job.job_title,
-          companyName: job.employer.organisation_name,
-          invitationLetter: invitation_letter,
-          dashboardUrl: "http://localhost:8080/user/dashboard",
-        });
+      if (!userHasBeenInvitedBefore) {
+        documentation.candidates.push(candidate);
+        await documentation.save();
+      }
+    } else {
+      await Documentation.create({
+        job: job_id,
+        candidates: [candidate],
+      });
 
-        // Send Notification
-        await createAndSendNotification({
-          recipient: user._id,
-          sender: userId as string,
-          type: NotificationType.APPLICATION_STATUS,
-          title: subject,
-          message,
-          status: NotificationStatus.UNREAD,
-        });
+      const subject = `You're Hired! - ${job.job_title}`;
+      const message = `Congratulations! You have been selected for the ${job.job_title} position at ${job.employer.organisation_name}. An official invitation letter has been issued, and you are required to upload the specified documents to complete your onboarding.`;
 
-        await Job.updateOne({ _id: job_id, "applicants.applicant": user._id }, { $set: { "applicants.$.status": "has_offer" } });
-      })
-    );
+      // Send Email
+      await sendHireCandidateEmail({
+        email: user.email,
+        recipientName: `${user.first_name} ${user.last_name}`,
+        jobTitle: job.job_title,
+        companyName: job.employer.organisation_name,
+        invitationLetter: invitation_letter,
+        dashboardUrl: `${CLIENT_URL}/dashboard/job-seeker/documentation-management`,
+      });
+
+      // Send Notification
+      await createAndSendNotification({
+        recipient: user._id,
+        sender: userId as string,
+        type: NotificationType.APPLICATION_STATUS,
+        title: subject,
+        message,
+        status: NotificationStatus.UNREAD,
+      });
+
+      await Job.updateOne({ _id: job_id, "applicants.applicant": user._id }, { $set: { "applicants.$.status": "has_offer" } });
+    }
 
     res.status(200).json({ message: "Invite Sent Successfully!" });
   } catch (error) {
@@ -206,7 +210,9 @@ const getCandidatesWithOffers = async function (req: IUserRequest, res: Response
     const formattedResponse = job.applicants
       .filter(app => app.status === "has_offer")
       .map(app => {
-        const candidate = interview?.candidates.find(cd => cd.candidate.toString() === app.applicant.toString());
+        const candidate = interview?.candidates.find(cd => cd.candidate.toString() === app.applicant._id.toString());
+
+        console.log(candidate, "candidate info");
 
         return {
           candidate_name: `${app.applicant.first_name} ${app.applicant.last_name}`,
@@ -235,7 +241,7 @@ const getCandidatesWithAcceptedOffer = async function (req: IUserRequest, res: R
 
     if (!job) return res.status(200).json([]);
 
-    const interview = await InterviewMgmt.findOne({ job: job_id });
+    const interview = await InterviewMgmt.findOne({ job: job_id }).lean();
 
     if (!interview) return res.status(404).json({ message: "Interview record not found!" });
 
@@ -245,7 +251,7 @@ const getCandidatesWithAcceptedOffer = async function (req: IUserRequest, res: R
       job.applicants
         .filter(app => app.status === "hired")
         .map(async app => {
-          const candidate = interview?.candidates.find(cd => cd.candidate.toString() === app.applicant.toString());
+          const candidate = interview?.candidates.find(cd => cd.candidate.toString() === app.applicant._id.toString());
 
           const documentation = await Documentation.findOne({ job: job._id });
 
@@ -351,4 +357,4 @@ const requestReUploadDocuments = async function (req: IUserRequest, res: Respons
   }
 };
 
-export { getJobsForDocumentation, getQualifiedCandidates, hireCandidate, getCandidatesWithOffers, getCandidatesWithAcceptedOffer, requestReUploadDocuments };
+export { getJobsForDocumentation, getQualifiedCandidates, sendCandidateOffer, getCandidatesWithOffers, getCandidatesWithAcceptedOffer, requestReUploadDocuments };

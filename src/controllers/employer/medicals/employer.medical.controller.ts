@@ -62,7 +62,7 @@ const setMedicalSchedule = async function (req: IUserRequest, res: Response) {
     const employer = await User.findById(userId).select("organisation_name").lean();
     if (!employer) return res.status(404).json({ message: "Employer not found" });
 
-    const existingMedicals = await MedicalMgmt.findOne({ job: job_id });
+    const existingMedicals = await MedicalMgmt.findOne({ job: job_id }).lean();
     if (existingMedicals) return res.status(200).json({ message: "A Medical record for the specified job already exists." });
 
     const processedTimeSlots = data.medical_time_slot.map(slot => ({
