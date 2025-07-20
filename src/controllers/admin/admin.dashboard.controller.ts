@@ -69,3 +69,5 @@ const deleteAccount = async function (req: IUserRequest, res: Response) {
 };
 
 export { getSummaryStats, updateAccountStatus, deleteAccount };
+
+//
