@@ -15,7 +15,14 @@ const getJobsWithMedicals = async function (req: IUserRequest, res: Response) {
   try {
     const { userId } = req;
 
-    const medicals = await MedicalMgmt.find({ "candidates.candidate": userId, "candidates.scheduled_date_time": { $exists: false } })
+    const medicals = await MedicalMgmt.find({
+      candidates: {
+        $elemMatch: {
+          candidate: userId,
+          scheduled_date_time: { $exists: false },
+        },
+      },
+    })
       .select("job candidates")
       .populate<{
         job: {
