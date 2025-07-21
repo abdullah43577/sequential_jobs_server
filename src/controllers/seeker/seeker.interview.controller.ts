@@ -25,7 +25,15 @@ const getJobsWithoutScheduledInterview = async function (req: IUserRequest, res:
       },
     })
       .select("job candidates")
-      .populate({
+      .populate<{
+        job: {
+          _id: string;
+          job_title: string;
+          createdAt: string;
+          job_type: string;
+          employer: { _id: string; organisation_name: string };
+        };
+      }>({
         path: "job",
         select: "job_title createdAt job_type employer",
         populate: {
@@ -34,22 +42,14 @@ const getJobsWithoutScheduledInterview = async function (req: IUserRequest, res:
         },
       });
 
-    if (!interviews || interviews.length === 0) {
-      return res.status(404).json({ message: "No Jobs Matching criteria found!" });
-    }
+    if (!interviews) return res.status(404).json({ message: "No Jobs Matching criteria found!" });
 
     const jobs = interviews.map(interview => {
       const candidate = interview.candidates.find(c => c.candidate.toString() === userId?.toString());
+
       const is_interview_scheduled = candidate?.scheduled_date_time && Object.keys(candidate.scheduled_date_time).length > 0;
 
-      return {
-        job_id: interview.job._id,
-        company_name: interview.job.employer.organisation_name,
-        job_title: interview.job.job_title,
-        created_at: interview.job.createdAt,
-        job_type: interview.job.job_type,
-        is_interview_scheduled,
-      };
+      return { job_id: interview.job._id, company_name: interview.job.employer.organisation_name, job_title: interview.job.job_title, created_at: interview.job.createdAt, job_type: interview.job.job_type, is_interview_scheduled };
     });
 
     res.status(200).json(jobs);
