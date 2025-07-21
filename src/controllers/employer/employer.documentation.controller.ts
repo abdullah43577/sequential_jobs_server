@@ -30,17 +30,19 @@ const getJobsForDocumentation = async function (req: IUserRequest, res: Response
 
     if (!interviewJobs) return res.status(200).json([]);
 
-    const formattedResponse = interviewJobs.map(data => {
-      return {
-        job_id: data.job._id,
-        job_title: data.job.job_title,
-        date_created: (data.job as any).createdAt,
-        no_of_applicants: data.job.applicants.length,
-        job_type: data.job.job_type,
-        employment_type: data.job.employment_type,
-        action: "",
-      };
-    });
+    const formattedResponse = interviewJobs
+      .filter(data => data.job)
+      .map(data => {
+        return {
+          job_id: data.job?._id,
+          job_title: data.job?.job_title,
+          date_created: (data.job as any).createdAt,
+          no_of_applicants: data.job?.applicants.length,
+          job_type: data.job?.job_type,
+          employment_type: data.job?.employment_type,
+          action: "",
+        };
+      });
 
     return res.status(200).json(formattedResponse);
   } catch (error) {
