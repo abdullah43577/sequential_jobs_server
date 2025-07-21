@@ -29,6 +29,7 @@ export const inviteMedicalist = async (params: MedicalistInviteParams) => {
       role: "medical-expert",
       isTemporary: true,
       expiresAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000), // 7 days
+      has_validated_email: true,
     });
 
     await sendMedicalistInviteEmail({ firstName: nameGuess.firstName, jobTitle, email, tempPassword });

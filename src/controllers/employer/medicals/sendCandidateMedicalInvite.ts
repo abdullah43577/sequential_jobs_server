@@ -1,10 +1,10 @@
 import { Types } from "mongoose";
 import { NotificationStatus, NotificationType } from "../../../models/notifications.model";
 import User from "../../../models/users.model";
-import { EmailTypes, generateProfessionalEmail } from "../../../utils/nodemailer.ts/email-templates/generateProfessionalEmail";
-import { transportMail } from "../../../utils/nodemailer.ts/transportMail";
 import { createAndSendNotification } from "../../../utils/services/notifications/sendNotification";
 import { sendCandidateMedicalEmail } from "../../../utils/services/emails/candidateMedicalEmailInvite";
+
+const { CLIENT_URL } = process.env;
 
 interface CandidateInviteParams {
   candidateId: string | Types.ObjectId;
@@ -23,7 +23,7 @@ export const sendCandidateMedicalInvite = async (params: CandidateInviteParams) 
     if (!candidate) return false;
 
     // Create invite link
-    const medicalInviteLink = `http://localhost:8080/medical-scheduling/${medicalRecordId}`;
+    const medicalInviteLink = `${CLIENT_URL}/dashboard/job-seeker/medicals/schedule_medicals?job_id=/${medicalRecordId}`;
     const expirationDate = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000); // Expires in 7 days
 
     await sendCandidateMedicalEmail({ email: candidate.email, first_name: candidate.first_name, last_name: candidate.last_name, jobTitle, expirationDate, medicalInviteLink, address, employerOrgName });

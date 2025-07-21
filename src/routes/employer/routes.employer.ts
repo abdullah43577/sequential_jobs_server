@@ -1,5 +1,5 @@
 import { Router } from "express";
-import { validateAccessToken, validateCompanyAdminSession, validateCompanySession, validatePanelistSession } from "../../middleware/validateToken";
+import { validateAccessToken, validateCompanyAdminSession, validateCompanySession, validateMedicalistSession, validatePanelistSession } from "../../middleware/validateToken";
 import { upload } from "../../utils/multerConfig";
 import {
   applicationTest,
@@ -40,7 +40,7 @@ import {
   handleInvitePanelists,
 } from "../../controllers/employer/employer.interview.controller";
 import { getCandidatesWithAcceptedOffer, getCandidatesWithOffers, getJobsForDocumentation, getQualifiedCandidates, sendCandidateOffer } from "../../controllers/employer/employer.documentation.controller";
-import { getJobsForMedical, setMedicalSchedule } from "../../controllers/employer/medicals/employer.medical.controller";
+import { getJobsForMedical, handleSubmitMedicalTest, setMedicalSchedule } from "../../controllers/employer/medicals/employer.medical.controller";
 import { GetActiveJobs, GetAllJobs, GetAllJobsWithCandidatesHires, TotalApplicantsTable } from "../../controllers/employer/employer.dashboard.controller";
 import { createCheckoutSession, getPricingInfo, handleWebhook } from "../../controllers/employer/employer.pricing.controller";
 
@@ -100,6 +100,7 @@ companyRouter.get("/documentation/get_candidates_with_accepted_offer", validateA
 //* MEDICAL MANAGEMENT
 companyRouter.get("/medical/get_jobs", validateAccessToken, validateCompanySession, getJobsForMedical);
 companyRouter.post("/medical/set_medical_schedule", validateAccessToken, validateCompanySession, setMedicalSchedule);
+companyRouter.put("/medical/submit_medical", validateAccessToken, validateMedicalistSession, upload.array("medical_files"), handleSubmitMedicalTest);
 
 //* PRICING MANAGEMENT
 companyRouter.get("/get_pricing_info", validateAccessToken, validateCompanyAdminSession, getPricingInfo);
