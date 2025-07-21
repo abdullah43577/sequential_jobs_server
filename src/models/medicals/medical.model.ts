@@ -21,7 +21,7 @@ const medicalSchema = new Schema<IMedical>({
         type: Object,
         default: {},
       },
-      medical_documents: { type: Map, of: Schema.Types.Mixed, default: {} },
+      medical_documents: { type: Object, default: {} },
       status: {
         type: String,
         enum: ["pending", "confirmed", "completed", "canceled"],

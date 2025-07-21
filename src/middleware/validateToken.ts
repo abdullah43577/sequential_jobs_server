@@ -106,7 +106,7 @@ const validateCompanyAdminSession = function (req: IUserRequest, res: Response, 
 const validatePanelistSession = function (req: IUserRequest, res: Response, next: NextFunction) {
   try {
     const { userId, role } = req;
-    if (role !== "panelist") return res.status(401).json({ message: "Unquthorized!, only a panelist is authorized to do this!" });
+    if (role !== "panelist") return res.status(401).json({ message: "Unauthorized!, only a panelist is authorized to do this!" });
 
     next();
   } catch (error) {
@@ -114,4 +114,15 @@ const validatePanelistSession = function (req: IUserRequest, res: Response, next
   }
 };
 
-export { validateAccessToken, validateRefreshToken, validateGoogleVerificationToken, validateAdminSession, validateCompanySession, validateCompanyAdminSession, validateSeekerSession, validatePanelistSession };
+const validateMedicalistSession = function (req: IUserRequest, res: Response, next: NextFunction) {
+  try {
+    const { userId, role } = req;
+    if (role !== "medical-expert") return res.status(401).json({ message: "Unauthorized!, only a medical expert is authorized to do this!" });
+
+    next();
+  } catch (error) {
+    handleErrors({ res, error });
+  }
+};
+
+export { validateAccessToken, validateRefreshToken, validateGoogleVerificationToken, validateAdminSession, validateCompanySession, validateCompanyAdminSession, validateSeekerSession, validatePanelistSession, validateMedicalistSession };

@@ -45,7 +45,9 @@ const updateAccountStatus = async function (req: IUserRequest, res: Response) {
 
     const user = await User.findByIdAndUpdate(id, { account_status: status });
 
-    res.status(200).json({ message: `${user?.first_name}'s account has been disabled successfully!` });
+    const value = status === "active" ? "Activated" : "Deactivated";
+
+    res.status(200).json({ message: `${user?.first_name}'s account has been ${value} successfully!` });
   } catch (error) {
     handleErrors({ res, error });
   }

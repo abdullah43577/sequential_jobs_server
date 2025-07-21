@@ -9,6 +9,8 @@ import User from "../../../models/users.model";
 import { batchInviteMedicalists } from "./inviteMedicalists";
 import { batchInviteCandidates } from "./sendCandidateMedicalInvite";
 import { Types } from "mongoose";
+import cloudinary from "../../../utils/cloudinaryConfig";
+import { Readable } from "stream";
 
 const getJobsForMedical = async function (req: IUserRequest, res: Response) {
   try {
@@ -108,4 +110,101 @@ const setMedicalSchedule = async function (req: IUserRequest, res: Response) {
   }
 };
 
-export { getJobsForMedical, setMedicalSchedule };
+const handleSubmitMedicalTest = async function (req: IUserRequest, res: Response) {
+  try {
+    const { candidate_id, job_id } = req.body;
+    const medicalFiles = req.files as Express.Multer.File[];
+
+    // Validation
+    if (!candidate_id || !job_id) {
+      return res.status(400).json({
+        message: "Candidate ID and Job ID are required",
+      });
+    }
+
+    if (!medicalFiles || medicalFiles.length === 0) {
+      return res.status(400).json({
+        message: "No medical files uploaded",
+      });
+    }
+
+    // Find the medical record
+    const medicalRecord = await MedicalMgmt.findOne({ job: job_id });
+    if (!medicalRecord) {
+      return res.status(404).json({
+        message: "Medical record not found for this job",
+      });
+    }
+
+    // Find the candidate in the medical record
+    const candidateIndex = medicalRecord.candidates.findIndex(candidate => candidate.candidate.toString() === candidate_id);
+
+    if (candidateIndex === -1) {
+      return res.status(404).json({
+        message: "Candidate not found in medical record",
+      });
+    }
+
+    // Upload files to Cloudinary and collect results
+    const uploadPromises = medicalFiles.map(file => {
+      return new Promise<{ fileName: string; url: string }>((resolve, reject) => {
+        const stream = cloudinary.uploader.upload_stream(
+          {
+            folder: `medicals/${job_id}/${candidate_id}`,
+            resource_type: "auto",
+            public_id: `${Date.now()}_${file.originalname.split(".")[0]}`, // Include timestamp to avoid conflicts
+          },
+          (error, result) => {
+            if (error) {
+              reject(error);
+            } else if (result?.secure_url) {
+              resolve({
+                fileName: file.originalname,
+                url: result.secure_url,
+              });
+            } else {
+              reject(new Error("Failed to get secure URL from Cloudinary"));
+            }
+          }
+        );
+
+        // Create a readable stream from the buffer and pipe it to Cloudinary
+        const bufferStream = new Readable();
+        bufferStream.push(file.buffer);
+        bufferStream.push(null); // End of stream
+        bufferStream.pipe(stream);
+      });
+    });
+
+    // Wait for all uploads to complete
+    const uploadResults = await Promise.all(uploadPromises);
+
+    // Create medical_documents object with filename as key and URL as value
+    const medicalDocuments: { [key: string]: string } = {};
+    uploadResults.forEach(({ fileName, url }) => {
+      medicalDocuments[fileName] = url;
+    });
+
+    medicalRecord.candidates[candidateIndex].medical_documents = medicalDocuments;
+
+    // Update status to completed (optional, adjust based on your workflow)
+    medicalRecord.candidates[candidateIndex].status = "completed";
+
+    // Save the updated medical record
+    await medicalRecord.save();
+
+    res.status(200).json({
+      message: "Medical documents uploaded successfully",
+      uploadedFiles: uploadResults.map(result => ({
+        fileName: result.fileName,
+        url: result.url,
+      })),
+      totalFiles: uploadResults.length,
+    });
+  } catch (error) {
+    console.error("Medical upload error:", error);
+    handleErrors({ res, error });
+  }
+};
+
+export { getJobsForMedical, setMedicalSchedule, handleSubmitMedicalTest };
