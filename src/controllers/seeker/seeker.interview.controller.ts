@@ -20,7 +20,7 @@ const getJobsWithoutScheduledInterview = async function (req: IUserRequest, res:
       candidates: {
         $elemMatch: {
           candidate: userId,
-          scheduled_date_time: {},
+          $or: [{ scheduled_date_time: {} }, { scheduled_date_time: null }, { scheduled_date_time: { $exists: false } }],
         },
       },
     })
@@ -41,6 +41,8 @@ const getJobsWithoutScheduledInterview = async function (req: IUserRequest, res:
           select: "organisation_name",
         },
       });
+
+    console.log(interviews, "interviews here for job seeker");
 
     if (!interviews) return res.status(404).json({ message: "No Jobs Matching criteria found!" });
 

@@ -19,7 +19,7 @@ const getJobsWithMedicals = async function (req: IUserRequest, res: Response) {
       candidates: {
         $elemMatch: {
           candidate: userId,
-          scheduled_date_time: {},
+          $or: [{ scheduled_date_time: {} }, { scheduled_date_time: null }, { scheduled_date_time: { $exists: false } }],
         },
       },
     })
@@ -40,6 +40,8 @@ const getJobsWithMedicals = async function (req: IUserRequest, res: Response) {
           select: "organisation_name",
         },
       });
+
+    console.log("medicals", medicals);
 
     if (!medicals) return res.status(404).json({ message: "No Jobs matching criteria found!" });
 
