@@ -41,7 +41,7 @@ const getJobsWithMedicals = async function (req: IUserRequest, res: Response) {
         },
       });
 
-    console.log("medicals", medicals);
+    console.log("medicalss", medicals);
 
     if (!medicals) return res.status(404).json({ message: "No Jobs matching criteria found!" });
 
