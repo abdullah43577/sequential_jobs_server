@@ -20,7 +20,7 @@ const getJobsWithoutScheduledInterview = async function (req: IUserRequest, res:
       candidates: {
         $elemMatch: {
           candidate: userId,
-          scheduled_date_time: { $exists: false },
+          scheduled_date_time: {},
         },
       },
     })

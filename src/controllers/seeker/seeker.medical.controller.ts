@@ -19,7 +19,7 @@ const getJobsWithMedicals = async function (req: IUserRequest, res: Response) {
       candidates: {
         $elemMatch: {
           candidate: userId,
-          scheduled_date_time: { $exists: false },
+          scheduled_date_time: {},
         },
       },
     })
