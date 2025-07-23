@@ -140,7 +140,7 @@ const inviteMedicalCandidates = async function (req: IUserRequest, res: Response
     // Send batch invites to candidates
     const successfulCandidateInvites = await batchInviteCandidates(uniqueCandidates, job_id, medical._id, medical.job.job_title, medical.address, userId as string, medical.job.employer.organisation_name);
 
-    // Add candidates to the medical record
+    // Add candidates to the medical records
     successfulCandidateInvites.forEach(candidateId => {
       medical.candidates.push({
         candidate: candidateId as unknown as Types.ObjectId,
