@@ -16,6 +16,7 @@ const { CLIENT_URL } = process.env;
 const getJobsWithoutScheduledInterview = async function (req: IUserRequest, res: Response) {
   try {
     const { userId } = req;
+
     const interviews = await InterviewMgmt.find({
       candidates: {
         $elemMatch: {

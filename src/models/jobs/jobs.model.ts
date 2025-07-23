@@ -30,7 +30,7 @@ const jobSchema = new Schema<IJob>(
         date_of_application: { type: Date, default: Date.now },
         status: {
           type: String,
-          enum: ["applied", "shortlisted", "interview_invite_sent", "interview_scheduled", "interview_completed", "has_offer", "hired", "documents_reupload_requested", "rejected", "medical_scheduled", "medical_completed"],
+          enum: ["applied", "shortlisted", "interview_invite_sent", "interview_scheduled", "interview_completed", "has_offer", "hired", "documents_reupload_requested", "rejected", "medical_invite_sent", "medical_scheduled", "medical_completed"],
           default: "applied",
         },
       },

@@ -333,7 +333,7 @@ const handleInviteCandidates = async function (req: IUserRequest, res: Response)
         select: "organisation_name",
       },
     });
-    if (!interview) return res.status(400).json({ message: "Interview not found!" });
+    if (!interview) return res.status(404).json({ message: "Interview not found!" });
 
     const uniqueCandidates = candidate_ids.filter(id => !interview.candidates.some(c => c.candidate.toString() === id.toString()));
 

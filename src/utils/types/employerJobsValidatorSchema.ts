@@ -64,7 +64,6 @@ export const EmployerInterviewManagementSchema = z.object({
 });
 
 export const EmployerMedicalsManagementSchema = z.object({
-  candidate_ids: z.array(z.string()),
   medical_time_slot: z
     .array(
       z
