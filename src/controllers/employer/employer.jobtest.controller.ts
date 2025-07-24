@@ -11,6 +11,8 @@ import TestSubmission from "../../models/jobs/testsubmission.model";
 import { createAndSendNotification } from "../../utils/services/notifications/sendNotification";
 import { sendTestApplicantsEmail } from "../../utils/services/emails/testApplicantsEmailInvite";
 
+const { CLIENT_URL } = process.env;
+
 //* JOB TEST MANAGEMENT
 const getJobsForJobTest = async function (req: IUserRequest, res: Response) {
   try {
@@ -380,7 +382,7 @@ const jobTestApplicantsInvite = async function (req: IUserRequest, res: Response
         if (!user) return null;
 
         // Generate a unique test link (you might want to generate a more secure token)
-        const testLink = `http://localhost:8080/job-test/${test._id}`;
+        const testLink = `${CLIENT_URL}/dashboard/job-seeker/test-management`;
 
         await sendTestApplicantsEmail({
           email: user.email,
@@ -395,7 +397,7 @@ const jobTestApplicantsInvite = async function (req: IUserRequest, res: Response
 
         const subject = `Job Assessment Invitation - ${(test.job as any).job_title}`;
 
-        const message = `${test.employer.organisation_name} as invited you to take a job test.`;
+        const message = `${test.employer.organisation_name} has invited you to take a job test.`;
 
         //* notification
         await createAndSendNotification({ recipient: user._id, sender: userId as string, type: NotificationType.MESSAGE, title: subject, message, status: NotificationStatus.UNREAD });
