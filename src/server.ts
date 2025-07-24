@@ -19,6 +19,7 @@ import { adminRouter } from "./routes/admin/routes.admin";
 import Stripe from "stripe";
 import { setupResumeReminder, setupSubscriptionCronJobs } from "./utils/cron-jobs";
 import { ticketRouter } from "./routes/ticketRoutes";
+import { emailWebhook } from "./routes/emailHookRoutes";
 
 export const stripe = new Stripe(STRIPE_SECRET_KEY as string, {
   apiVersion: "2025-04-30.basil",
@@ -69,6 +70,7 @@ app.use("/api/seeker", seekerRouter);
 app.use("/api/admin", adminRouter);
 app.use("/api/events", eventsRouter);
 app.use("/api/ticket", ticketRouter);
+app.use("/api/emails", emailWebhook);
 
 app.use("*", (req: Request, res: Response) => {
   res.status(404).json({
