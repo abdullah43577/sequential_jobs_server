@@ -11,7 +11,7 @@ adminRouter.get("/get_summary_stat", validateAccessToken, validateAdminSession, 
 adminRouter.put("/user/deactivate/:id", validateAccessToken, validateAdminSession, updateAccountStatus);
 adminRouter.delete("/user/delete/:id", validateAccessToken, validateAdminSession, deleteAccount);
 
-//* SUBSCRIPTIONSs
+//* SUBSCRIPTIONS
 adminRouter.put("/extend_plan_expiry/:userId", validateAccessToken, validateAdminSession, extendPlanExpiry);
 adminRouter.put("/payment/create-checkout/:userId", validateAccessToken, validateAdminSession, createCheckoutSessionAdmin);
 adminRouter.put("/user/change-plan/:userId", validateAccessToken, validateAdminSession, changeUserPlan);
