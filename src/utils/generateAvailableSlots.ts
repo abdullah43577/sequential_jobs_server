@@ -14,17 +14,21 @@ export const generateAvailableSlots = (date: string, startTime: string, endTime:
   const interviewMinutes = parseInt(interviewDuration.split(" ")[0]);
 
   while (start.isBefore(end)) {
-    let slotEnd = start.clone().add(interviewMinutes, "minutes"); // Add interview duration
+    let slotEnd = start.clone().add(interviewMinutes, "minutes");
 
-    if (slotEnd.isAfter(end)) break; // Stop if the slot goes beyond the end time
+    if (slotEnd.isAfter(end)) break;
 
     slots.push({
       start_time: start.format("hh:mm A"),
       end_time: slotEnd.format("hh:mm A"),
     });
 
-    // Create a new moment object for the next start time
     start = start.clone().add(interviewMinutes + breakMinutes, "minutes");
+  }
+
+  //  throw error if no slots were generated
+  if (slots.length === 0) {
+    throw new Error(`Unable to generate time slots. The time window (${startTime} - ${endTime}) is too small for the specified duration (${interviewDuration}) and break time (${breakTime}). Please adjust your schedule parameters.`);
   }
 
   return slots;
