@@ -43,6 +43,7 @@ export interface IUser {
   resume: string | null;
   resumeId: string | null;
   account_status: "active" | "deactivated";
+  grace_period: string;
 }
 
 export interface INotification {
@@ -78,7 +79,7 @@ export interface IJob {
   applicants: {
     applicant: Types.ObjectId;
     date_of_application?: Date;
-    status: "applied" | "shortlisted" | "interview_invite_sent" | "interview_scheduled" | "interview_completed" | "has_offer" | "hired" | "documents_reupload_requested" | "rejected";
+    status: "applied" | "shortlisted" | "interview_invite_sent" | "interview_scheduled" | "interview_completed" | "has_offer" | "hired" | "documents_reupload_requested" | "rejected" | "medical_invite_sent" | "medical_scheduled" | "medical_completed";
   }[];
   is_live: boolean;
   status: "archived" | "flagged" | "active";

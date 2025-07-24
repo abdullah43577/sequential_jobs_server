@@ -22,7 +22,7 @@ import { ticketRouter } from "./routes/ticketRoutes";
 
 export const stripe = new Stripe(STRIPE_SECRET_KEY as string, {
   apiVersion: "2025-04-30.basil",
-  timeout: 10000, // 10 secondss
+  timeout: 10000, // 10 seconds
 });
 
 const app = express();

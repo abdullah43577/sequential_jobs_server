@@ -125,7 +125,17 @@ const userSchema = new Schema<IUser>(
       type: Boolean,
       default: true,
     },
-
+    grace_period: {
+      type: String,
+      default: "",
+      validate: {
+        validator: function (v: string) {
+          // Allow empty string or format like "7d", "14d", etc.
+          return v === "" || /^\d+[dD]$/.test(v);
+        },
+        message: 'Grace period must be in format like "7d", "14d", or empty string',
+      },
+    },
     googleId: { type: String, default: null },
     failedLoginAttempts: { type: Number, default: 0 },
     isLocked: { type: Boolean, default: false },

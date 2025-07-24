@@ -16,31 +16,20 @@ const getJobsForMedical = async function (req: IUserRequest, res: Response) {
   try {
     const { userId } = req;
 
-    const jobs = await Job.find({ employer: userId, is_live: true })
-      .select("job_title applicants")
-      .populate<{ applicants: { applicant: { _id: string; first_name: string; last_name: string; resume: string }; date_of_application: string; status: string }[] }>({
-        path: "applicants.applicant",
-        select: "first_name last_name resume",
-      })
-      .lean();
+    const jobs = await Job.find({ employer: userId, is_live: true }).select("job_title applicants salary job_type createdAt").lean();
 
+    //* extract job ids
     const jobIds = jobs.map(job => job._id);
 
     const medicals = await MedicalMgmt.find({ job: { $in: jobIds } });
 
-    const formattedResponse = jobs.flatMap(job => {
+    const formattedResponse = jobs.map(job => {
       const medicalData = medicals.find(medical => medical.job.toString() === job._id.toString());
 
-      return job.applicants.map(app => ({
-        job_id: job._id,
-        role_applied_for: job.job_title,
-        candidate_name: `${app.applicant.first_name} ${app.applicant.last_name}`,
-        candidate_id: app.applicant._id,
-        date_of_application: app.date_of_application,
-        resume: app.applicant.resume,
-        decision: app.status,
-        has_created_medical: !!medicalData?.candidates?.length,
-      }));
+      return {
+        ...job,
+        has_set_availability_schedule: !!medicalData,
+      };
     });
 
     res.status(200).json(formattedResponse);
@@ -49,7 +38,32 @@ const getJobsForMedical = async function (req: IUserRequest, res: Response) {
   }
 };
 
-const setMedicalSchedule = async function (req: IUserRequest, res: Response) {
+const getCandidatesInvitedForMedicals = async function (req: IUserRequest, res: Response) {
+  try {
+    const { job_id } = req.query;
+    if (!job_id) return res.status(400).json({ message: "JOb ID is required" });
+
+    const medicals = await MedicalMgmt.findOne({ job: job_id }).select("candidates").populate<{
+      candidates: { candidate: { first_name: string; last_name: string; phone_no: string; resume: string; profile_pic: string; email: string } }[];
+    }>("candidates.candidate", "first_name last_name phone_no resume profile_pic email");
+
+    if (!medicals) return res.status(404).json({ message: "Medical Record not found!" });
+
+    const formattedResponse = medicals?.candidates.map(cd => ({
+      name: `${cd.candidate.first_name} ${cd.candidate.last_name}`,
+      phone_no: cd.candidate.phone_no,
+      resume: cd.candidate.resume,
+      profile_pic: cd.candidate.profile_pic,
+      email: cd.candidate.email,
+    }));
+
+    res.status(200).json(formattedResponse);
+  } catch (error) {
+    handleErrors({ res, error });
+  }
+};
+
+const setMedicalAvailability = async function (req: IUserRequest, res: Response) {
   try {
     const { userId } = req;
     const { job_id } = req.query;
@@ -87,16 +101,6 @@ const setMedicalSchedule = async function (req: IUserRequest, res: Response) {
     // Update medicalists list in record
     medicalRecord.medicalists = invitedMedicalists;
 
-    // Send batch invites to candidates
-    const successfulCandidateInvites = await batchInviteCandidates(data.candidate_ids, medicalRecord._id, job.job_title, data.address, userId as string, employer.organisation_name);
-
-    // Add candidates to the medical record
-    successfulCandidateInvites.forEach(candidateId => {
-      medicalRecord.candidates.push({
-        candidate: candidateId as unknown as Types.ObjectId,
-      });
-    });
-
     // Save the updated medical record
     await medicalRecord.save();
 
@@ -105,6 +109,47 @@ const setMedicalSchedule = async function (req: IUserRequest, res: Response) {
       invitedMedicalists: invitedMedicalists.length,
       invitedCandidates: medicalRecord.candidates.length,
     });
+  } catch (error) {
+    handleErrors({ res, error });
+  }
+};
+
+const inviteMedicalCandidates = async function (req: IUserRequest, res: Response) {
+  try {
+    const { userId } = req;
+    const { job_id } = req.params;
+    if (!job_id) return res.status(400).json({ message: "Job ID is required!" });
+
+    const { candidate_ids } = req.body;
+
+    if (!candidate_ids || !Array.isArray(candidate_ids)) return res.status(400).json({ message: "Candidate IDs is required and must be of an array type" });
+
+    const medical = await MedicalMgmt.findOne({ job: job_id }).populate<{ job: { _id: string; job_title: string; employer: { organisation_name: string } } }>({
+      path: "job",
+      select: "employer job_title",
+      populate: {
+        path: "employer",
+        select: "organisation_name",
+      },
+    });
+
+    if (!medical) return res.status(404).json({ message: "Medical record not found" });
+
+    const uniqueCandidates = candidate_ids.filter(id => !medical.candidates.some(c => c.candidate.toString() === id.toString()));
+
+    // Send batch invites to candidates
+    const successfulCandidateInvites = await batchInviteCandidates(uniqueCandidates, job_id, medical._id, medical.job.job_title, medical.address, userId as string, medical.job.employer.organisation_name);
+
+    // Add candidates to the medical records
+    successfulCandidateInvites.forEach(candidateId => {
+      medical.candidates.push({
+        candidate: candidateId as unknown as Types.ObjectId,
+      });
+    });
+
+    await medical.save();
+
+    return res.status(200).json({ message: "Candidates invited successfully!" });
   } catch (error) {
     handleErrors({ res, error });
   }
@@ -207,4 +252,4 @@ const handleSubmitMedicalTest = async function (req: IUserRequest, res: Response
   }
 };
 
-export { getJobsForMedical, setMedicalSchedule, handleSubmitMedicalTest };
+export { getJobsForMedical, getCandidatesInvitedForMedicals, setMedicalAvailability, inviteMedicalCandidates, handleSubmitMedicalTest };

@@ -15,7 +15,14 @@ const getJobsWithMedicals = async function (req: IUserRequest, res: Response) {
   try {
     const { userId } = req;
 
-    const medicals = await MedicalMgmt.find({ "candidates.candidate": userId, "candidates.scheduled_date_time": { $exists: false } })
+    const medicals = await MedicalMgmt.find({
+      candidates: {
+        $elemMatch: {
+          candidate: userId,
+          $or: [{ scheduled_date_time: {} }, { scheduled_date_time: null }, { scheduled_date_time: { $exists: false } }],
+        },
+      },
+    })
       .select("job candidates")
       .populate<{
         job: {
@@ -33,6 +40,8 @@ const getJobsWithMedicals = async function (req: IUserRequest, res: Response) {
           select: "organisation_name",
         },
       });
+
+    console.log("medicalss", medicals);
 
     if (!medicals) return res.status(404).json({ message: "No Jobs matching criteria found!" });
 

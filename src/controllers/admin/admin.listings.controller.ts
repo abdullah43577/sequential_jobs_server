@@ -9,7 +9,7 @@ import MedicalMgmt from "../../models/medicals/medical.model";
 
 const getListings = async function (req: IUserRequest, res: Response) {
   try {
-    const jobs = await Job.find({ is_live: true }).populate<{ employer: { _id: string; organisation_name: string } }>("employer", "organisation_name").lean();
+    const jobs = await Job.find({}).populate<{ employer: { _id: string; organisation_name: string } }>("employer", "organisation_name").lean();
 
     const formattedResponse = jobs.map(job => ({
       job_id: job._id,
@@ -38,7 +38,7 @@ const updateListingStatus = async function (req: IUserRequest, res: Response) {
 
     if (!id) return res.status(404).json({ message: "Job ID is required!" });
 
-    if (!status || (status.toLowerCase() !== "archived" && status.toLowerCase() !== "flagged")) return res.status(400).json({ message: "Job Status is required " });
+    if (!status || (status.toLowerCase() !== "archived" && status.toLowerCase() !== "flagged" && status.toLowerCase() !== "active")) return res.status(400).json({ message: "Job Status is required " });
 
     await Job.findByIdAndUpdate(id, { status, is_live: false });
 

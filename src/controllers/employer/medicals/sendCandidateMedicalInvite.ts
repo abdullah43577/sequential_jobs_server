@@ -3,6 +3,7 @@ import { NotificationStatus, NotificationType } from "../../../models/notificati
 import User from "../../../models/users.model";
 import { createAndSendNotification } from "../../../utils/services/notifications/sendNotification";
 import { sendCandidateMedicalEmail } from "../../../utils/services/emails/candidateMedicalEmailInvite";
+import Job from "../../../models/jobs/jobs.model";
 
 const { CLIENT_URL } = process.env;
 
@@ -42,7 +43,15 @@ export const sendCandidateMedicalInvite = async (params: CandidateInviteParams) 
   }
 };
 
-export const batchInviteCandidates = async (candidateIds: string[] | Types.ObjectId[], medicalRecordId: string | Types.ObjectId, jobTitle: string, address: string, employerId: string | Types.ObjectId, employerOrgName: string) => {
+export const batchInviteCandidates = async (
+  candidateIds: string[] | Types.ObjectId[],
+  job_id: string | Types.ObjectId,
+  medicalRecordId: string | Types.ObjectId,
+  jobTitle: string,
+  address: string,
+  employerId: string | Types.ObjectId,
+  employerOrgName: string
+) => {
   const successfulInvites: string[] = [];
 
   await Promise.all(
@@ -58,6 +67,15 @@ export const batchInviteCandidates = async (candidateIds: string[] | Types.Objec
 
       if (success) {
         successfulInvites.push(candidateId.toString());
+
+        await Job.findOneAndUpdate(
+          { _id: job_id, "applicants.applicant": candidateId },
+          {
+            $set: {
+              "applicants.$.status": "medical_invite_sent",
+            },
+          }
+        );
       }
     })
   );

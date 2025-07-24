@@ -16,9 +16,14 @@ const { CLIENT_URL } = process.env;
 const getJobsWithoutScheduledInterview = async function (req: IUserRequest, res: Response) {
   try {
     const { userId } = req;
+
     const interviews = await InterviewMgmt.find({
-      "candidates.candidate": userId,
-      "candidates.scheduled_date_time": { $exists: false },
+      candidates: {
+        $elemMatch: {
+          candidate: userId,
+          $or: [{ scheduled_date_time: {} }, { scheduled_date_time: null }, { scheduled_date_time: { $exists: false } }],
+        },
+      },
     })
       .select("job candidates")
       .populate<{
@@ -37,6 +42,8 @@ const getJobsWithoutScheduledInterview = async function (req: IUserRequest, res:
           select: "organisation_name",
         },
       });
+
+    console.log(interviews, "interviews here for job seeker");
 
     if (!interviews) return res.status(404).json({ message: "No Jobs Matching criteria found!" });
 

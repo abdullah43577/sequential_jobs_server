@@ -3,7 +3,7 @@ import { validateAccessToken, validateAdminSession } from "../../middleware/vali
 import { updateAccountStatus, deleteAccount, getSummaryStats } from "../../controllers/admin/admin.dashboard.controller";
 import { deleteListing, getListings, updateListingStatus } from "../../controllers/admin/admin.listings.controller";
 import { sendBroadcast } from "../../controllers/admin/admin.broadcast.controller";
-import { changeUserPlan, createCheckoutSessionAdmin, extendPlanExpiry } from "../../controllers/admin/admin.subscription.controller";
+import { changeUserPlan, createCheckoutSessionAdmin, extendGracePeriod, extendPlanExpiry } from "../../controllers/admin/admin.subscription.controller";
 
 const adminRouter = Router();
 
@@ -12,9 +12,10 @@ adminRouter.put("/user/deactivate/:id", validateAccessToken, validateAdminSessio
 adminRouter.delete("/user/delete/:id", validateAccessToken, validateAdminSession, deleteAccount);
 
 //* SUBSCRIPTIONS
-adminRouter.post("/extend_plan_expiry/:userId", validateAccessToken, validateAdminSession, extendPlanExpiry);
+adminRouter.put("/extend_plan_expiry/:userId", validateAccessToken, validateAdminSession, extendPlanExpiry);
 adminRouter.put("/payment/create-checkout/:userId", validateAccessToken, validateAdminSession, createCheckoutSessionAdmin);
 adminRouter.put("/user/change-plan/:userId", validateAccessToken, validateAdminSession, changeUserPlan);
+adminRouter.put("/extend_grace_period/:userId", validateAccessToken, validateAdminSession, extendGracePeriod);
 
 //* LISTINGS MANAGEMENT
 adminRouter.get("/get_all_listings", validateAccessToken, validateAdminSession, getListings);
