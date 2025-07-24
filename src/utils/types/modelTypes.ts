@@ -43,6 +43,7 @@ export interface IUser {
   resume: string | null;
   resumeId: string | null;
   account_status: "active" | "deactivated";
+  grace_period: string;
 }
 
 export interface INotification {
