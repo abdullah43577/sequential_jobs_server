@@ -18,5 +18,3 @@ const JobTestSchema = new Schema<IJobTest>(
 const JobTest = model<IJobTest>("JobTest", JobTestSchema);
 
 export default JobTest;
-
-//

@@ -68,7 +68,7 @@ export const handleErrors = function ({ res, error }: IHandleErrors) {
   // Generic/Unknown Error
   console.error("Unhandled error:", error);
   return res.status(500).json({
-    message: "Internal Server Error",
-    error: process.env.NODE_ENV === "development" ? error : error, //* undefined
+    message: typeof error === "string" ? error : "Internal Server Error",
+    error: process.env.NODE_ENV === "development" ? error : undefined,
   });
 };

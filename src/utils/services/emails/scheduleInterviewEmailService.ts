@@ -182,6 +182,7 @@ export const sendAllInterviewEmails = async (data: InterviewEmailData, panelists
 
     // Send panelist emails
     if (panelists.length > 0) {
+      console.log("panelists data emails here", panelists);
       const panelistPromises = panelists.map(panelist =>
         sendPanelistInterviewEmail(data, panelist).catch(error => {
           console.error(`Error sending email to panelist ${panelist.email}:`, error);

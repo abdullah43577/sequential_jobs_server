@@ -67,9 +67,42 @@ const createCheckoutSession = async function (req: IUserRequest, res: Response) 
         message: "Subscription tier name and price ID is required!",
       });
 
-    const user = await User.findById(userId).select("email").lean();
+    const user = await User.findById(userId).select("email subscription_tier").lean();
 
     if (!user) return res.status(404).json({ message: "user not found!" });
+
+    const fullPlanName = subscription_tier_name === "Sequential Professional" ? "Sequential Pro" : subscription_tier_name;
+
+    // Check if user is already on the requested plan
+    if (user.subscription_tier === fullPlanName) {
+      return res.status(400).json({
+        message: `You are already subscribed to ${subscription_tier_name}`,
+      });
+    }
+
+    // Handle Sequential Freemium - just downgrade without checkout
+    if (subscription_tier_name === "Sequential Freemium") {
+      await User.findByIdAndUpdate(userId, {
+        subscription_tier: "Sequential Freemium",
+        subscription_status: "trial",
+        subscription_start: new Date(),
+        subscription_end: (() => {
+          const date = new Date();
+          date.setDate(date.getDate() + 30);
+          return date;
+        })(),
+        is_trial: false,
+        stripe_customer_id: null, // Clear stripe customer ID if downgrading
+      });
+
+      return res.status(200).json({
+        message: "Successfully downgraded to Sequential Freemium",
+        data: {
+          tier: "Sequential Freemium",
+          downgraded: true,
+        },
+      });
+    }
 
     // Create a checkout session
     const session = await stripe.checkout.sessions.create({
