@@ -115,9 +115,13 @@ const scheduleInterview = async function (req: IUserRequest, res: Response) {
 
     // Get panelist information if they exist
     let panelists: { email: string; firstName: string | undefined; lastName: string | undefined }[] = [];
+
+    console.log(interview, "interview data here");
+
     if (interview.panelists && interview.panelists.length > 0) {
       const panelistPromises = interview.panelists.map(async panelistData => {
         const panelist = await User.findOne({ email: panelistData.email }).select("first_name last_name");
+        console.log(panelist, "panelist fetched data is here");
         return {
           email: panelistData.email,
           firstName: panelist?.first_name,
@@ -125,6 +129,7 @@ const scheduleInterview = async function (req: IUserRequest, res: Response) {
         };
       });
       panelists = await Promise.all(panelistPromises);
+      console.log(panelists, "panelists data");
     }
 
     // Prepare email data
