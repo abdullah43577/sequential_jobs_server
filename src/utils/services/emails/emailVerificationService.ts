@@ -1,7 +1,7 @@
 import { registrationEmail } from "../../nodemailer.ts/email-templates/registration-email";
 import { transportMail } from "../../nodemailer.ts/transportMail";
 
-interface EmailVerificationSuccessData {
+export interface EmailVerificationSuccessData {
   email: string;
   firstName: string;
   baseUrl: string;

@@ -1,7 +1,7 @@
 import { generateProfessionalEmail } from "../../nodemailer.ts/email-templates/generateProfessionalEmail";
 import { transportMail } from "../../nodemailer.ts/transportMail";
 
-interface PanelistInviteData {
+export interface PanelistInviteData {
   email: string;
   recipientName: string;
   jobTitle: string;
@@ -67,4 +67,7 @@ export const sendPanelistInviteEmail = async (data: PanelistInviteData) => {
     subject,
     message: html,
   });
+
+  // Wait 1 second to stay under Resend's 2 req/sec limit
+  await new Promise(resolve => setTimeout(resolve, 1000));
 };

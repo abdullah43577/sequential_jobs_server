@@ -21,12 +21,12 @@ import { setupResumeReminder, setupSubscriptionCronJobs } from "./utils/cron-job
 import { ticketRouter } from "./routes/ticketRoutes";
 import { emailWebhook } from "./routes/emailHookRoutes";
 
+const app = express();
+
 export const stripe = new Stripe(STRIPE_SECRET_KEY as string, {
   apiVersion: "2025-04-30.basil",
   timeout: 10000, // 10 seconds
 });
-
-const app = express();
 
 app.use("/api/employer/payment/webhook", express.raw({ type: "application/json" }));
 

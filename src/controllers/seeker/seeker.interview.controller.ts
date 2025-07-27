@@ -95,7 +95,7 @@ const scheduleInterview = async function (req: IUserRequest, res: Response) {
           "candidates.$.scheduled_date_time": scheduled_date_time,
           "candidates.$.status": "confirmed",
         },
-      },
+      },  
       { returnDocument: "after" }
     )
       .populate<{ job: { _id: string; job_title: string } }>({

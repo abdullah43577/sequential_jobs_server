@@ -12,9 +12,10 @@ import TestSubmission from "../../models/jobs/testsubmission.model";
 import { Types } from "mongoose";
 import { NotificationStatus, NotificationType } from "../../models/notifications.model";
 import { guessNameFromEmail } from "../../utils/guessNameFromEmail";
-import { sendPanelistInviteEmail } from "../../utils/services/emails/panelistEmailService";
 import { sendCandidateInviteEmail } from "../../utils/services/emails/interviewCandidatesEmailService";
 import { createAndSendNotification } from "../../utils/services/notifications/sendNotification";
+import { queueEmail } from "../../workers/globalEmailQueueHandler";
+import { JOB_KEY } from "../../workers/registerWorkers";
 
 //* INTERVIEW MANAGEMENT
 const getJobsForInterviews = async function (req: IUserRequest, res: Response) {
@@ -179,25 +180,36 @@ const handleInvitePanelists = async function (req: IUserRequest, res: Response) 
     if (!interview) return res.status(400).json({ message: "Interview not found!" });
 
     //* search for panelists existence across DB
-    const existingUserInDB = await User.find({ email: { $in: panelists } })
+    const existingPanelistsInDB = await User.find({ email: { $in: panelists } })
       .select("email first_name")
       .lean();
 
-    const existingEmailsInDB = new Set(existingUserInDB.map(pan => pan.email));
-    const existingEmailInInterview = new Set(interview.panelists.map(pan => pan.email));
+    const panelistsAlreadyInDB = new Set(existingPanelistsInDB.map(pan => pan.email));
+    const interviewPanelists = new Set(interview.panelists.map(pan => pan.email));
 
     //* panelists not in DB and haven't been added to this interview before
-    const uniquePanelists = panelists.filter(email => !existingEmailsInDB.has(email) && !existingEmailInInterview.has(email));
+    const uniquePanelists = panelists.filter(email => !panelistsAlreadyInDB.has(email) && !interviewPanelists.has(email));
 
     //* panelists that match what's stored in DB for current interview with data sent to this controller
-    const existingPanelists = panelists.filter(email => existingEmailInInterview.has(email));
+    const existingPanelists = panelists.filter(email => interviewPanelists.has(email));
 
-    let newPanelistPromises: Promise<void>[] = [];
-    let existingPanelistPromises: Promise<void>[] = [];
+    //* panelists already in DB for different jobs should be merged with existingPanelists if the email was also sent across
+    panelists.forEach(pan => {
+      if (panelistsAlreadyInDB.has(pan) && !existingPanelists.includes(pan)) {
+        existingPanelists.push(pan);
 
-    // Process new panelists (with login credentials)
+        const rating_scale_keys = Array.from(interview.rating_scale.keys());
+        const newScale = new Map<string, string | number>();
+
+        rating_scale_keys.forEach(key => newScale.set(key, ""));
+
+        interview.panelists.push({ email: pan, rating_scale: newScale });
+      }
+    });
+
+    // Process new panelists (create users first, then queue emails)
     if (uniquePanelists.length > 0) {
-      newPanelistPromises = uniquePanelists.map(async email => {
+      for (const email of uniquePanelists) {
         try {
           const tempPassword = crypto.randomBytes(8).toString("hex");
           const hashedPassword = await hashPassword(tempPassword);
@@ -215,8 +227,8 @@ const handleInvitePanelists = async function (req: IUserRequest, res: Response) 
             expiresAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000), // 7 days
           });
 
-          //* send invite email with temporary credentials
-          await sendPanelistInviteEmail({
+          // Queue the email job (no delay needed as worker handles rate limiting)
+          await queueEmail(JOB_KEY.PANELIST_INVITE, {
             email,
             recipientName: nameGuess.firstName || "Guest",
             jobTitle: interview.job.job_title,
@@ -232,38 +244,39 @@ const handleInvitePanelists = async function (req: IUserRequest, res: Response) 
 
           interview.panelists.push({ email: email, rating_scale: newScale });
         } catch (error) {
-          console.error(`Error creating and inviting panelist ${email}:`, error);
+          console.error(`Error creating panelist ${email}:`, error);
         }
-      });
+      }
     }
 
-    // Process existing panelists (without login credentials)
+    // Process existing panelists (queue emails)
     if (existingPanelists.length > 0) {
-      existingPanelistPromises = existingPanelists.map(async email => {
+      for (const email of existingPanelists) {
         try {
           const existingUser = await User.findOne({ email }).lean();
           const nameGuess = existingUser ? { firstName: existingUser.first_name } : guessNameFromEmail(email);
 
-          await sendPanelistInviteEmail({
+          await queueEmail(JOB_KEY.PANELIST_INVITE, {
             email,
             recipientName: nameGuess.firstName || "Guest",
             jobTitle: interview.job.job_title,
             isNewPanelist: false,
           });
         } catch (error) {
-          console.error(`Error sending notification to existing panelist ${email}:`, error);
+          console.error(`Error queuing notification for existing panelist ${email}:`, error);
         }
-      });
+      }
     }
 
-    // Execute all promises
-    await Promise.all([...newPanelistPromises, ...existingPanelistPromises]);
-
-    // Save the updated interview document in bulk
+    // Save the updated interview document
     interview.stage = "panelist_invite_confirmation";
     await interview.save();
 
-    return res.status(200).json({ message: "Panelists Invited Successfully" });
+    // Return success response immediately (emails will be sent asynchronously)
+    return res.status(200).json({
+      message: "Panelists invitation process initiated successfully",
+      totalInvites: uniquePanelists.length + existingPanelists.length,
+    });
   } catch (error) {
     handleErrors({ res, error });
   }

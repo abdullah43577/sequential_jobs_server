@@ -9,10 +9,11 @@ import jwt, { Secret } from "jsonwebtoken";
 import { Readable } from "stream";
 import cloudinary from "../utils/cloudinaryConfig";
 import { cleanObject } from "../utils/cleanedObject";
-import { sendWelcomeEmail } from "../utils/services/emails/welcomeEmailService";
 import { sendEmailVerificationSuccessEmail } from "../utils/services/emails/emailVerificationService";
 import { sendForgotPasswordEmail } from "../utils/services/emails/forgotPasswordEmailService";
 import { sendResetPasswordEmail } from "../utils/services/emails/resetPasswordEmailService";
+import { queueEmail } from "../workers/globalEmailQueueHandler";
+import { JOB_KEY } from "../workers/registerWorkers";
 const { EMAIL_VERIFICATION_TOKEN, CLIENT_URL } = process.env;
 
 const testApi = async (req: Request, res: Response) => {
@@ -49,7 +50,7 @@ const createUser = async (req: Request, res: Response) => {
     const verificationToken = jwt.sign({ id: user._id }, EMAIL_VERIFICATION_TOKEN as Secret);
 
     //* send welcome email
-    await sendWelcomeEmail({
+    await queueEmail(JOB_KEY.REGISTRATION, {
       email: user.email,
       firstName: user.first_name,
       verificationToken,
@@ -67,8 +68,6 @@ const updateJobPreferences = async (req: IUserRequest, res: Response) => {
   try {
     const { userId } = req;
     const { job_preferences } = updateJobPreferencesSchema.parse(req.body);
-
-    console.log(job_preferences);
 
     const user = await User.findByIdAndUpdate(userId, { job_preferences });
     res.status(200).json({ message: "Profile Updated Successfully!" });
@@ -93,19 +92,18 @@ const validateEmail = async (req: Request, res: Response) => {
       }
 
       // User exists but is already verified - redirect without sending email
-      return res.redirect(`https://sequentialjobs.com/auth/email-activation-success?name=${encodeURIComponent(existingUser.first_name)}`);
+      return res.redirect(`${CLIENT_URL}/auth/email-activation-success?name=${encodeURIComponent(existingUser.first_name)}`);
     }
 
     const baseUrl = CLIENT_URL as string;
 
-    // Send welcome email only for newly verified users using the service
-    await sendEmailVerificationSuccessEmail({
+    await queueEmail(JOB_KEY.EMAIL_VERIFICATION, {
       email: user.email,
       firstName: user.first_name,
       baseUrl,
     });
 
-    res.redirect(`https://sequentialjobs.com/auth/email-activation-success?name=${encodeURIComponent(user.first_name)}`);
+    res.redirect(`${CLIENT_URL}/auth/email-activation-success?name=${encodeURIComponent(user.first_name)}`);
   } catch (error) {
     handleErrors({ res, error });
   }
@@ -166,7 +164,12 @@ const forgotPassword = async (req: Request, res: Response) => {
 
     const baseUrl = CLIENT_URL as string;
 
-    await sendForgotPasswordEmail({ email: user.email, first_name: user.first_name, baseUrl, resetToken });
+    await queueEmail(JOB_KEY.FORGOT_PASSWORD, {
+      email: user.email,
+      first_name: user.first_name,
+      baseUrl,
+      resetToken,
+    });
 
     res.status(200).json({ message: "Reset Link sent to provided email address" });
   } catch (error) {
@@ -215,7 +218,10 @@ const resetPassword = async (req: Request, res: Response) => {
     if (!user) return res.status(404).json({ message: "User not found!" });
 
     //* send mail
-    await sendResetPasswordEmail({ email: user.email, first_name: user.first_name });
+    await queueEmail(JOB_KEY.RESET_PASSWORD, {
+      email: user.email,
+      first_name: user.first_name,
+    });
 
     res.status(200).json({ message: "Password reset successfully" });
   } catch (error) {
