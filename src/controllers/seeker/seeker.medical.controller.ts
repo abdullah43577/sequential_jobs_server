@@ -7,7 +7,8 @@ import User from "../../models/users.model";
 import { NotificationStatus, NotificationType } from "../../models/notifications.model";
 import Job from "../../models/jobs/jobs.model";
 import { createAndSendNotification } from "../../utils/services/notifications/sendNotification";
-import { sendAllMedicalEmails } from "../../utils/services/emails/scheduleMedicalEmailService";
+import { JOB_KEY } from "../../workers/registerWorkers";
+import { queueBulkEmail } from "../../workers/globalEmailQueueHandler";
 
 const { CLIENT_URL } = process.env;
 
@@ -171,8 +172,20 @@ const scheduleMedical = async function (req: IUserRequest, res: Response) {
       baseUrl: CLIENT_URL as string,
     };
 
-    // Send all medical emails
-    await sendAllMedicalEmails(emailData, medicalExperts);
+    const emailJobs = [
+      { type: JOB_KEY.MEDICALIST_CANDIDATE_SCHEDULE_EMPLOYER_EMAIL, ...emailData },
+      { type: JOB_KEY.MEDICALIST_CANDIDATE_SCHEDULE, ...emailData },
+      ...medicalExperts.map(medic => ({
+        type: JOB_KEY.MEDICALIST_CANDIDATE_SCHEDULE_MEDICALISTS_EMAIL,
+        ...emailData,
+        // ✅ Flatten panelist data to top level
+        medicalistEmail: medic.email,
+        medicalistFirstName: medic.firstName,
+        medicalistLastName: medic.lastName,
+      })),
+    ];
+
+    await queueBulkEmail("CANDIDATE_MEDICAL_SCHEDULED", emailJobs);
 
     // Create notification for employer
     const formattedDate = new Date(scheduled_date_time.date).toLocaleDateString();

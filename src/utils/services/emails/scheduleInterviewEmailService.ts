@@ -173,30 +173,3 @@ export const sendCandidateInterviewEmail = async (data: InterviewEmailData) => {
     message: html,
   });
 };
-
-// Send all interview emails
-export const sendAllInterviewEmails = async (data: InterviewEmailData, panelists: PanelistData[] = []) => {
-  try {
-    // Send employer email
-    await sendEmployerInterviewEmail(data);
-
-    // Send panelist emails
-    if (panelists.length > 0) {
-      const panelistPromises = panelists.map(panelist =>
-        sendPanelistInterviewEmail(data, panelist).catch(error => {
-          console.error(`Error sending email to panelist ${panelist.email}:`, error);
-          return false;
-        })
-      );
-      await Promise.allSettled(panelistPromises);
-    }
-
-    // Send candidate email
-    await sendCandidateInterviewEmail(data);
-
-    return true;
-  } catch (error) {
-    console.error("Error sending interview emails:", error);
-    throw error;
-  }
-};

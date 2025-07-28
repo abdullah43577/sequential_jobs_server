@@ -301,11 +301,21 @@ const handleInvitePanelists = async function (req: IUserRequest, res: Response) 
     const emailPromises: Promise<any>[] = [];
 
     if (newPanelistEmailData.length > 0) {
-      emailPromises.push(queueBulkEmail(JOB_KEY.PANELIST_INVITE, newPanelistEmailData));
+      emailPromises.push(
+        queueBulkEmail(
+          JOB_KEY.PANELIST_INVITE,
+          newPanelistEmailData.map(data => ({ type: JOB_KEY.PANELIST_INVITE, ...data }))
+        )
+      );
     }
 
     if (existingPanelistEmailData.length > 0) {
-      emailPromises.push(queueBulkEmail(JOB_KEY.PANELIST_INVITE, existingPanelistEmailData));
+      emailPromises.push(
+        queueBulkEmail(
+          JOB_KEY.PANELIST_INVITE,
+          existingPanelistEmailData.map(data => ({ type: JOB_KEY.PANELIST_INVITE, ...data }))
+        )
+      );
     }
 
     // Execute bulk email operations concurrently
@@ -317,7 +327,6 @@ const handleInvitePanelists = async function (req: IUserRequest, res: Response) 
     interview.stage = "panelist_invite_confirmation";
     await interview.save();
 
-    // Return success response immediately (emails will be sent asynchronously)
     return res.status(200).json({
       message: "Panelists invitation process initiated successfully",
       totalInvites: newPanelistEmailData.length + existingPanelistEmailData.length,
@@ -449,7 +458,13 @@ const handleInviteCandidates = async function (req: IUserRequest, res: Response)
     }
 
     if (processedCandidateData.length > 0) {
-      await queueBulkEmail(JOB_KEY.INTERVIEW_CANDIDATE_INVITE, processedCandidateData);
+      await queueBulkEmail(
+        JOB_KEY.INTERVIEW_CANDIDATE_INVITE,
+        processedCandidateData.map(data => ({
+          type: JOB_KEY.INTERVIEW_CANDIDATE_INVITE,
+          ...data,
+        }))
+      );
     }
 
     //* save candidates record

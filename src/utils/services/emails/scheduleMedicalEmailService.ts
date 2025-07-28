@@ -2,7 +2,7 @@ import { Types } from "mongoose";
 import { EmailTypes, generateProfessionalEmail } from "../../nodemailer.ts/email-templates/generateProfessionalEmail";
 import { transportMail } from "../../nodemailer.ts/transportMail";
 
-interface MedicalEmailData {
+export interface MedicalEmailData {
   candidate: {
     id: string;
     firstName: string;
@@ -173,31 +173,4 @@ export const sendCandidateMedicalEmail = async (data: MedicalEmailData) => {
     subject,
     message: html,
   });
-};
-
-// Send all medical emails
-export const sendAllMedicalEmails = async (data: MedicalEmailData, medicalExperts: MedicalExpertData[] = []) => {
-  try {
-    // Send employer email
-    await sendEmployerMedicalEmail(data);
-
-    // Send medical expert emails
-    if (medicalExperts.length > 0) {
-      const expertPromises = medicalExperts.map(expert =>
-        sendMedicalExpertEmail(data, expert).catch(error => {
-          console.error(`Error sending email to medical expert ${expert.email}:`, error);
-          return false;
-        })
-      );
-      await Promise.allSettled(expertPromises);
-    }
-
-    // Send candidate email
-    await sendCandidateMedicalEmail(data);
-
-    return true;
-  } catch (error) {
-    console.error("Error sending medical emails:", error);
-    throw error;
-  }
 };

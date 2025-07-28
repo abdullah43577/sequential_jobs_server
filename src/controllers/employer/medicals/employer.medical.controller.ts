@@ -6,11 +6,19 @@ import { EmployerMedicalsManagementSchema } from "../../../utils/types/employerJ
 import MedicalMgmt from "../../../models/medicals/medical.model";
 import { generateAvailableSlots } from "../../../utils/generateAvailableSlots";
 import User from "../../../models/users.model";
-import { batchInviteMedicalists } from "./inviteMedicalists";
-import { batchInviteCandidates } from "./sendCandidateMedicalInvite";
-import { Types } from "mongoose";
 import cloudinary from "../../../utils/cloudinaryConfig";
 import { Readable } from "stream";
+import { MedicalistInviteData } from "../../../utils/services/emails/medicalistInviteEmailService";
+import crypto from "crypto";
+import { hashPassword } from "../../../helper/hashPassword";
+import { guessNameFromEmail } from "../../../utils/guessNameFromEmail";
+import { queueBulkEmail } from "../../../workers/globalEmailQueueHandler";
+import { JOB_KEY } from "../../../workers/registerWorkers";
+import { createAndSendNotification } from "../../../utils/services/notifications/sendNotification";
+import { NotificationStatus, NotificationType } from "../../../models/notifications.model";
+import { CandidateMedicalData } from "../../../utils/services/emails/candidateMedicalEmailInvite";
+
+const { CLIENT_URL } = process.env;
 
 const getJobsForMedical = async function (req: IUserRequest, res: Response) {
   try {
@@ -69,7 +77,7 @@ const setMedicalAvailability = async function (req: IUserRequest, res: Response)
     const { job_id } = req.query;
     const data = EmployerMedicalsManagementSchema.parse(req.body);
 
-    if (!job_id) return res.status(200).json({ message: "Job ID is required" });
+    if (!job_id) return res.status(400).json({ message: "Job ID is required" });
 
     const job = await Job.findById(job_id);
     if (!job) return res.status(404).json({ message: "Job not found!" });
@@ -78,19 +86,20 @@ const setMedicalAvailability = async function (req: IUserRequest, res: Response)
     const employer = await User.findById(userId).select("organisation_name").lean();
     if (!employer) return res.status(404).json({ message: "Employer not found" });
 
+    const existingMedicals = await MedicalMgmt.findOne({ job: job_id }).lean();
+    if (existingMedicals) return res.status(200).json({ message: "A Medical record for the specified job already exists." });
+
+    // Search for medicalists existence across DB
     const existingMedicalistsInDB = await User.find({ email: { $in: data.medicalists } })
       .select("email first_name")
       .lean();
 
     const medicalistsAlreadyInDB = new Set(existingMedicalistsInDB.map(med => med.email));
 
-    const existingMedicals = await MedicalMgmt.findOne({ job: job_id }).lean();
-    if (existingMedicals) return res.status(200).json({ message: "A Medical record for the specified job already exists." });
+    // Medicalists not in DB - need to create new accounts
+    const uniqueMedicalists = data.medicalists.filter(email => !medicalistsAlreadyInDB.has(email));
 
-    // new medicalists to create account for that aren't already in the DB
-    const uniqueMedicalists = data.medicalists.filter(med => !medicalistsAlreadyInDB.has(med));
-
-    // medicalists already in DB for different jobs - collect them for processing
+    // Medicalists already in DB - collect them for processing
     const existingDBMedicalists: string[] = [];
 
     const processedTimeSlots = data.medical_time_slot.map(slot => ({
@@ -107,7 +116,7 @@ const setMedicalAvailability = async function (req: IUserRequest, res: Response)
       candidates: [],
     });
 
-    //* process already existing panelists in DB differently
+    // Process existing medicalists in DB
     data.medicalists.forEach(med => {
       if (medicalistsAlreadyInDB.has(med)) {
         existingDBMedicalists.push(med);
@@ -115,19 +124,122 @@ const setMedicalAvailability = async function (req: IUserRequest, res: Response)
       }
     });
 
-    // Process medicalists invites using utility function
-    const invitedMedicalists = await batchInviteMedicalists(uniqueMedicalists, job.job_title);
+    // Process new medicalists (create users concurrently)
+    let newMedicalistEmailData: MedicalistInviteData[] = [];
 
-    // Update medicalists list in record
-    medicalRecord.medicalists = invitedMedicalists;
+    if (uniqueMedicalists.length > 0) {
+      const medicalistCreationResults = await Promise.allSettled(
+        uniqueMedicalists.map(async email => {
+          const tempPassword = crypto.randomBytes(8).toString("hex");
+          const hashedPassword = await hashPassword(tempPassword);
+          const nameGuess = guessNameFromEmail(email);
+
+          const newMedicalist = await User.create({
+            first_name: nameGuess.firstName || "Guest",
+            last_name: "medicalist",
+            email,
+            password: hashedPassword,
+            role: "medical-expert",
+            has_validated_email: true,
+            isTemporary: true,
+            expiresAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000), // 7 days
+          });
+
+          return {
+            email,
+            emailData: {
+              email,
+              recipientName: nameGuess.firstName || "Guest",
+              jobTitle: job.job_title,
+              isNewMedicalist: true,
+              tempPassword,
+              isTemporary: newMedicalist.isTemporary,
+            },
+          };
+        })
+      );
+
+      // Process successful user creations
+      medicalistCreationResults.forEach((result, index) => {
+        if (result.status === "fulfilled") {
+          // Add to medical record medicalists
+          medicalRecord.medicalists.push(result.value.email);
+          // Collect email data
+          newMedicalistEmailData.push(result.value.emailData as MedicalistInviteData);
+        } else {
+          console.error(`Error creating medicalist ${uniqueMedicalists[index]}:`, result.reason);
+        }
+      });
+    }
+
+    // Process existing medicalists (prepare email data concurrently)
+    let existingMedicalistEmailData: MedicalistInviteData[] = [];
+
+    if (existingDBMedicalists.length > 0) {
+      const existingMedicalistResults = await Promise.allSettled(
+        existingDBMedicalists.map(async email => {
+          const existingUser = await User.findOne({ email }).lean();
+          const nameGuess = existingUser ? { firstName: existingUser.first_name } : guessNameFromEmail(email);
+
+          return {
+            email,
+            emailData: {
+              email,
+              recipientName: nameGuess.firstName || "Guest",
+              jobTitle: job.job_title,
+              isNewMedicalist: false,
+            },
+          };
+        })
+      );
+
+      // Process successful existing medicalist data
+      existingMedicalistResults.forEach((result, index) => {
+        if (result.status === "fulfilled") {
+          existingMedicalistEmailData.push(result.value.emailData as MedicalistInviteData);
+        } else {
+          console.error(`Error processing existing medicalist ${existingDBMedicalists[index]}:`, result.reason);
+        }
+      });
+    }
+
+    // Bulk email operations
+    const emailPromises: Promise<any>[] = [];
+
+    if (newMedicalistEmailData.length > 0) {
+      emailPromises.push(
+        queueBulkEmail(
+          JOB_KEY.MEDICALIST_INVITE,
+          newMedicalistEmailData.map(data => ({ type: JOB_KEY.MEDICALIST_INVITE, ...data }))
+        )
+      );
+    }
+
+    if (existingMedicalistEmailData.length > 0) {
+      emailPromises.push(
+        queueBulkEmail(
+          JOB_KEY.MEDICALIST_INVITE,
+          existingMedicalistEmailData.map(data => ({ type: JOB_KEY.MEDICALIST_INVITE, ...data }))
+        )
+      );
+    }
+
+    // Execute bulk email operations concurrently
+    if (emailPromises.length > 0) {
+      await Promise.all(emailPromises);
+    }
 
     // Save the updated medical record
     await medicalRecord.save();
 
-    res.status(200).json({
-      message: "Medical record created, invites sent!!",
-      invitedMedicalists: invitedMedicalists.length,
-      invitedCandidates: medicalRecord.candidates.length,
+    return res.status(200).json({
+      message: "Medicalists invitation process initiated successfully",
+      totalInvites: newMedicalistEmailData.length + existingMedicalistEmailData.length,
+      breakdown: {
+        newMedicalists: newMedicalistEmailData.length,
+        existingMedicalists: existingMedicalistEmailData.length,
+        totalProcessed: uniqueMedicalists.length + existingDBMedicalists.length,
+      },
     });
   } catch (error) {
     handleErrors({ res, error });
@@ -157,16 +269,80 @@ const inviteMedicalCandidates = async function (req: IUserRequest, res: Response
 
     const uniqueCandidates = candidate_ids.filter(id => !medical.candidates.some(c => c.candidate.toString() === id.toString()));
 
-    // Send batch invites to candidates
-    const successfulCandidateInvites = await batchInviteCandidates(uniqueCandidates, job_id, medical._id, medical.job.job_title, medical.address, userId as string, medical.job.employer.organisation_name);
+    // invite users concurrently
+    let processedCandidateData: CandidateMedicalData[] = [];
 
-    // Add candidates to the medical records
-    successfulCandidateInvites.forEach(candidateId => {
-      medical.candidates.push({
-        candidate: candidateId as unknown as Types.ObjectId,
+    if (uniqueCandidates.length > 0) {
+      const actionResult = await Promise.allSettled(
+        uniqueCandidates.map(async id => {
+          const existingUser = await User.findById(id);
+
+          //* update candidate status
+          await Job.findOneAndUpdate(
+            { _id: job_id, "applicants.applicant": id },
+            {
+              $set: {
+                "applicants.$.status": "medical_invite_sent",
+              },
+            }
+          );
+
+          const subject = `Medical Assessment Invitation - ${medical.job.job_title}`;
+          const message = `${medical.job.employer.organisation_name} has invited you to schedule a medical assessment for ${medical.job.job_title} position.`;
+
+          //*CREATE AND SEND NOTIFICATION
+          await createAndSendNotification({
+            recipient: id,
+            sender: userId as string,
+            type: NotificationType.MESSAGE,
+            title: subject,
+            message,
+            status: NotificationStatus.UNREAD,
+          });
+
+          // Create invite link and expiration date
+          const medicalInviteLink = `${CLIENT_URL}/dashboard/job-seeker/medicals/schedule_medicals?job_id=/${medical._id}`;
+          const expirationDate = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000); // Expires in 7 days
+
+          return {
+            candidateId: id,
+            emailData: {
+              email: existingUser?.email,
+              first_name: existingUser?.first_name,
+              last_name: existingUser?.last_name,
+              jobTitle: medical.job.job_title,
+              expirationDate,
+              medicalInviteLink,
+              address: medical.address,
+              employerOrgName: medical.job.employer.organisation_name,
+            },
+          };
+        })
+      );
+
+      //* predictable candidate push and email data collector
+      actionResult.forEach((result, index) => {
+        if (result.status === "fulfilled") {
+          medical.candidates.push({ candidate: result.value.candidateId });
+          // Collect email data for bulk queue
+          processedCandidateData.push(result.value?.emailData as CandidateMedicalData);
+        } else {
+          console.error(`Error inviting candidate ${uniqueCandidates[index]}:`, result.reason);
+        }
       });
-    });
+    }
 
+    if (processedCandidateData.length > 0) {
+      await queueBulkEmail(
+        JOB_KEY.MEDICALIST_CANDIDATE_INVITE,
+        processedCandidateData.map(data => ({
+          type: JOB_KEY.MEDICALIST_CANDIDATE_INVITE,
+          ...data,
+        }))
+      );
+    }
+
+    //* save candidates record
     await medical.save();
 
     return res.status(200).json({ message: "Candidates invited successfully!" });

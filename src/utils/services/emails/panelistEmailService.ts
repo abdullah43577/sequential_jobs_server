@@ -67,7 +67,4 @@ export const sendPanelistInviteEmail = async (data: PanelistInviteData) => {
     subject,
     message: html,
   });
-
-  // Wait 1 second to stay under Resend's 2 req/sec limit
-  await new Promise(resolve => setTimeout(resolve, 1000));
 };

@@ -7,6 +7,8 @@ import User from "../../models/users.model";
 import { stripe } from "../../server";
 import { sendUpgradeConfirmationEmail } from "../../utils/services/emails/sendUpgradeConfirmationEmailService";
 import { sendPaymentFailureEmail } from "../../utils/services/emails/sendPaymentFailureEmailService";
+import { queueEmail } from "../../workers/globalEmailQueueHandler";
+import { JOB_KEY } from "../../workers/registerWorkers";
 const { STRIPE_WEBHOOK_SECRET, SEQUENTIAL_FREEMIUM, SEQUENTIAL_STANDARD, SEQUENTIAL_PRO, SEQUENTIAL_SUPER_PRO } = process.env;
 
 const getPricingInfo = async function (req: IUserRequest, res: Response) {
@@ -210,9 +212,9 @@ const handleWebhook = async function (req: Request, res: Response) {
 
           console.log(`[Webhook][invoice.paid] Updated user ${user._id} with successful payment.`);
 
-          await sendUpgradeConfirmationEmail({ email: userInfo?.email as string, first_name: userInfo?.first_name as string, last_name: userInfo?.last_name as string, plan_name: userInfo?.subscription_tier as string, btnUrl: "" });
+          await queueEmail(JOB_KEY.UPGRADE_CONFIRMATION_MAIL, { email: userInfo?.email as string, first_name: userInfo?.first_name as string, last_name: userInfo?.last_name as string, plan_name: userInfo?.subscription_tier as string, btnUrl: "" });
 
-          console.log("Email Upgrade sent successfully to end user");
+          console.log("Email Upgrade scheduled successfully to end user");
         } else {
           console.log(`No user found with customer ID: ${customerId}`);
         }
@@ -237,7 +239,7 @@ const handleWebhook = async function (req: Request, res: Response) {
           );
           console.log(`[Webhook][invoice.payment_failed] Marked user ${user._id} as payment_failed.`);
 
-          await sendPaymentFailureEmail({ email: userInfo?.email as string, first_name: userInfo?.first_name as string, last_name: userInfo?.last_name as string, plan_name: userInfo?.subscription_tier as string, btnUrl: "" });
+          await queueEmail(JOB_KEY.PAYMENT_FAILURE_MAIL, { email: userInfo?.email as string, first_name: userInfo?.first_name as string, last_name: userInfo?.last_name as string, plan_name: userInfo?.subscription_tier as string, btnUrl: "" });
 
           console.log("Email Upgrade Failure message sent sucecssfully to end user");
         } else {
