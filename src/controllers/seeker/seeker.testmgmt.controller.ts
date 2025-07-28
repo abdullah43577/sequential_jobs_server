@@ -7,6 +7,8 @@ import TestSubmission from "../../models/jobs/testsubmission.model";
 import Test from "../../models/jobs/test.model";
 import { sendTestSubmissionNotificationEmail } from "../../utils/services/emails/testSubmissionEmailService";
 import User from "../../models/users.model";
+import { queueEmail } from "../../workers/globalEmailQueueHandler";
+import { JOB_KEY } from "../../workers/registerWorkers";
 
 const { CLIENT_URL } = process.env;
 
@@ -107,8 +109,7 @@ const submitJobTest = async function (req: IUserRequest, res: Response) {
       score: totalScore,
     });
 
-    // Send email to employer
-    await sendTestSubmissionNotificationEmail({
+    await queueEmail(JOB_KEY.JOB_TEST, {
       employer: {
         email: test.employer.email,
         firstName: test.employer.first_name,
@@ -130,8 +131,32 @@ const submitJobTest = async function (req: IUserRequest, res: Response) {
         score: totalScore,
         totalQuestions: test.questions.length,
       },
-      baseUrl: CLIENT_URL as string,
     });
+
+    // Send email to employer
+    // await sendTestSubmissionNotificationEmail({
+    //   employer: {
+    //     email: test.employer.email,
+    //     firstName: test.employer.first_name,
+    //     lastName: test.employer.last_name,
+    //   },
+    //   candidate: {
+    //     firstName: candidate.first_name,
+    //     lastName: candidate.last_name,
+    //   },
+    //   job: {
+    //     title: test.job.job_title,
+    //   },
+    //   test: {
+    //     title: "Assessment Test",
+    //     type: "job_test",
+    //   },
+    //   submission: {
+    //     id: submission._id.toString(),
+    //     score: totalScore,
+    //     totalQuestions: test.questions.length,
+    //   },
+    // });
 
     return res.status(200).json({ message: "Test submitted successfully", submission });
   } catch (error) {

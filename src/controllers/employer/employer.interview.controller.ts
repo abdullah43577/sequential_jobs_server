@@ -12,10 +12,11 @@ import TestSubmission from "../../models/jobs/testsubmission.model";
 import { Types } from "mongoose";
 import { NotificationStatus, NotificationType } from "../../models/notifications.model";
 import { guessNameFromEmail } from "../../utils/guessNameFromEmail";
-import { sendCandidateInviteEmail } from "../../utils/services/emails/interviewCandidatesEmailService";
+import { CandidateInviteData, sendCandidateInviteEmail } from "../../utils/services/emails/interviewCandidatesEmailService";
 import { createAndSendNotification } from "../../utils/services/notifications/sendNotification";
-import { queueEmail } from "../../workers/globalEmailQueueHandler";
+import { queueBulkEmail, queueEmail } from "../../workers/globalEmailQueueHandler";
 import { JOB_KEY } from "../../workers/registerWorkers";
+import { PanelistInviteData } from "../../utils/services/emails/panelistEmailService";
 
 //* INTERVIEW MANAGEMENT
 const getJobsForInterviews = async function (req: IUserRequest, res: Response) {
@@ -174,12 +175,15 @@ const handleInvitePanelists = async function (req: IUserRequest, res: Response) 
 
     const panelists = req.body.panelists as string[];
 
-    if (!panelists || typeof panelists !== "object" || panelists.length === 0) return res.status(400).json({ message: "Panelist emails required!" });
+    if (!panelists || typeof panelists !== "object" || panelists.length === 0) {
+      return res.status(400).json({ message: "Panelist emails required!" });
+    }
 
     const interview = await InterviewMgmt.findOne({ job: job_id }).populate<{ job: { _id: string; job_title: string } }>("job", "job_title");
+
     if (!interview) return res.status(400).json({ message: "Interview not found!" });
 
-    //* search for panelists existence across DB
+    // Search for panelists existence across DB
     const existingPanelistsInDB = await User.find({ email: { $in: panelists } })
       .select("email first_name")
       .lean();
@@ -187,33 +191,35 @@ const handleInvitePanelists = async function (req: IUserRequest, res: Response) 
     const panelistsAlreadyInDB = new Set(existingPanelistsInDB.map(pan => pan.email));
     const interviewPanelists = new Set(interview.panelists.map(pan => pan.email));
 
-    //* panelists not in DB and haven't been added to this interview before
+    // Panelists not in DB and haven't been added to this interview before
     const uniquePanelists = panelists.filter(email => !panelistsAlreadyInDB.has(email) && !interviewPanelists.has(email));
 
-    //* panelists that match what's stored in DB for current interview with data sent to this controller
+    // Panelists that match what's stored in DB for current interview
     const existingPanelists = panelists.filter(email => interviewPanelists.has(email));
 
-    //* panelists already in DB for different jobs should be merged with existingPanelists if the email was also sent across
+    // Panelists already in DB for different jobs - collect them for processing
+    const existingDBPanelists: string[] = [];
+
     panelists.forEach(pan => {
       if (panelistsAlreadyInDB.has(pan) && !existingPanelists.includes(pan)) {
-        existingPanelists.push(pan);
+        existingDBPanelists.push(pan);
 
         const rating_scale_keys = Array.from(interview.rating_scale.keys());
         const newScale = new Map<string, string | number>();
-
         rating_scale_keys.forEach(key => newScale.set(key, ""));
 
         interview.panelists.push({ email: pan, rating_scale: newScale });
       }
     });
 
-    // Process new panelists (create users first, then queue emails)
+    // Process new panelists (create users concurrently)
+    let newPanelistEmailData: PanelistInviteData[] = [];
+
     if (uniquePanelists.length > 0) {
-      for (const email of uniquePanelists) {
-        try {
+      const panelistCreationResults = await Promise.allSettled(
+        uniquePanelists.map(async email => {
           const tempPassword = crypto.randomBytes(8).toString("hex");
           const hashedPassword = await hashPassword(tempPassword);
-
           const nameGuess = guessNameFromEmail(email);
 
           const newPanelist = await User.create({
@@ -227,45 +233,84 @@ const handleInvitePanelists = async function (req: IUserRequest, res: Response) 
             expiresAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000), // 7 days
           });
 
-          // Queue the email job (no delay needed as worker handles rate limiting)
-          await queueEmail(JOB_KEY.PANELIST_INVITE, {
-            email,
-            recipientName: nameGuess.firstName || "Guest",
-            jobTitle: interview.job.job_title,
-            isNewPanelist: true,
-            tempPassword,
-            isTemporary: newPanelist.isTemporary,
-          });
-
           const rating_scale_keys = Array.from(interview.rating_scale.keys());
           const newScale = new Map<string, string | number>();
-
           rating_scale_keys.forEach(key => newScale.set(key, ""));
 
-          interview.panelists.push({ email: email, rating_scale: newScale });
-        } catch (error) {
-          console.error(`Error creating panelist ${email}:`, error);
+          return {
+            email,
+            interviewPanelistData: { email, rating_scale: newScale },
+            emailData: {
+              email,
+              recipientName: nameGuess.firstName || "Guest",
+              jobTitle: interview.job.job_title,
+              isNewPanelist: true,
+              tempPassword,
+              isTemporary: newPanelist.isTemporary,
+            },
+          };
+        })
+      );
+
+      // Process successful user creations
+      panelistCreationResults.forEach((result, index) => {
+        if (result.status === "fulfilled") {
+          // Add to interview panelists (safe sequential operation)
+          interview.panelists.push(result.value.interviewPanelistData);
+          // Collect email data
+          newPanelistEmailData.push(result.value.emailData as PanelistInviteData);
+        } else {
+          console.error(`Error creating panelist ${uniquePanelists[index]}:`, result.reason);
         }
-      }
+      });
     }
 
-    // Process existing panelists (queue emails)
-    if (existingPanelists.length > 0) {
-      for (const email of existingPanelists) {
-        try {
+    // Process existing panelists (prepare email data concurrently)
+    let existingPanelistEmailData: PanelistInviteData[] = [];
+    const allExistingEmails = [...existingPanelists, ...existingDBPanelists];
+
+    if (allExistingEmails.length > 0) {
+      const existingPanelistResults = await Promise.allSettled(
+        allExistingEmails.map(async email => {
           const existingUser = await User.findOne({ email }).lean();
           const nameGuess = existingUser ? { firstName: existingUser.first_name } : guessNameFromEmail(email);
 
-          await queueEmail(JOB_KEY.PANELIST_INVITE, {
+          return {
             email,
-            recipientName: nameGuess.firstName || "Guest",
-            jobTitle: interview.job.job_title,
-            isNewPanelist: false,
-          });
-        } catch (error) {
-          console.error(`Error queuing notification for existing panelist ${email}:`, error);
+            emailData: {
+              email,
+              recipientName: nameGuess.firstName || "Guest",
+              jobTitle: interview.job.job_title,
+              isNewPanelist: false,
+            },
+          };
+        })
+      );
+
+      // Process successful existing panelist data
+      existingPanelistResults.forEach((result, index) => {
+        if (result.status === "fulfilled") {
+          existingPanelistEmailData.push(result.value.emailData as PanelistInviteData);
+        } else {
+          console.error(`Error processing existing panelist ${allExistingEmails[index]}:`, result.reason);
         }
-      }
+      });
+    }
+
+    // Bulk email operations
+    const emailPromises: Promise<any>[] = [];
+
+    if (newPanelistEmailData.length > 0) {
+      emailPromises.push(queueBulkEmail(JOB_KEY.PANELIST_INVITE, newPanelistEmailData));
+    }
+
+    if (existingPanelistEmailData.length > 0) {
+      emailPromises.push(queueBulkEmail(JOB_KEY.PANELIST_INVITE, existingPanelistEmailData));
+    }
+
+    // Execute bulk email operations concurrently
+    if (emailPromises.length > 0) {
+      await Promise.all(emailPromises);
     }
 
     // Save the updated interview document
@@ -275,7 +320,12 @@ const handleInvitePanelists = async function (req: IUserRequest, res: Response) 
     // Return success response immediately (emails will be sent asynchronously)
     return res.status(200).json({
       message: "Panelists invitation process initiated successfully",
-      totalInvites: uniquePanelists.length + existingPanelists.length,
+      totalInvites: newPanelistEmailData.length + existingPanelistEmailData.length,
+      breakdown: {
+        newPanelists: newPanelistEmailData.length,
+        existingPanelists: existingPanelistEmailData.length,
+        totalProcessed: uniquePanelists.length + allExistingEmails.length,
+      },
     });
   } catch (error) {
     handleErrors({ res, error });
@@ -350,44 +400,57 @@ const handleInviteCandidates = async function (req: IUserRequest, res: Response)
 
     const uniqueCandidates = candidate_ids.filter(id => !interview.candidates.some(c => c.candidate.toString() === id.toString()));
 
-    const promises = uniqueCandidates.map(async id => {
-      try {
-        const existingUser = await User.findById(id);
-        if (!existingUser) return;
+    // invite users concurrently
+    let processedCandidateData: CandidateInviteData[] = [];
 
-        //* send invite email
-        await sendCandidateInviteEmail({
-          email: existingUser.email,
-          recipientName: `${existingUser.first_name} ${existingUser.last_name}`,
-          jobTitle: interview.job.job_title,
-          isTemporary: existingUser.isTemporary,
-        });
+    if (uniqueCandidates.length > 0) {
+      const actionResult = await Promise.allSettled(
+        uniqueCandidates.map(async id => {
+          const existingUser = await User.findById(id);
 
-        interview.candidates.push({ candidate: id });
+          //* update candidate status
+          await Job.findOneAndUpdate(
+            { _id: job_id, "applicants.applicant": id },
+            {
+              $set: {
+                "applicants.$.status": "interview_invite_sent",
+              },
+            }
+          );
 
-        //* update candidate status
-        await Job.findOneAndUpdate(
-          { _id: job_id, "applicants.applicant": id },
-          {
-            $set: {
-              "applicants.$.status": "interview_invite_sent",
+          const subject = `Candidate Interview Invite - ${interview.job.job_title}`;
+          const message = `${interview.job.employer.organisation_name} has invited you for an interview.`;
+
+          //*CREATE AND SEND NOTIFICATION
+          await createAndSendNotification({ recipient: id, sender: userId as string, type: NotificationType.MESSAGE, title: subject, message, status: NotificationStatus.UNREAD });
+
+          return {
+            candidateId: id,
+            emailData: {
+              email: existingUser?.email,
+              recipientName: `${existingUser?.first_name} ${existingUser?.last_name}`,
+              jobTitle: interview.job.job_title,
+              isTemporary: existingUser?.isTemporary,
             },
-          }
-        );
+          };
+        })
+      );
 
-        const subject = `Candidate Interview Invite - ${interview.job.job_title}`;
-        const message = `${interview.job.employer.organisation_name} has invited you for an interview.`;
+      //* predictable candidate push and email data collector
+      actionResult.forEach((result, index) => {
+        if (result.status === "fulfilled") {
+          interview.candidates.push({ candidate: result.value.candidateId });
+          // Collect email data
+          processedCandidateData.push(result.value?.emailData as CandidateInviteData);
+        } else {
+          console.error(`Error inviting candidate ${uniqueCandidates[index]}:`, result.reason);
+        }
+      });
+    }
 
-        //*CREATE AND SEND NOTIFICATION
-        await createAndSendNotification({ recipient: id, sender: userId as string, type: NotificationType.MESSAGE, title: subject, message, status: NotificationStatus.UNREAD });
-
-        return;
-      } catch (error) {
-        console.error(`Error inviting candidate ${id}:`, error);
-      }
-    });
-
-    await Promise.all(promises);
+    if (processedCandidateData.length > 0) {
+      await queueBulkEmail(JOB_KEY.INTERVIEW_CANDIDATE_INVITE, processedCandidateData);
+    }
 
     //* save candidates record
     interview.stage = "applicants_invite";

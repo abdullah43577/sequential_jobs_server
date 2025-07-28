@@ -78,8 +78,20 @@ const setMedicalAvailability = async function (req: IUserRequest, res: Response)
     const employer = await User.findById(userId).select("organisation_name").lean();
     if (!employer) return res.status(404).json({ message: "Employer not found" });
 
+    const existingMedicalistsInDB = await User.find({ email: { $in: data.medicalists } })
+      .select("email first_name")
+      .lean();
+
+    const medicalistsAlreadyInDB = new Set(existingMedicalistsInDB.map(med => med.email));
+
     const existingMedicals = await MedicalMgmt.findOne({ job: job_id }).lean();
     if (existingMedicals) return res.status(200).json({ message: "A Medical record for the specified job already exists." });
+
+    // new medicalists to create account for that aren't already in the DB
+    const uniqueMedicalists = data.medicalists.filter(med => !medicalistsAlreadyInDB.has(med));
+
+    // medicalists already in DB for different jobs - collect them for processing
+    const existingDBMedicalists: string[] = [];
 
     const processedTimeSlots = data.medical_time_slot.map(slot => ({
       ...slot,
@@ -95,8 +107,16 @@ const setMedicalAvailability = async function (req: IUserRequest, res: Response)
       candidates: [],
     });
 
+    //* process already existing panelists in DB differently
+    data.medicalists.forEach(med => {
+      if (medicalistsAlreadyInDB.has(med)) {
+        existingDBMedicalists.push(med);
+        medicalRecord.medicalists.push(med);
+      }
+    });
+
     // Process medicalists invites using utility function
-    const invitedMedicalists = await batchInviteMedicalists(data.medicalists, job.job_title);
+    const invitedMedicalists = await batchInviteMedicalists(uniqueMedicalists, job.job_title);
 
     // Update medicalists list in record
     medicalRecord.medicalists = invitedMedicalists;

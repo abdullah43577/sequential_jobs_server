@@ -1,7 +1,7 @@
 import { EmailTypes, generateProfessionalEmail } from "../../nodemailer.ts/email-templates/generateProfessionalEmail";
 import { transportMail } from "../../nodemailer.ts/transportMail";
 
-interface ReuploadDocumentData {
+export interface ReuploadDocumentData {
   email: string;
   first_name: string;
   last_name: string;

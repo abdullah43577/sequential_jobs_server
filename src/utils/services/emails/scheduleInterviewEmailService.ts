@@ -2,7 +2,7 @@ import { Types } from "mongoose";
 import { EmailTypes, generateProfessionalEmail } from "../../nodemailer.ts/email-templates/generateProfessionalEmail";
 import { transportMail } from "../../nodemailer.ts/transportMail";
 
-interface InterviewEmailData {
+export interface InterviewEmailData {
   candidate: {
     id: string;
     firstName: string;
@@ -32,7 +32,7 @@ interface InterviewEmailData {
   baseUrl: string;
 }
 
-interface PanelistData {
+export interface PanelistData {
   email: string;
   firstName?: string | undefined;
   lastName?: string | undefined;
@@ -182,7 +182,6 @@ export const sendAllInterviewEmails = async (data: InterviewEmailData, panelists
 
     // Send panelist emails
     if (panelists.length > 0) {
-      console.log("panelists data emails here", panelists);
       const panelistPromises = panelists.map(panelist =>
         sendPanelistInterviewEmail(data, panelist).catch(error => {
           console.error(`Error sending email to panelist ${panelist.email}:`, error);

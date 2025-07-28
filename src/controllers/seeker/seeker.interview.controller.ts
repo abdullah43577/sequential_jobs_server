@@ -4,11 +4,11 @@ import { IUserRequest } from "../../interface";
 import InterviewMgmt from "../../models/interview/interview.model";
 import { scheduleInterviewSchema } from "../../utils/types/seekerValidatorSchema";
 import { NotificationStatus, NotificationType } from "../../models/notifications.model";
-
 import User from "../../models/users.model";
 import Job from "../../models/jobs/jobs.model";
 import { createAndSendNotification } from "../../utils/services/notifications/sendNotification";
-import { sendAllInterviewEmails } from "../../utils/services/emails/scheduleInterviewEmailService";
+import { queueBulkEmail } from "../../workers/globalEmailQueueHandler";
+import { JOB_KEY } from "../../workers/registerWorkers";
 
 const { CLIENT_URL } = process.env;
 
@@ -95,7 +95,7 @@ const scheduleInterview = async function (req: IUserRequest, res: Response) {
           "candidates.$.scheduled_date_time": scheduled_date_time,
           "candidates.$.status": "confirmed",
         },
-      },  
+      },
       { returnDocument: "after" }
     )
       .populate<{ job: { _id: string; job_title: string } }>({
@@ -116,12 +116,9 @@ const scheduleInterview = async function (req: IUserRequest, res: Response) {
     // Get panelist information if they exist
     let panelists: { email: string; firstName: string | undefined; lastName: string | undefined }[] = [];
 
-    console.log(interview, "interview data here");
-
     if (interview.panelists && interview.panelists.length > 0) {
       const panelistPromises = interview.panelists.map(async panelistData => {
-        const panelist = await User.findOne({ email: panelistData.email }).select("first_name last_name");
-        console.log(panelist, "panelist fetched data is here");
+        const panelist = await User.findOne({ email: panelistData.email }).select("first_name last_name").lean();
         return {
           email: panelistData.email,
           firstName: panelist?.first_name,
@@ -129,7 +126,6 @@ const scheduleInterview = async function (req: IUserRequest, res: Response) {
         };
       });
       panelists = await Promise.all(panelistPromises);
-      console.log(panelists, "panelists data");
     }
 
     // Prepare email data
@@ -163,8 +159,21 @@ const scheduleInterview = async function (req: IUserRequest, res: Response) {
       baseUrl: CLIENT_URL as string,
     };
 
-    // Send all interview emails
-    await sendAllInterviewEmails(emailData, panelists);
+    const emailJobs = [
+      { type: JOB_KEY.INTERVIEW_CANDIDATE_SCHEDULE_EMPLOYER_EMAIL, ...emailData },
+      { type: JOB_KEY.INTERVIEW_CANDIDATE_SCHEDULE, ...emailData },
+      ...panelists.map(panelist => ({
+        type: JOB_KEY.INTERVIEW_CANDIDATE_SCHEDULE_PAHELISTS_EMAIL,
+        ...emailData,
+        // ✅ Flatten panelist data to top level
+        panelistEmail: panelist.email,
+        panelistFirstName: panelist.firstName,
+        panelistLastName: panelist.lastName,
+      })),
+    ];
+
+    // Schedule/send all interview emails
+    await queueBulkEmail("CANDIDATE_INTERVIEW_SCHEDULED", emailJobs);
 
     // Create notification for employer
     const formattedDate = new Date(scheduled_date_time.date).toLocaleDateString();

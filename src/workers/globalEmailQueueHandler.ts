@@ -1,10 +1,10 @@
 import { Queue, Worker } from "bullmq";
 import { connection } from "./redisConnection";
 
-export const emailQueue = new Queue("emails", { connection });
+export const emailQueue = new Queue("Emails", { connection });
 
-// Job handler registry - you can add handlers dynamically
-type EmailJobHandler = (data: any) => Promise<any>;
+// Job handler registry
+type EmailJobHandler = (data: any | any[]) => Promise<any>;
 
 const jobHandlers: Record<string, EmailJobHandler> = {};
 
@@ -13,9 +13,11 @@ export const registerEmailHandler = (type: string, handler: EmailJobHandler) => 
   jobHandlers[type] = handler;
 };
 
+// {"interview_candidate_invite": async () => {...}}
+
 // Single global worker - handles ALL email types
 const globalEmailWorker = new Worker(
-  "emails",
+  "Emails",
   async job => {
     const { type, ...data } = job.data;
 
@@ -47,7 +49,26 @@ globalEmailWorker.on("failed", (job, err) => {
   console.log(`Email job has failed with ${err.message}`);
 });
 
+globalEmailWorker.on("error", err => {
+  console.error(err);
+});
+
 // Helper function to queue any email type
-export const queueEmail = (type: string, data: any) => emailQueue.add("send_email", { type, ...data });
+export const queueEmail = (type: string, data: any) => emailQueue.add("send_email", { type, ...data }, { removeOnComplete: true, removeOnFail: true });
+
+// Helper function to queue emails in bulk
+export const queueBulkEmail = (type: string, emailData: any[]) => {
+  const jobs = emailData.map((data, index) => ({
+    name: "send_email",
+    data: { type, ...data },
+    opts: {
+      removeOnComplete: 10,
+      removeOnFail: 50,
+      delay: index * 100, // Optional: stagger jobs by 100ms each
+    },
+  }));
+
+  return emailQueue.addBulk(jobs);
+};
 
 export { globalEmailWorker };

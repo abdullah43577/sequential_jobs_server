@@ -9,7 +9,8 @@ import User from "../../models/users.model";
 import { NotificationStatus, NotificationType } from "../../models/notifications.model";
 import TestSubmission from "../../models/jobs/testsubmission.model";
 import { createAndSendNotification } from "../../utils/services/notifications/sendNotification";
-import { sendTestApplicantsEmail } from "../../utils/services/emails/testApplicantsEmailInvite";
+import { queueEmail } from "../../workers/globalEmailQueueHandler";
+import { JOB_KEY } from "../../workers/registerWorkers";
 
 const { CLIENT_URL } = process.env;
 
@@ -375,16 +376,15 @@ const jobTestApplicantsInvite = async function (req: IUserRequest, res: Response
       expiresAt: expirationDate,
     }));
 
-    // Send invitations
-    const emailPromises = newInvites.map(async invite => {
+    for (const invite of newInvites) {
       try {
         const user = await User.findById(invite.user);
-        if (!user) return null;
+        if (!user) continue;
 
         // Generate a unique test link (you might want to generate a more secure token)
         const testLink = `${CLIENT_URL}/dashboard/job-seeker/test-management`;
 
-        await sendTestApplicantsEmail({
+        await queueEmail(JOB_KEY.JOB_TEST, {
           email: user.email,
           first_name: user.first_name,
           last_name: user.last_name,
@@ -409,10 +409,7 @@ const jobTestApplicantsInvite = async function (req: IUserRequest, res: Response
       } catch (error) {
         console.error(`Error inviting candidate ${invite.user}:`, error);
       }
-    });
-
-    // Wait for all emails to be sent
-    await Promise.allSettled(emailPromises);
+    }
 
     return res.status(200).json({
       message: "Applicants invited successfully!",
