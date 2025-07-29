@@ -2,7 +2,7 @@ import { Types } from "mongoose";
 import { EmailTypes, generateProfessionalEmail } from "../../nodemailer.ts/email-templates/generateProfessionalEmail";
 import { transportMail } from "../../nodemailer.ts/transportMail";
 
-interface InterviewEmailData {
+export interface InterviewEmailData {
   candidate: {
     id: string;
     firstName: string;
@@ -32,7 +32,7 @@ interface InterviewEmailData {
   baseUrl: string;
 }
 
-interface PanelistData {
+export interface PanelistData {
   email: string;
   firstName?: string | undefined;
   lastName?: string | undefined;
@@ -73,8 +73,8 @@ const generatePanelistEmailData = (data: InterviewEmailData, panelist: PanelistD
     
 As a panelist, you'll need to evaluate this candidate after the interview. Please keep the following reference information for your records:
 
-Job ID: ${data.job.id}
 Candidate ID: ${data.candidate.id}
+Job ID: ${data.job.id}
 
 You will need these IDs when submitting your candidate evaluation.`,
     buttonText: "Join Interview",
@@ -172,31 +172,4 @@ export const sendCandidateInterviewEmail = async (data: InterviewEmailData) => {
     subject,
     message: html,
   });
-};
-
-// Send all interview emails
-export const sendAllInterviewEmails = async (data: InterviewEmailData, panelists: PanelistData[] = []) => {
-  try {
-    // Send employer email
-    await sendEmployerInterviewEmail(data);
-
-    // Send panelist emails
-    if (panelists.length > 0) {
-      const panelistPromises = panelists.map(panelist =>
-        sendPanelistInterviewEmail(data, panelist).catch(error => {
-          console.error(`Error sending email to panelist ${panelist.email}:`, error);
-          return false;
-        })
-      );
-      await Promise.allSettled(panelistPromises);
-    }
-
-    // Send candidate email
-    await sendCandidateInterviewEmail(data);
-
-    return true;
-  } catch (error) {
-    console.error("Error sending interview emails:", error);
-    throw error;
-  }
 };

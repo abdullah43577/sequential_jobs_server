@@ -1,7 +1,7 @@
 import { registrationEmail } from "../../nodemailer.ts/email-templates/registration-email";
 import { transportMail } from "../../nodemailer.ts/transportMail";
 
-interface ForgotPasswordData {
+export interface ForgotPasswordData {
   email: string;
   first_name: string;
   baseUrl: string;

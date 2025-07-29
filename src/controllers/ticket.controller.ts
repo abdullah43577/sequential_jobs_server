@@ -3,11 +3,13 @@ import { IUserRequest } from "../interface";
 import { handleErrors } from "../helper/handleErrors";
 import { createTicketSchema, updateTicketSchema } from "../utils/types/ticketValidatorSchema";
 import Ticket from "../models/ticket.model";
-import { sendTicketCreatedEmail } from "../utils/services/emails/sendTicketEmail";
 import User from "../models/users.model";
-import { sendTicketUpdateEmail } from "../utils/services/emails/sendTicketUpdateEmail";
 import { Readable } from "stream";
 import cloudinary from "../utils/cloudinaryConfig";
+import { queueEmail } from "../workers/globalEmailQueueHandler";
+import { JOB_KEY } from "../workers/registerWorkers";
+
+const { CLIENT_URL } = process.env;
 
 const createTicket = async function (req: IUserRequest, res: Response) {
   try {
@@ -66,13 +68,13 @@ const createTicket = async function (req: IUserRequest, res: Response) {
     });
 
     // Send email to candidate of the new ticket created
-    await sendTicketCreatedEmail({
+    await queueEmail(JOB_KEY.CREATE_TICKET, {
       email: user.email,
       first_name: user.first_name,
       last_name: user.last_name,
       ticket_title: title,
       ticketId: ticket.ticketId,
-      btnUrl: `https://myapp.com/my-tickets/${ticket._id}`,
+      btnUrl: `${CLIENT_URL}/dashboard/company/ticket-management/${ticket._id}`,
     });
 
     res.status(200).json({
@@ -143,7 +145,7 @@ const updateTicket = async function (req: IUserRequest, res: Response) {
     ticket.comments.push({ sender: userId as string, message });
     await ticket.save();
 
-    await sendTicketUpdateEmail({
+    await queueEmail(JOB_KEY.UPDATE_TICKET, {
       email: ticket.createdBy.email,
       first_name: ticket.createdBy.first_name,
       last_name: ticket.createdBy.last_name,
@@ -151,7 +153,7 @@ const updateTicket = async function (req: IUserRequest, res: Response) {
       ticketId: ticket.ticketId,
       status,
       message,
-      btnUrl: `https://myapp.com/my-tickets/${ticket._id}`,
+      btnUrl: `${CLIENT_URL}/dashboard/company/ticket-management/${ticket._id}`,
     });
 
     res.status(200).json({ message: `Ticket ${ticketId} updated successfully!` });

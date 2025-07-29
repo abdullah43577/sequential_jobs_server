@@ -7,6 +7,8 @@ import User from "../../models/users.model";
 import { stripe } from "../../server";
 import { sendUpgradeConfirmationEmail } from "../../utils/services/emails/sendUpgradeConfirmationEmailService";
 import { sendPaymentFailureEmail } from "../../utils/services/emails/sendPaymentFailureEmailService";
+import { queueEmail } from "../../workers/globalEmailQueueHandler";
+import { JOB_KEY } from "../../workers/registerWorkers";
 const { STRIPE_WEBHOOK_SECRET, SEQUENTIAL_FREEMIUM, SEQUENTIAL_STANDARD, SEQUENTIAL_PRO, SEQUENTIAL_SUPER_PRO } = process.env;
 
 const getPricingInfo = async function (req: IUserRequest, res: Response) {
@@ -67,9 +69,42 @@ const createCheckoutSession = async function (req: IUserRequest, res: Response) 
         message: "Subscription tier name and price ID is required!",
       });
 
-    const user = await User.findById(userId).select("email").lean();
+    const user = await User.findById(userId).select("email subscription_tier").lean();
 
     if (!user) return res.status(404).json({ message: "user not found!" });
+
+    const fullPlanName = subscription_tier_name === "Sequential Professional" ? "Sequential Pro" : subscription_tier_name;
+
+    // Check if user is already on the requested plan
+    if (user.subscription_tier === fullPlanName) {
+      return res.status(400).json({
+        message: `You are already subscribed to ${subscription_tier_name}`,
+      });
+    }
+
+    // Handle Sequential Freemium - just downgrade without checkout
+    if (subscription_tier_name === "Sequential Freemium") {
+      await User.findByIdAndUpdate(userId, {
+        subscription_tier: "Sequential Freemium",
+        subscription_status: "trial",
+        subscription_start: new Date(),
+        subscription_end: (() => {
+          const date = new Date();
+          date.setDate(date.getDate() + 30);
+          return date;
+        })(),
+        is_trial: false,
+        stripe_customer_id: null, // Clear stripe customer ID if downgrading
+      });
+
+      return res.status(200).json({
+        message: "Successfully downgraded to Sequential Freemium",
+        data: {
+          tier: "Sequential Freemium",
+          downgraded: true,
+        },
+      });
+    }
 
     // Create a checkout session
     const session = await stripe.checkout.sessions.create({
@@ -177,9 +212,9 @@ const handleWebhook = async function (req: Request, res: Response) {
 
           console.log(`[Webhook][invoice.paid] Updated user ${user._id} with successful payment.`);
 
-          await sendUpgradeConfirmationEmail({ email: userInfo?.email as string, first_name: userInfo?.first_name as string, last_name: userInfo?.last_name as string, plan_name: userInfo?.subscription_tier as string, btnUrl: "" });
+          await queueEmail(JOB_KEY.UPGRADE_CONFIRMATION_MAIL, { email: userInfo?.email as string, first_name: userInfo?.first_name as string, last_name: userInfo?.last_name as string, plan_name: userInfo?.subscription_tier as string, btnUrl: "" });
 
-          console.log("Email Upgrade sent successfully to end user");
+          console.log("Email Upgrade scheduled successfully to end user");
         } else {
           console.log(`No user found with customer ID: ${customerId}`);
         }
@@ -204,7 +239,7 @@ const handleWebhook = async function (req: Request, res: Response) {
           );
           console.log(`[Webhook][invoice.payment_failed] Marked user ${user._id} as payment_failed.`);
 
-          await sendPaymentFailureEmail({ email: userInfo?.email as string, first_name: userInfo?.first_name as string, last_name: userInfo?.last_name as string, plan_name: userInfo?.subscription_tier as string, btnUrl: "" });
+          await queueEmail(JOB_KEY.PAYMENT_FAILURE_MAIL, { email: userInfo?.email as string, first_name: userInfo?.first_name as string, last_name: userInfo?.last_name as string, plan_name: userInfo?.subscription_tier as string, btnUrl: "" });
 
           console.log("Email Upgrade Failure message sent sucecssfully to end user");
         } else {

@@ -13,6 +13,8 @@ import { createAndSendNotification } from "../../utils/services/notifications/se
 import { NotificationStatus, NotificationType } from "../../models/notifications.model";
 import { sendMatchingJobEmail } from "../../utils/services/emails/matchingJobEmailService";
 import MedicalMgmt from "../../models/medicals/medical.model";
+import { queueEmail } from "../../workers/globalEmailQueueHandler";
+import { JOB_KEY } from "../../workers/registerWorkers";
 
 //* BULK UPLOAD
 const handleBulkUpload = async function (req: IUserRequest, res: Response) {
@@ -312,10 +314,10 @@ const applicationTestCutoff = async function (req: IUserRequest, res: Response) 
 
     const employer = await User.findById(userId).select<{ _id: string; organisation_name: string }>("organisation_name");
 
-    //* send email to relevant candidates
+    //* schedule email to relevant candidates
     await Promise.all(
       candidates.map(async cd => {
-        await sendMatchingJobEmail({ email: cd.email, first_name: cd.first_name, last_name: cd.last_name, job_title: job.job_title, organisation_name: employer?.organisation_name as string, btnUrl: "" });
+        await queueEmail(JOB_KEY.MATCHING_JOB_DETAIL, { email: cd.email, first_name: cd.first_name, last_name: cd.last_name, job_title: job.job_title, organisation_name: employer?.organisation_name as string, btnUrl: "" });
       })
     );
 

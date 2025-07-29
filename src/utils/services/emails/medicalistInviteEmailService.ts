@@ -1,40 +1,62 @@
 import { EmailTypes, generateProfessionalEmail } from "../../nodemailer.ts/email-templates/generateProfessionalEmail";
 import { transportMail } from "../../nodemailer.ts/transportMail";
 
-interface MedicalistInviteData {
-  firstName: string | undefined;
-  jobTitle: string;
+export interface MedicalistInviteData {
   email: string;
-  tempPassword: string;
+  recipientName: string;
+  jobTitle: string;
+  isNewMedicalist: boolean;
+  tempPassword?: string;
+  isTemporary?: boolean;
 }
 
-const generateMedicalistInviteEmailData = (data: MedicalistInviteData) => ({
+interface EmailResult {
+  html: string;
+  subject: string;
+}
+
+const generateNewMedicalistEmailData = (data: MedicalistInviteData) => ({
   type: "invite" as EmailTypes,
-  title: "You've Been Invited as a Medical Examiner",
-  recipientName: data.firstName || "Guest",
-  message: `You have been selected to conduct a medical examination for a candidate applying for the position of ${data.jobTitle}. Please click the button below to access the examination panel and review candidate details.
+  title: "You've Been Selected as a Medical Examiner",
+  recipientName: data.recipientName,
+  message: `You have been selected to conduct medical examinations for candidates applying for the position of ${data.jobTitle}.
     
-    Temporary Account Credentials:
-    Email: ${data.email}
-    Password: ${data.tempPassword}
-    
-    This account will expire in 7 days. Please change your password after first login.`,
-  buttonText: "Access Examination Panel",
-  buttonAction: `https://login?email=${encodeURIComponent(data.email)}&temp=true`,
+When candidates schedule their medical examinations, you will receive follow-up emails with specific details including the job ID and candidate ID you'll need when submitting medical evaluations.
+
+${data.isTemporary && data.tempPassword ? `\n\nTemporary Account Credentials:\nEmail: ${data.email}\nPassword: ${data.tempPassword}\n\nThis account will expire in 7 days. Please change your password after first login.` : ""}`,
+  buttonText: "Access Medical Panel",
+  buttonAction: "https://sequentialjobs.com/auth/login",
   additionalDetails: {
-    date: new Date().toLocaleDateString(),
-    time: new Date().toLocaleTimeString(),
-    location: "Medical Evaluation (Virtual/In-person)",
+    location: "Medical Evaluation Center",
     organizerName: "Sequential Jobs Medical Team",
   },
 });
 
-const createMedicalistInviteEmail = (data: MedicalistInviteData) => {
-  const emailData = generateMedicalistInviteEmailData(data);
-  const html = generateProfessionalEmail(emailData);
-  const subject = `Medical Examiner Invite - ${data.jobTitle}`;
+const generateExistingMedicalistEmailData = (data: MedicalistInviteData) => ({
+  type: "invite" as EmailTypes,
+  title: "Medical Examination Assignment",
+  recipientName: data.recipientName,
+  message: `You have been assigned to conduct medical examinations for candidates applying for the position of ${data.jobTitle}.
+    
+When candidates schedule their medical examinations, you will receive follow-up emails with specific details including the job ID and candidate ID you'll need when submitting medical evaluations.
 
-  return { html: html.html, subject };
+Please use your existing account credentials to access the medical examination panel.`,
+  buttonText: "Access Medical Panel",
+  buttonAction: "https://sequentialjobs.com/auth/login",
+  additionalDetails: {
+    location: "Medical Evaluation Center",
+    organizerName: "Sequential Jobs Medical Team",
+  },
+});
+
+export const createMedicalistInviteEmail = (data: MedicalistInviteData): EmailResult => {
+  const emailData = data.isNewMedicalist ? generateNewMedicalistEmailData(data) : generateExistingMedicalistEmailData(data);
+
+  const { html } = generateProfessionalEmail(emailData);
+
+  const subject = data.isNewMedicalist ? `Medical Examiner Selection - ${data.jobTitle}` : `Medical Assignment - ${data.jobTitle}`;
+
+  return { html, subject };
 };
 
 export const sendMedicalistInviteEmail = async (data: MedicalistInviteData) => {

@@ -17,16 +17,16 @@ import { landingRouter } from "./routes/landingRoutes";
 import { eventsRouter } from "./routes/eventRoutes";
 import { adminRouter } from "./routes/admin/routes.admin";
 import Stripe from "stripe";
-import { setupResumeReminder, setupSubscriptionCronJobs } from "./utils/cron-jobs";
 import { ticketRouter } from "./routes/ticketRoutes";
 import { emailWebhook } from "./routes/emailHookRoutes";
+import { setupBullMQScheduledJobs } from "./utils/cron-jobs";
+
+const app = express();
 
 export const stripe = new Stripe(STRIPE_SECRET_KEY as string, {
   apiVersion: "2025-04-30.basil",
   timeout: 10000, // 10 seconds
 });
-
-const app = express();
 
 app.use("/api/employer/payment/webhook", express.raw({ type: "application/json" }));
 
@@ -83,10 +83,10 @@ app.use("*", (req: Request, res: Response) => {
   });
 });
 
-const cronJobs = function () {
+const cronJobs = async function () {
   console.log("EXECUTING CRON JOBS....");
-  setupSubscriptionCronJobs();
-  setupResumeReminder();
+
+  await setupBullMQScheduledJobs();
 };
 
 const server = app.listen(PORT, async () => {
@@ -96,7 +96,7 @@ const server = app.listen(PORT, async () => {
     console.log(`server started on http://localhost:${PORT}`);
 
     //* EXECUTE CRON JOBS
-    cronJobs();
+    await cronJobs();
   } catch (error) {
     console.error("Error starting server and connecting to DB", error);
   }

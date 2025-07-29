@@ -1,7 +1,7 @@
 import { EmailTypes, generateProfessionalEmail } from "../../nodemailer.ts/email-templates/generateProfessionalEmail";
 import { transportMail } from "../../nodemailer.ts/transportMail";
 
-interface CandidateMedicalData {
+export interface CandidateMedicalData {
   email: string;
   first_name: string;
   last_name: string;
@@ -12,21 +12,25 @@ interface CandidateMedicalData {
   employerOrgName: string;
 }
 
-const generateCandidateMedicalEmailData = (data: CandidateMedicalData) => ({
-  type: "invite" as EmailTypes,
-  title: "Medical Assessment Invitation",
-  recipientName: `${data.first_name} ${data.last_name}`,
-  message: `You have been invited to schedule a medical assessment for the ${data.jobTitle} position. 
-      Please click the button below to schedule your medical assessment. This invitation will expire on ${data.expirationDate.toLocaleDateString()}.`,
-  buttonText: "Schedule Medical Assessment",
-  buttonAction: data.medicalInviteLink,
-  additionalDetails: {
-    date: data.expirationDate.toLocaleDateString(),
-    time: "Open Until " + data.expirationDate.toLocaleTimeString(),
-    location: data.address,
-    organizerName: data.employerOrgName,
-  },
-});
+const generateCandidateMedicalEmailData = (data: CandidateMedicalData) => {
+  const expirationDate = new Date(data.expirationDate);
+
+  return {
+    type: "invite" as EmailTypes,
+    title: "Medical Assessment Invitation",
+    recipientName: `${data.first_name} ${data.last_name}`,
+    message: `You have been invited to schedule a medical assessment for the ${data.jobTitle} position. 
+      Please click the button below to schedule your medical assessment. This invitation will expire on ${expirationDate.toLocaleDateString()}.`,
+    buttonText: "Schedule Medical Assessment",
+    buttonAction: data.medicalInviteLink,
+    additionalDetails: {
+      date: expirationDate.toLocaleDateString(),
+      time: "Open Until " + expirationDate.toLocaleTimeString(),
+      location: data.address,
+      organizerName: data.employerOrgName,
+    },
+  };
+};
 
 export const createCandidateMedicalEmail = (data: CandidateMedicalData) => {
   const emailData = generateCandidateMedicalEmailData(data);
