@@ -111,17 +111,20 @@ const getAllTicket = async function (req: IUserRequest, res: Response) {
   try {
     const tickets = await Ticket.find({}).populate<{ createdBy: { _id: string; first_name: string; last_name: string } }>("createdBy", "first_name last_name").lean();
 
-    const formattedResponse = tickets.map(ticket => ({
-      createdBy: `${ticket.createdBy.first_name} ${ticket.createdBy.last_name}`,
-      ticketId: ticket.ticketId,
-      title: ticket.title,
-      type: ticket.type,
-      description: ticket.description,
-      status: ticket.status,
-      attachments: ticket.attachments,
-      createdAt: ticket.createdAt,
-      updatedAt: ticket.updatedAt,
-    }));
+    //* filter out tickets whose users are still on the platform
+    const formattedResponse = tickets
+      .filter(ticket => ticket.createdBy?._id)
+      .map(ticket => ({
+        createdBy: `${ticket.createdBy.first_name} ${ticket.createdBy.last_name}`,
+        ticketId: ticket.ticketId,
+        title: ticket.title,
+        type: ticket.type,
+        description: ticket.description,
+        status: ticket.status,
+        attachments: ticket.attachments,
+        createdAt: ticket.createdAt,
+        updatedAt: ticket.updatedAt,
+      }));
 
     return res.status(200).json(formattedResponse);
   } catch (error) {
@@ -142,7 +145,10 @@ const updateTicket = async function (req: IUserRequest, res: Response) {
     if (!ticket) return res.status(404).json({ message: "Ticket not found!" });
 
     ticket.status = status;
-    ticket.comments.push({ sender: userId as string, message });
+
+    if (message && message.trim().length > 0) {
+      ticket.comments.push({ sender: userId as string, message });
+    }
     await ticket.save();
 
     await queueEmail(JOB_KEY.UPDATE_TICKET, {
