@@ -205,7 +205,7 @@ registerEmailHandler(JOB_KEY.UPDATE_TICKET, async (data: TicketUpdateEmailData) 
 
 /* CRON JOBS HERE */
 
-// Add new job keys for scheduled tasks
+// Add new job keys for scheduled tasks and must conform with the one in the cron-jobs screen
 export const SCHEDULED_JOB_KEY = {
   TRIAL_EXPIRED: "trial_expired_email",
   GRACE_PERIOD_NOTIFICATION: "grace_period_notification_email",
