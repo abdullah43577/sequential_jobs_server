@@ -19,6 +19,7 @@ import { adminRouter } from "./routes/admin/routes.admin";
 import Stripe from "stripe";
 import { ticketRouter } from "./routes/ticketRoutes";
 import { emailWebhook } from "./routes/emailHookRoutes";
+import "./workers/globalEmailQueueHandler";
 import { setupBullMQScheduledJobs } from "./utils/cron-jobs";
 
 const app = express();

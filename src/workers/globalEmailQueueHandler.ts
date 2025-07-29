@@ -1,4 +1,3 @@
-import "./workers/registerWorkers";
 import { Queue, Worker } from "bullmq";
 import { connection } from "./redisConnection";
 import { checkPaidSubscriptions, checkTrialSubscriptions, RemindJobSeekerToCompleteAcctSetup, sendSubscriptionExpiryWarnings } from "../utils/cron-jobs";
