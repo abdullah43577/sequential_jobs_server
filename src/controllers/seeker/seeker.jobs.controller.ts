@@ -7,9 +7,8 @@ import Test from "../../models/jobs/test.model";
 import TestSubmission from "../../models/jobs/testsubmission.model";
 import { Types } from "mongoose";
 import User from "../../models/users.model";
-import { sendTestSubmissionNotificationEmail } from "../../utils/services/emails/testSubmissionEmailService";
-
-const { CLIENT_URL } = process.env;
+import { queueEmail } from "../../workers/globalEmailQueueHandler";
+import { JOB_KEY } from "../../workers/registerWorkers";
 
 //* JOBSs
 const getAllJobs = async function (req: IUserRequest, res: Response) {
@@ -228,7 +227,7 @@ const submitApplicationTest = async function (req: IUserRequest, res: Response) 
     if (!candidate) return res.status(404).json({ message: "Candidate not found" });
 
     // Send email to employer
-    await sendTestSubmissionNotificationEmail({
+    await queueEmail(JOB_KEY.APPLICATION_TEST_SUBMISSION, {
       employer: {
         email: test.employer.email,
         firstName: test.employer.first_name,
@@ -250,7 +249,6 @@ const submitApplicationTest = async function (req: IUserRequest, res: Response) 
         score: totalScore,
         totalQuestions: test.questions.length,
       },
-      baseUrl: CLIENT_URL as string,
     });
 
     res.status(201).json({ message: "Test submitted successfully", submission });

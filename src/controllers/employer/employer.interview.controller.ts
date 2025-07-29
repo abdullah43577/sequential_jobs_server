@@ -12,9 +12,11 @@ import TestSubmission from "../../models/jobs/testsubmission.model";
 import { Types } from "mongoose";
 import { NotificationStatus, NotificationType } from "../../models/notifications.model";
 import { guessNameFromEmail } from "../../utils/guessNameFromEmail";
-import { sendPanelistInviteEmail } from "../../utils/services/emails/panelistEmailService";
-import { sendCandidateInviteEmail } from "../../utils/services/emails/interviewCandidatesEmailService";
+import { CandidateInviteData, sendCandidateInviteEmail } from "../../utils/services/emails/interviewCandidatesEmailService";
 import { createAndSendNotification } from "../../utils/services/notifications/sendNotification";
+import { queueBulkEmail, queueEmail } from "../../workers/globalEmailQueueHandler";
+import { JOB_KEY } from "../../workers/registerWorkers";
+import { PanelistInviteData } from "../../utils/services/emails/panelistEmailService";
 
 //* INTERVIEW MANAGEMENT
 const getJobsForInterviews = async function (req: IUserRequest, res: Response) {
@@ -158,7 +160,7 @@ const handleGetPanelistEmails = async function (req: IUserRequest, res: Response
       return res.status(200).json({ success: false, emails: [] });
     }
 
-    const panelistEmails = interview.panelists.map(pan => pan.email);
+    const panelistEmails = interview.panelists.map(email => email);
 
     res.status(200).json({ success: true, emails: panelistEmails });
   } catch (error) {
@@ -173,35 +175,46 @@ const handleInvitePanelists = async function (req: IUserRequest, res: Response) 
 
     const panelists = req.body.panelists as string[];
 
-    if (!panelists || typeof panelists !== "object" || panelists.length === 0) return res.status(400).json({ message: "Panelist emails required!" });
+    if (!panelists || typeof panelists !== "object" || panelists.length === 0) {
+      return res.status(400).json({ message: "Panelist emails required!" });
+    }
 
     const interview = await InterviewMgmt.findOne({ job: job_id }).populate<{ job: { _id: string; job_title: string } }>("job", "job_title");
+
     if (!interview) return res.status(400).json({ message: "Interview not found!" });
 
-    //* search for panelists existence across DB
-    const existingUserInDB = await User.find({ email: { $in: panelists } })
+    // Search for panelists existence across DB
+    const existingPanelistsInDB = await User.find({ email: { $in: panelists } })
       .select("email first_name")
       .lean();
 
-    const existingEmailsInDB = new Set(existingUserInDB.map(pan => pan.email));
-    const existingEmailInInterview = new Set(interview.panelists.map(pan => pan.email));
+    const panelistsAlreadyInDB = new Set(existingPanelistsInDB.map(pan => pan.email));
+    const interviewPanelists = new Set(interview.panelists.map(pan => pan));
 
-    //* panelists not in DB and haven't been added to this interview before
-    const uniquePanelists = panelists.filter(email => !existingEmailsInDB.has(email) && !existingEmailInInterview.has(email));
+    // Panelists not in DB and haven't been added to this interview before
+    const uniquePanelists = panelists.filter(email => !panelistsAlreadyInDB.has(email) && !interviewPanelists.has(email));
 
-    //* panelists that match what's stored in DB for current interview with data sent to this controller
-    const existingPanelists = panelists.filter(email => existingEmailInInterview.has(email));
+    // Panelists that match what's stored in DB for current interview
+    const existingPanelists = panelists.filter(email => interviewPanelists.has(email));
 
-    let newPanelistPromises: Promise<void>[] = [];
-    let existingPanelistPromises: Promise<void>[] = [];
+    // Panelists already in DB for different jobs - collect them for processing
+    const existingDBPanelists: string[] = [];
 
-    // Process new panelists (with login credentials)
+    panelists.forEach(pan => {
+      if (panelistsAlreadyInDB.has(pan) && !existingPanelists.includes(pan)) {
+        existingDBPanelists.push(pan);
+        interview.panelists.push(pan);
+      }
+    });
+
+    // Process new panelists (create users concurrently)
+    let newPanelistEmailData: PanelistInviteData[] = [];
+
     if (uniquePanelists.length > 0) {
-      newPanelistPromises = uniquePanelists.map(async email => {
-        try {
+      const panelistCreationResults = await Promise.allSettled(
+        uniquePanelists.map(async email => {
           const tempPassword = crypto.randomBytes(8).toString("hex");
           const hashedPassword = await hashPassword(tempPassword);
-
           const nameGuess = guessNameFromEmail(email);
 
           const newPanelist = await User.create({
@@ -215,55 +228,97 @@ const handleInvitePanelists = async function (req: IUserRequest, res: Response) 
             expiresAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000), // 7 days
           });
 
-          //* send invite email with temporary credentials
-          await sendPanelistInviteEmail({
-            email,
-            recipientName: nameGuess.firstName || "Guest",
-            jobTitle: interview.job.job_title,
-            isNewPanelist: true,
-            tempPassword,
-            isTemporary: newPanelist.isTemporary,
-          });
-
           const rating_scale_keys = Array.from(interview.rating_scale.keys());
           const newScale = new Map<string, string | number>();
-
           rating_scale_keys.forEach(key => newScale.set(key, ""));
 
-          interview.panelists.push({ email: email, rating_scale: newScale });
-        } catch (error) {
-          console.error(`Error creating and inviting panelist ${email}:`, error);
+          return {
+            email,
+            panelistEmail: email,
+            emailData: {
+              email,
+              recipientName: nameGuess.firstName || "Guest",
+              jobTitle: interview.job.job_title,
+              isNewPanelist: true,
+              tempPassword,
+              isTemporary: newPanelist.isTemporary,
+            },
+          };
+        })
+      );
+
+      // Process successful user creations
+      panelistCreationResults.forEach((result, index) => {
+        if (result.status === "fulfilled") {
+          interview.panelists.push(result.value.panelistEmail);
+          newPanelistEmailData.push(result.value.emailData as PanelistInviteData);
+        } else {
+          console.error(`Error creating panelist ${uniquePanelists[index]}:`, result.reason);
         }
       });
     }
 
-    // Process existing panelists (without login credentials)
-    if (existingPanelists.length > 0) {
-      existingPanelistPromises = existingPanelists.map(async email => {
-        try {
+    // Process existing panelists (prepare email data concurrently)
+    let existingPanelistEmailData: PanelistInviteData[] = [];
+    const allExistingEmails = [...existingPanelists, ...existingDBPanelists];
+
+    if (allExistingEmails.length > 0) {
+      const existingPanelistResults = await Promise.allSettled(
+        allExistingEmails.map(async email => {
           const existingUser = await User.findOne({ email }).lean();
           const nameGuess = existingUser ? { firstName: existingUser.first_name } : guessNameFromEmail(email);
 
-          await sendPanelistInviteEmail({
+          return {
             email,
-            recipientName: nameGuess.firstName || "Guest",
-            jobTitle: interview.job.job_title,
-            isNewPanelist: false,
-          });
-        } catch (error) {
-          console.error(`Error sending notification to existing panelist ${email}:`, error);
+            emailData: {
+              email,
+              recipientName: nameGuess.firstName || "Guest",
+              jobTitle: interview.job.job_title,
+              isNewPanelist: false,
+            },
+          };
+        })
+      );
+
+      // Process successful existing panelist data
+      existingPanelistResults.forEach((result, index) => {
+        if (result.status === "fulfilled") {
+          existingPanelistEmailData.push(result.value.emailData as PanelistInviteData);
+        } else {
+          console.error(`Error processing existing panelist ${allExistingEmails[index]}:`, result.reason);
         }
       });
     }
 
-    // Execute all promises
-    await Promise.all([...newPanelistPromises, ...existingPanelistPromises]);
+    // Bulk email operations
+    const emailPromises: Promise<any>[] = [];
 
-    // Save the updated interview document in bulk
+    if (newPanelistEmailData.length > 0) {
+      emailPromises.push(queueBulkEmail(JOB_KEY.PANELIST_INVITE, newPanelistEmailData));
+    }
+
+    if (existingPanelistEmailData.length > 0) {
+      emailPromises.push(queueBulkEmail(JOB_KEY.PANELIST_INVITE, existingPanelistEmailData));
+    }
+
+    // Execute bulk email operations concurrently
+    if (emailPromises.length > 0) {
+      await Promise.all(emailPromises);
+    }
+
+    // Save the updated interview document
     interview.stage = "panelist_invite_confirmation";
     await interview.save();
 
-    return res.status(200).json({ message: "Panelists Invited Successfully" });
+    return res.status(200).json({
+      message: "Panelists invitation process initiated successfully",
+      totalInvites: newPanelistEmailData.length + existingPanelistEmailData.length,
+      breakdown: {
+        newPanelists: newPanelistEmailData.length,
+        existingPanelists: existingPanelistEmailData.length,
+        totalProcessed: uniquePanelists.length + allExistingEmails.length,
+      },
+    });
   } catch (error) {
     handleErrors({ res, error });
   }
@@ -337,44 +392,56 @@ const handleInviteCandidates = async function (req: IUserRequest, res: Response)
 
     const uniqueCandidates = candidate_ids.filter(id => !interview.candidates.some(c => c.candidate.toString() === id.toString()));
 
-    const promises = uniqueCandidates.map(async id => {
-      try {
-        const existingUser = await User.findById(id);
-        if (!existingUser) return;
+    // invite users concurrently
+    let processedCandidateData: CandidateInviteData[] = [];
 
-        //* send invite email
-        await sendCandidateInviteEmail({
-          email: existingUser.email,
-          recipientName: `${existingUser.first_name} ${existingUser.last_name}`,
-          jobTitle: interview.job.job_title,
-          isTemporary: existingUser.isTemporary,
-        });
+    if (uniqueCandidates.length > 0) {
+      const actionResult = await Promise.allSettled(
+        uniqueCandidates.map(async id => {
+          const existingUser = await User.findById(id);
 
-        interview.candidates.push({ candidate: id });
+          //* update candidate status
+          await Job.findOneAndUpdate(
+            { _id: job_id, "applicants.applicant": id },
+            {
+              $set: {
+                "applicants.$.status": "interview_invite_sent",
+              },
+            }
+          );
 
-        //* update candidate status
-        await Job.findOneAndUpdate(
-          { _id: job_id, "applicants.applicant": id },
-          {
-            $set: {
-              "applicants.$.status": "interview_invite_sent",
+          const subject = `Candidate Interview Invite - ${interview.job.job_title}`;
+          const message = `${interview.job.employer.organisation_name} has invited you for an interview.`;
+
+          //*CREATE AND SEND NOTIFICATION
+          await createAndSendNotification({ recipient: id, sender: userId as string, type: NotificationType.MESSAGE, title: subject, message, status: NotificationStatus.UNREAD });
+
+          return {
+            candidateId: id,
+            emailData: {
+              email: existingUser?.email,
+              recipientName: `${existingUser?.first_name} ${existingUser?.last_name}`,
+              jobTitle: interview.job.job_title,
+              isTemporary: existingUser?.isTemporary,
             },
-          }
-        );
+          };
+        })
+      );
 
-        const subject = `Candidate Interview Invite - ${interview.job.job_title}`;
-        const message = `${interview.job.employer.organisation_name} has invited you for an interview.`;
+      //* predictable candidate push and email data collector
+      actionResult.forEach((result, index) => {
+        if (result.status === "fulfilled") {
+          interview.candidates.push({ candidate: result.value.candidateId });
+          processedCandidateData.push(result.value?.emailData as CandidateInviteData);
+        } else {
+          console.error(`Error inviting candidate ${uniqueCandidates[index]}:`, result.reason);
+        }
+      });
+    }
 
-        //*CREATE AND SEND NOTIFICATION
-        await createAndSendNotification({ recipient: id, sender: userId as string, type: NotificationType.MESSAGE, title: subject, message, status: NotificationStatus.UNREAD });
-
-        return;
-      } catch (error) {
-        console.error(`Error inviting candidate ${id}:`, error);
-      }
-    });
-
-    await Promise.all(promises);
+    if (processedCandidateData.length > 0) {
+      await queueBulkEmail(JOB_KEY.INTERVIEW_CANDIDATE_INVITE, processedCandidateData);
+    }
 
     //* save candidates record
     interview.stage = "applicants_invite";
@@ -417,22 +484,28 @@ const handleGradeCandidate = async function (req: IUserRequest, res: Response) {
     const interview = await InterviewMgmt.findOne({ job: job_id });
     if (!interview) return res.status(404).json({ message: "Interview Record not found!" });
 
-    const panelistEntry = interview.panelists.find(panelist => panelist.email === panelist_email);
+    // Verify panelist exists
+    const panelistEntry = interview.panelists.find(email => email === panelist_email);
     if (!panelistEntry) return res.status(400).json({ message: "Panelist Record not found!" });
-
-    // Prevent regrading
-    if ([...panelistEntry.rating_scale.values()].some(v => v !== "" && v !== null && v !== undefined)) {
-      return res.status(400).json({ message: "You have already graded this candidate." });
-    }
-
-    // Assign grades to panelist
-    panelistEntry.rating_scale = new Map(Object.entries(rating_scale));
-    if (remark?.trim().length) panelistEntry.remark = remark;
 
     const candidateEntry = interview.candidates.find(c => c.candidate.toString() === candidate_id);
     if (!candidateEntry) return res.status(400).json({ message: "Candidate Entry not found" });
 
-    // Calculate average per scale key across all panelists
+    // Check if this panelist has already graded this specific candidate
+    const existingRating = candidateEntry.panelist_ratings?.find(rating => rating.panelist_email === panelist_email);
+
+    if (existingRating) {
+      return res.status(400).json({ message: "You have already graded this candidate." });
+    }
+
+    // Add panelist's rating for this candidate
+    candidateEntry.panelist_ratings?.push({
+      panelist_email,
+      rating_scale: new Map(Object.entries(rating_scale)),
+      remark: remark?.trim() || "",
+    });
+
+    // Calculate average per scale key across all panelists who have graded this candidate
     const scaleKeys = Array.from(interview.rating_scale.keys());
 
     const totalScores: Record<string, number> = {};
@@ -443,9 +516,10 @@ const handleGradeCandidate = async function (req: IUserRequest, res: Response) {
       ratingCounts[key] = 0;
     });
 
-    interview.panelists.forEach(p => {
+    // Calculate averages from panelist ratings for this candidate
+    candidateEntry.panelist_ratings?.forEach(pRating => {
       scaleKeys.forEach(key => {
-        const value = p.rating_scale.get(key);
+        const value = pRating.rating_scale.get(key);
         if (value !== "" && !isNaN(Number(value))) {
           totalScores[key] += Number(value);
           ratingCounts[key] += 1;
@@ -461,13 +535,11 @@ const handleGradeCandidate = async function (req: IUserRequest, res: Response) {
 
     candidateEntry.rating_scale = averageRatingScale;
 
-    // Calculate total interview score (optional)
+    // Calculate total interview score
     const totalScore = Array.from(averageRatingScale.values()).reduce((acc, val) => acc + val, 0);
     candidateEntry.interview_score = parseFloat(totalScore.toFixed(1));
 
     await interview.save();
-
-    //* delete panelist account on grade successful
 
     return res.status(200).json({ message: "Candidate graded successfully" });
   } catch (error) {

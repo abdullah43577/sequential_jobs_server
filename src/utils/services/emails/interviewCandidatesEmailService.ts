@@ -1,7 +1,9 @@
 import { generateProfessionalEmail } from "../../nodemailer.ts/email-templates/generateProfessionalEmail";
 import { transportMail } from "../../nodemailer.ts/transportMail";
 
-interface CandidateInviteData {
+const { CLIENT_URL } = process.env;
+
+export interface CandidateInviteData {
   email: string;
   recipientName: string;
   jobTitle: string;
@@ -19,7 +21,7 @@ const generateCandidateInviteEmailData = (data: CandidateInviteData) => ({
   recipientName: data.recipientName,
   message: `You have been invited for an upcoming interview for the position of ${data.jobTitle}. Please click the button below to access the interview panel and set your available date and time.`,
   buttonText: "Access Interview Panel",
-  buttonAction: `https://login?email=${encodeURIComponent(data.email)}${data.isTemporary ? "&temp=true" : ""}`,
+  buttonAction: `${CLIENT_URL}/dashboard/job-seeker/main?email=${encodeURIComponent(data.email)}${data.isTemporary ? "&temp=true" : ""}`,
   additionalDetails: {
     date: "formattedDate",
     time: "formattedTime",

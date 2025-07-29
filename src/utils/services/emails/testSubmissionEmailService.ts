@@ -1,7 +1,9 @@
 import { EmailTypes, generateProfessionalEmail } from "../../nodemailer.ts/email-templates/generateProfessionalEmail";
 import { transportMail } from "../../nodemailer.ts/transportMail";
 
-interface TestSubmissionNotificationData {
+const { CLIENT_URL } = process.env;
+
+export interface TestSubmissionNotificationData {
   employer: {
     email: string;
     firstName: string;
@@ -23,7 +25,6 @@ interface TestSubmissionNotificationData {
     score: number;
     totalQuestions: number;
   };
-  baseUrl: string;
 }
 
 interface EmailResult {
@@ -41,7 +42,7 @@ const generateTestSubmissionNotificationData = (data: TestSubmissionNotification
     recipientName: `${data.employer.firstName} ${data.employer.lastName}`,
     message: `${data.candidate.firstName} ${data.candidate.lastName} has completed the ${testTypeLabel.toLowerCase()} for the ${data.job.title} position. Please review their performance below.`,
     buttonText: "View Test Results",
-    buttonAction: `${data.baseUrl}/test-submissions/${data.submission.id}`,
+    buttonAction: `${CLIENT_URL}/dashboard/company/test-management`,
     // additionalDetails: {
     //   candidate: `${data.candidate.firstName} ${data.candidate.lastName}`,
     //   position: data.job.title,

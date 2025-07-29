@@ -1,7 +1,7 @@
 import { generateProfessionalEmail } from "../../nodemailer.ts/email-templates/generateProfessionalEmail";
 import { transportMail } from "../../nodemailer.ts/transportMail";
 
-interface HireCandidateEmailData {
+export interface HireCandidateEmailData {
   email: string;
   recipientName: string;
   jobTitle: string;
