@@ -20,7 +20,6 @@ import Stripe from "stripe";
 import { ticketRouter } from "./routes/ticketRoutes";
 import { emailWebhook } from "./routes/emailHookRoutes";
 import { setupBullMQScheduledJobs } from "./utils/cron-jobs";
-import "./workers/registerWorkers";
 
 const app = express();
 
