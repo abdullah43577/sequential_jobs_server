@@ -25,7 +25,7 @@ const app = express();
 
 export const stripe = new Stripe(STRIPE_SECRET_KEY as string, {
   apiVersion: "2025-04-30.basil",
-  timeout: 10000, // 10 seconds
+  timeout: 10000, // 10 secondss
 });
 
 app.use("/api/employer/payment/webhook", express.raw({ type: "application/json" }));
