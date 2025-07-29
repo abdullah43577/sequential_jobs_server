@@ -1,42 +1,8 @@
 import User from "../models/users.model";
-import { sendResumeReminderEmail } from "./services/emails/ResumeReminderEmailService";
 import { createAndSendNotification } from "./services/notifications/sendNotification";
 import { NotificationStatus, NotificationType } from "../models/notifications.model";
-import { sendTrialExpiredEmail } from "./services/emails/TrialExpiredEmailService";
-import { sendGracePeriodNotificationEmail } from "./services/emails/gracePeriodEmailService";
-import { sendSubscriptionExpiredEmail } from "./services/emails/subscriptionExpiredEmailService";
-import { emailQueue, queueBulkEmail, registerEmailHandler } from "../workers/globalEmailQueueHandler";
-
-// Add new job keys for scheduled tasks
-export const SCHEDULED_JOB_KEY = {
-  TRIAL_EXPIRED: "trial_expired_email",
-  GRACE_PERIOD_NOTIFICATION: "grace_period_notification_email",
-  SUBSCRIPTION_EXPIRED: "subscription_expired_email",
-  SUBSCRIPTION_EXPIRY_WARNING: "subscription_expiry_warning",
-  RESUME_REMINDER: "resume_reminder_email",
-};
-
-// Register email handlers for scheduled jobs (add these to your existing emailHandlers.ts)
-
-// Trial expired email handler
-registerEmailHandler(SCHEDULED_JOB_KEY.TRIAL_EXPIRED, async (data: { email: string; first_name: string; last_name: string; btnUrl: string }) => {
-  return await sendTrialExpiredEmail(data);
-});
-
-// Grace period notification email handlers
-registerEmailHandler(SCHEDULED_JOB_KEY.GRACE_PERIOD_NOTIFICATION, async (data: { email: string; first_name: string; last_name: string; graceEndDate: Date; btnUrl: string }) => {
-  return await sendGracePeriodNotificationEmail(data);
-});
-
-// Subscription expired email handler
-registerEmailHandler(SCHEDULED_JOB_KEY.SUBSCRIPTION_EXPIRED, async (data: { email: string; first_name: string; last_name: string; previousTier: string; btnUrl: string }) => {
-  return await sendSubscriptionExpiredEmail(data);
-});
-
-// Resume reminder email handler
-registerEmailHandler(SCHEDULED_JOB_KEY.RESUME_REMINDER, async (data: { email: string; first_name: string; last_name: string; btnUrl: string }) => {
-  return await sendResumeReminderEmail(data);
-});
+import { SCHEDULED_JOB_KEY } from "../workers/registerWorkers";
+import { emailQueue, queueBulkEmail } from "../workers/globalEmailQueueHandler";
 
 // Function to check and handle expired trial subscriptions
 export const checkTrialSubscriptions = async function () {
@@ -317,59 +283,3 @@ export const setupBullMQScheduledJobs = async () => {
     console.error("Error setting up BullMQ scheduled jobs:", error);
   }
 };
-
-// You'll also need to update your global worker to handle these scheduled job types
-// Add this to your globalEmailQueueHandler.ts worker logic:
-
-/*
-// Update your existing worker in globalEmailQueueHandler.ts to handle scheduled jobs:
-
-const globalEmailWorker = new Worker(
-  "Emails",
-  async job => {
-    const { type, jobType, ...data } = job.data;
-
-    // Handle scheduled jobs
-    if (jobType) {
-      console.log(`Processing scheduled job: ${jobType}`);
-      
-      switch (jobType) {
-        case "subscription_check":
-          await checkTrialSubscriptions();
-          await checkPaidSubscriptions();
-          return { success: true, jobType };
-          
-        case "expiry_warnings":
-          await sendSubscriptionExpiryWarnings();
-          return { success: true, jobType };
-          
-        case "resume_reminder":
-          await RemindJobSeekerToCompleteAcctSetup();
-          return { success: true, jobType };
-          
-        default:
-          throw new Error(`Unknown scheduled job type: ${jobType}`);
-      }
-    }
-
-    // Handle regular email jobs
-    console.log(`Processing ${type} email for: ${data.email}`);
-
-    const handler = jobHandlers[type];
-    if (!handler) {
-      throw new Error(`No handler registered for email type: ${type}`);
-    }
-
-    const result = await handler(data);
-    return { success: true, email: data.email, type, result };
-  },
-  {
-    connection,
-    concurrency: 1,
-    limiter: {
-      max: 2,
-      duration: 1000,
-    },
-  }
-);
-*/

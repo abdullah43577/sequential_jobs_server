@@ -1,12 +1,14 @@
 import { CandidateMedicalData, sendCandidateMedicalEmail } from "../utils/services/emails/candidateMedicalEmailInvite";
 import { EmailVerificationSuccessData, sendEmailVerificationSuccessEmail } from "../utils/services/emails/emailVerificationService";
 import { ForgotPasswordData, sendForgotPasswordEmail } from "../utils/services/emails/forgotPasswordEmailService";
+import { sendGracePeriodNotificationEmail } from "../utils/services/emails/gracePeriodEmailService";
 import { HireCandidateEmailData, sendHireCandidateEmail } from "../utils/services/emails/hireCandidateEmailService";
 import { CandidateInviteData, sendCandidateInviteEmail } from "../utils/services/emails/interviewCandidatesEmailService";
 import { MatchingJobEmailData, sendMatchingJobEmail } from "../utils/services/emails/matchingJobEmailService";
 import { MedicalistInviteData, sendMedicalistInviteEmail } from "../utils/services/emails/medicalistInviteEmailService";
 import { PanelistInviteData, sendPanelistInviteEmail } from "../utils/services/emails/panelistEmailService";
 import { ResetPasswordData, sendResetPasswordEmail } from "../utils/services/emails/resetPasswordEmailService";
+import { sendResumeReminderEmail } from "../utils/services/emails/ResumeReminderEmailService";
 import { ReuploadDocumentData, sendReuploadDocumentEmail } from "../utils/services/emails/reuploadDocumentEmailService";
 import { InterviewEmailData, sendCandidateInterviewEmail, sendEmployerInterviewEmail, sendPanelistInterviewEmail } from "../utils/services/emails/scheduleInterviewEmailService";
 import { MedicalEmailData, sendEmployerMedicalEmail, sendMedicalExpertEmail, sendCandidateMedicalEmail as sendCandidateMedicalEmailData } from "../utils/services/emails/scheduleMedicalEmailService";
@@ -14,8 +16,10 @@ import { PaymentFailureEmailData, sendPaymentFailureEmail } from "../utils/servi
 import { sendTicketCreatedEmail, TicketCreatedEmailData } from "../utils/services/emails/sendTicketEmail";
 import { sendTicketUpdateEmail, TicketUpdateEmailData } from "../utils/services/emails/sendTicketUpdateEmail";
 import { sendUpgradeConfirmationEmail, UpgradeConfirmationEmailData } from "../utils/services/emails/sendUpgradeConfirmationEmailService";
+import { sendSubscriptionExpiredEmail } from "../utils/services/emails/subscriptionExpiredEmailService";
 import { sendTestApplicantsEmail, TestApplicantsData } from "../utils/services/emails/testApplicantsEmailInvite";
 import { sendTestSubmissionNotificationEmail, TestSubmissionNotificationData } from "../utils/services/emails/testSubmissionEmailService";
+import { sendTrialExpiredEmail } from "../utils/services/emails/TrialExpiredEmailService";
 import { sendWelcomeEmail, WelcomeEmailData } from "../utils/services/emails/welcomeEmailService";
 import { registerEmailHandler } from "./globalEmailQueueHandler";
 
@@ -197,4 +201,37 @@ registerEmailHandler(JOB_KEY.CREATE_TICKET, async (data: TicketCreatedEmailData)
 
 registerEmailHandler(JOB_KEY.UPDATE_TICKET, async (data: TicketUpdateEmailData) => {
   return await sendTicketUpdateEmail(data);
+});
+
+/* CRON JOBS HERE */
+
+// Add new job keys for scheduled tasks
+export const SCHEDULED_JOB_KEY = {
+  TRIAL_EXPIRED: "trial_expired_email",
+  GRACE_PERIOD_NOTIFICATION: "grace_period_notification_email",
+  SUBSCRIPTION_EXPIRED: "subscription_expired_email",
+  SUBSCRIPTION_EXPIRY_WARNING: "subscription_expiry_warning",
+  RESUME_REMINDER: "resume_reminder_email",
+};
+
+// Register email handlers for scheduled jobs (add these to your existing emailHandlers.ts)
+
+// Trial expired email handler
+registerEmailHandler(SCHEDULED_JOB_KEY.TRIAL_EXPIRED, async (data: { email: string; first_name: string; last_name: string; btnUrl: string }) => {
+  return await sendTrialExpiredEmail(data);
+});
+
+// Grace period notification email handlers
+registerEmailHandler(SCHEDULED_JOB_KEY.GRACE_PERIOD_NOTIFICATION, async (data: { email: string; first_name: string; last_name: string; graceEndDate: Date; btnUrl: string }) => {
+  return await sendGracePeriodNotificationEmail(data);
+});
+
+// Subscription expired email handler
+registerEmailHandler(SCHEDULED_JOB_KEY.SUBSCRIPTION_EXPIRED, async (data: { email: string; first_name: string; last_name: string; previousTier: string; btnUrl: string }) => {
+  return await sendSubscriptionExpiredEmail(data);
+});
+
+// Resume reminder email handler
+registerEmailHandler(SCHEDULED_JOB_KEY.RESUME_REMINDER, async (data: { email: string; first_name: string; last_name: string; btnUrl: string }) => {
+  return await sendResumeReminderEmail(data);
 });
