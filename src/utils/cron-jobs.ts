@@ -23,7 +23,7 @@ registerEmailHandler(SCHEDULED_JOB_KEY.TRIAL_EXPIRED, async (data: { email: stri
   return await sendTrialExpiredEmail(data);
 });
 
-// Grace period notification email handler
+// Grace period notification email handlers
 registerEmailHandler(SCHEDULED_JOB_KEY.GRACE_PERIOD_NOTIFICATION, async (data: { email: string; first_name: string; last_name: string; graceEndDate: Date; btnUrl: string }) => {
   return await sendGracePeriodNotificationEmail(data);
 });
