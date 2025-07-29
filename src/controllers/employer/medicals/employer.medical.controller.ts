@@ -162,9 +162,7 @@ const setMedicalAvailability = async function (req: IUserRequest, res: Response)
       // Process successful user creations
       medicalistCreationResults.forEach((result, index) => {
         if (result.status === "fulfilled") {
-          // Add to medical record medicalists
           medicalRecord.medicalists.push(result.value.email);
-          // Collect email data
           newMedicalistEmailData.push(result.value.emailData as MedicalistInviteData);
         } else {
           console.error(`Error creating medicalist ${uniqueMedicalists[index]}:`, result.reason);
@@ -207,21 +205,11 @@ const setMedicalAvailability = async function (req: IUserRequest, res: Response)
     const emailPromises: Promise<any>[] = [];
 
     if (newMedicalistEmailData.length > 0) {
-      emailPromises.push(
-        queueBulkEmail(
-          JOB_KEY.MEDICALIST_INVITE,
-          newMedicalistEmailData.map(data => ({ type: JOB_KEY.MEDICALIST_INVITE, ...data }))
-        )
-      );
+      emailPromises.push(queueBulkEmail(JOB_KEY.MEDICALIST_INVITE, newMedicalistEmailData));
     }
 
     if (existingMedicalistEmailData.length > 0) {
-      emailPromises.push(
-        queueBulkEmail(
-          JOB_KEY.MEDICALIST_INVITE,
-          existingMedicalistEmailData.map(data => ({ type: JOB_KEY.MEDICALIST_INVITE, ...data }))
-        )
-      );
+      emailPromises.push(queueBulkEmail(JOB_KEY.MEDICALIST_INVITE, existingMedicalistEmailData));
     }
 
     // Execute bulk email operations concurrently
@@ -324,7 +312,6 @@ const inviteMedicalCandidates = async function (req: IUserRequest, res: Response
       actionResult.forEach((result, index) => {
         if (result.status === "fulfilled") {
           medical.candidates.push({ candidate: result.value.candidateId });
-          // Collect email data for bulk queue
           processedCandidateData.push(result.value?.emailData as CandidateMedicalData);
         } else {
           console.error(`Error inviting candidate ${uniqueCandidates[index]}:`, result.reason);
@@ -333,13 +320,7 @@ const inviteMedicalCandidates = async function (req: IUserRequest, res: Response
     }
 
     if (processedCandidateData.length > 0) {
-      await queueBulkEmail(
-        JOB_KEY.MEDICALIST_CANDIDATE_INVITE,
-        processedCandidateData.map(data => ({
-          type: JOB_KEY.MEDICALIST_CANDIDATE_INVITE,
-          ...data,
-        }))
-      );
+      await queueBulkEmail(JOB_KEY.MEDICALIST_CANDIDATE_INVITE, processedCandidateData);
     }
 
     //* save candidates record

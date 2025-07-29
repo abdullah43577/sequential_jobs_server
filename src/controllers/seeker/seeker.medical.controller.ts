@@ -9,6 +9,7 @@ import Job from "../../models/jobs/jobs.model";
 import { createAndSendNotification } from "../../utils/services/notifications/sendNotification";
 import { JOB_KEY } from "../../workers/registerWorkers";
 import { queueBulkEmail } from "../../workers/globalEmailQueueHandler";
+import moment from "moment";
 
 const { CLIENT_URL } = process.env;
 
@@ -74,7 +75,7 @@ const getMedicalInfo = async function (req: IUserRequest, res: Response) {
     if (!job_id) return res.status(400).json({ message: "Job ID is required!" });
 
     const medical_record = await MedicalMgmt.findOne({ job: job_id })
-      .select("medical_time_slot job")
+      .select("medical_time_slot job candidates")
       .populate<{ job: { job_title: string; employer: { organisation_name: string } } }>({
         path: "job",
         select: "job_title employer",
@@ -82,11 +83,41 @@ const getMedicalInfo = async function (req: IUserRequest, res: Response) {
           path: "employer",
           select: "organisation_name",
         },
-      });
+      })
+      .lean();
 
     if (!medical_record) return res.status(404).json({ message: "Medical record not found!" });
 
-    res.status(200).json(medical_record);
+    // Filter out booked slots from available_date_time
+    const processedTimeSlots = medical_record.medical_time_slot.map(slot => {
+      // Get all booked slots for this date
+      const bookedSlots = medical_record.candidates
+        .filter(candidate => candidate.scheduled_date_time && candidate.scheduled_date_time.date && moment(candidate.scheduled_date_time.date).format("YYYY-MM-DD") === moment(slot.date).format("YYYY-MM-DD"))
+        .map(candidate => ({
+          start_time: candidate.scheduled_date_time?.start_time,
+          end_time: candidate.scheduled_date_time?.end_time,
+        }));
+
+      // Filter out booked slots from available slots
+      const availableSlots = slot.available_date_time.filter(availableSlot => {
+        return !bookedSlots.some(bookedSlot => bookedSlot.start_time === availableSlot.start_time && bookedSlot.end_time === availableSlot.end_time);
+      });
+
+      return {
+        ...slot,
+        available_date_time: availableSlots,
+      };
+    });
+
+    const response = {
+      ...medical_record,
+      medical_time_slot: processedTimeSlots,
+    };
+
+    // Remove candidates array from response for security
+    const { candidates, ...responseWithoutCandidates } = response;
+
+    res.status(200).json(responseWithoutCandidates);
   } catch (error) {
     handleErrors({ res, error });
   }
@@ -97,6 +128,28 @@ const scheduleMedical = async function (req: IUserRequest, res: Response) {
     const { userId } = req;
     const { scheduled_date_time, job_id } = scheduleInterviewSchema.parse(req.body);
 
+    // ✅ First, check if the slot is still available and remove it from available_date_time
+    const medical = await MedicalMgmt.findOne({ job: job_id });
+    if (!medical) return res.status(404).json({ message: "Medical Record not found!" });
+
+    // Find the time slot that matches the selected date
+    const timeSlotIndex = medical.medical_time_slot.findIndex(slot => moment(slot.date).format("YYYY-MM-DD") === moment(scheduled_date_time.date).format("YYYY-MM-DD"));
+
+    if (timeSlotIndex === -1) {
+      return res.status(400).json({ message: "Time slot not found for the selected date" });
+    }
+
+    // Check if the slot is still available
+    const availableSlotIndex = medical.medical_time_slot[timeSlotIndex].available_date_time.findIndex(slot => slot.start_time === scheduled_date_time.start_time && slot.end_time === scheduled_date_time.end_time);
+
+    if (availableSlotIndex === -1) {
+      return res.status(400).json({ message: "Selected time slot is no longer available" });
+    }
+
+    // ✅ Remove the slot from available_date_time to prevent double booking
+    medical.medical_time_slot[timeSlotIndex].available_date_time.splice(availableSlotIndex, 1);
+
+    // ✅ Now update the candidate's scheduled time with the modified medical_time_slot
     const medicals = await MedicalMgmt.findOneAndUpdate(
       {
         job: job_id,
@@ -106,6 +159,8 @@ const scheduleMedical = async function (req: IUserRequest, res: Response) {
         $set: {
           "candidates.$.scheduled_date_time": scheduled_date_time,
           "candidates.$.status": "confirmed",
+          // ✅ Update the medical_time_slot with the modified available_date_time
+          medical_time_slot: medical.medical_time_slot,
         },
       },
       { returnDocument: "after" }
@@ -118,7 +173,15 @@ const scheduleMedical = async function (req: IUserRequest, res: Response) {
       },
     });
 
-    if (!medicals) return res.status(404).json({ message: "Medical record not found!" });
+    if (!medicals) {
+      // ✅ If update fails, add the slot back to available_date_time
+      medical.medical_time_slot[timeSlotIndex].available_date_time.push({
+        start_time: scheduled_date_time.start_time,
+        end_time: scheduled_date_time.end_time,
+      });
+      await medical.save();
+      return res.status(404).json({ message: "Failed to update medical record" });
+    }
 
     // Get candidate information
     const candidate = await User.findById(userId).select("first_name last_name email");
@@ -178,7 +241,7 @@ const scheduleMedical = async function (req: IUserRequest, res: Response) {
       ...medicalExperts.map(medic => ({
         type: JOB_KEY.MEDICALIST_CANDIDATE_SCHEDULE_MEDICALISTS_EMAIL,
         ...emailData,
-        // ✅ Flatten panelist data to top level
+        // ✅ Flatten medical expert data to top level
         medicalistEmail: medic.email,
         medicalistFirstName: medic.firstName,
         medicalistLastName: medic.lastName,

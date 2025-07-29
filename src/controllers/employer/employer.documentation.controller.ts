@@ -9,9 +9,7 @@ import Job from "../../models/jobs/jobs.model";
 import { Types } from "mongoose";
 import { Readable } from "stream";
 import { createAndSendNotification } from "../../utils/services/notifications/sendNotification";
-import { sendHireCandidateEmail } from "../../utils/services/emails/hireCandidateEmailService";
 import User from "../../models/users.model";
-import { sendReuploadDocumentEmail } from "../../utils/services/emails/reuploadDocumentEmailService";
 import { queueEmail } from "../../workers/globalEmailQueueHandler";
 import { JOB_KEY } from "../../workers/registerWorkers";
 
@@ -160,32 +158,32 @@ const sendCandidateOffer = async function (req: IUserRequest, res: Response) {
         job: job_id,
         candidates: [candidate],
       });
-
-      const subject = `You're Hired! - ${job.job_title}`;
-      const message = `Congratulations! You have been selected for the ${job.job_title} position at ${job.employer.organisation_name}. An official invitation letter has been issued, and you are required to upload the specified documents to complete your onboarding.`;
-
-      // Send Email
-      await queueEmail(JOB_KEY.DOCUMENT_SEND_CANDIDATE_OFFER, {
-        email: user.email,
-        recipientName: `${user.first_name} ${user.last_name}`,
-        jobTitle: job.job_title,
-        companyName: job.employer.organisation_name,
-        invitationLetter: invitation_letter,
-        dashboardUrl: `${CLIENT_URL}/dashboard/job-seeker/documentation-management`,
-      });
-
-      // Send Notification
-      await createAndSendNotification({
-        recipient: user._id,
-        sender: userId as string,
-        type: NotificationType.APPLICATION_STATUS,
-        title: subject,
-        message,
-        status: NotificationStatus.UNREAD,
-      });
-
-      await Job.updateOne({ _id: job_id, "applicants.applicant": user._id }, { $set: { "applicants.$.status": "has_offer" } });
     }
+
+    const subject = `You're Hired! - ${job.job_title}`;
+    const message = `Congratulations! You have been selected for the ${job.job_title} position at ${job.employer.organisation_name}. An official invitation letter has been issued, and you are required to upload the specified documents to complete your onboarding.`;
+
+    // Send Email
+    await queueEmail(JOB_KEY.DOCUMENT_SEND_CANDIDATE_OFFER, {
+      email: user.email,
+      recipientName: `${user.first_name} ${user.last_name}`,
+      jobTitle: job.job_title,
+      companyName: job.employer.organisation_name,
+      invitationLetter: invitation_letter,
+      dashboardUrl: `${CLIENT_URL}/dashboard/job-seeker/documentation-management`,
+    });
+
+    // Send Notification
+    await createAndSendNotification({
+      recipient: user._id,
+      sender: userId as string,
+      type: NotificationType.APPLICATION_STATUS,
+      title: subject,
+      message,
+      status: NotificationStatus.UNREAD,
+    });
+
+    await Job.updateOne({ _id: job_id, "applicants.applicant": user._id }, { $set: { "applicants.$.status": "has_offer" } });
 
     res.status(200).json({ message: "Invite Sent Successfully!" });
   } catch (error) {

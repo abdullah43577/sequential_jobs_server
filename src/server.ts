@@ -17,9 +17,9 @@ import { landingRouter } from "./routes/landingRoutes";
 import { eventsRouter } from "./routes/eventRoutes";
 import { adminRouter } from "./routes/admin/routes.admin";
 import Stripe from "stripe";
-import { setupResumeReminder, setupSubscriptionCronJobs } from "./utils/cron-jobs";
 import { ticketRouter } from "./routes/ticketRoutes";
 import { emailWebhook } from "./routes/emailHookRoutes";
+import { setupBullMQScheduledJobs } from "./utils/cron-jobs";
 
 const app = express();
 
@@ -85,8 +85,7 @@ app.use("*", (req: Request, res: Response) => {
 
 const cronJobs = function () {
   console.log("EXECUTING CRON JOBS....");
-  setupSubscriptionCronJobs();
-  setupResumeReminder();
+  setupBullMQScheduledJobs();
 };
 
 const server = app.listen(PORT, async () => {

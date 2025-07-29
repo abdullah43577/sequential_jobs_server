@@ -1,11 +1,42 @@
 import User from "../models/users.model";
-import cron from "node-cron";
 import { sendResumeReminderEmail } from "./services/emails/ResumeReminderEmailService";
 import { createAndSendNotification } from "./services/notifications/sendNotification";
 import { NotificationStatus, NotificationType } from "../models/notifications.model";
 import { sendTrialExpiredEmail } from "./services/emails/TrialExpiredEmailService";
 import { sendGracePeriodNotificationEmail } from "./services/emails/gracePeriodEmailService";
 import { sendSubscriptionExpiredEmail } from "./services/emails/subscriptionExpiredEmailService";
+import { emailQueue, queueBulkEmail, registerEmailHandler } from "../workers/globalEmailQueueHandler";
+
+// Add new job keys for scheduled tasks
+export const SCHEDULED_JOB_KEY = {
+  TRIAL_EXPIRED: "trial_expired_email",
+  GRACE_PERIOD_NOTIFICATION: "grace_period_notification_email",
+  SUBSCRIPTION_EXPIRED: "subscription_expired_email",
+  SUBSCRIPTION_EXPIRY_WARNING: "subscription_expiry_warning",
+  RESUME_REMINDER: "resume_reminder_email",
+};
+
+// Register email handlers for scheduled jobs (add these to your existing emailHandlers.ts)
+
+// Trial expired email handler
+registerEmailHandler(SCHEDULED_JOB_KEY.TRIAL_EXPIRED, async (data: { email: string; first_name: string; last_name: string; btnUrl: string }) => {
+  return await sendTrialExpiredEmail(data);
+});
+
+// Grace period notification email handler
+registerEmailHandler(SCHEDULED_JOB_KEY.GRACE_PERIOD_NOTIFICATION, async (data: { email: string; first_name: string; last_name: string; graceEndDate: Date; btnUrl: string }) => {
+  return await sendGracePeriodNotificationEmail(data);
+});
+
+// Subscription expired email handler
+registerEmailHandler(SCHEDULED_JOB_KEY.SUBSCRIPTION_EXPIRED, async (data: { email: string; first_name: string; last_name: string; previousTier: string; btnUrl: string }) => {
+  return await sendSubscriptionExpiredEmail(data);
+});
+
+// Resume reminder email handler
+registerEmailHandler(SCHEDULED_JOB_KEY.RESUME_REMINDER, async (data: { email: string; first_name: string; last_name: string; btnUrl: string }) => {
+  return await sendResumeReminderEmail(data);
+});
 
 // Function to check and handle expired trial subscriptions
 export const checkTrialSubscriptions = async function () {
@@ -19,6 +50,20 @@ export const checkTrialSubscriptions = async function () {
       subscription_end: { $lt: currentDate },
     });
 
+    // Prepare bulk email data for trial expired emails
+    const trialExpiredEmails = expiredTrialUsers.map(user => ({
+      email: user.email,
+      first_name: user.first_name,
+      last_name: user.last_name,
+      btnUrl: "",
+    }));
+
+    // Queue all trial expired emails in bulk
+    if (trialExpiredEmails.length > 0) {
+      await queueBulkEmail(SCHEDULED_JOB_KEY.TRIAL_EXPIRED, trialExpiredEmails);
+    }
+
+    // Update user records and send notifications
     await Promise.all(
       expiredTrialUsers.map(async user => {
         user.subscription_tier = "Sequential Freemium";
@@ -26,15 +71,7 @@ export const checkTrialSubscriptions = async function () {
         user.is_trial = false;
         await user.save();
 
-        //* send email
-        await sendTrialExpiredEmail({
-          email: user.email,
-          first_name: user.first_name,
-          last_name: user.last_name,
-          btnUrl: "",
-        });
-
-        //* send notification
+        // Send notification
         await createAndSendNotification({
           recipient: user._id,
           sender: null as any,
@@ -63,14 +100,16 @@ export const checkPaidSubscriptions = async function () {
       is_trial: false,
       subscription_status: { $in: ["payment_successful", "pending"] },
       subscription_end: { $lt: currentDate },
-      subscription_tier: { $ne: "Sequential Freemium" }, // Don't process freemium users
+      subscription_tier: { $ne: "Sequential Freemium" },
     });
+
+    const gracePeriodEmails: any[] = [];
+    const subscriptionExpiredEmails: any[] = [];
 
     await Promise.all(
       expiredPaidUsers.map(async user => {
         // Check if user has a grace period
         if (user.grace_period && user.grace_period.trim() !== "") {
-          // Parse grace period (assuming format like "7d", "30d", etc.)
           const gracePeriodMatch = user.grace_period.match(/^(\d+)([dD])$/);
 
           if (gracePeriodMatch) {
@@ -79,20 +118,19 @@ export const checkPaidSubscriptions = async function () {
             graceEndDate.setDate(graceEndDate.getDate() + graceDays);
 
             if (currentDate <= graceEndDate) {
-              // Still within grace period - send reminder but don't downgrade
               console.log(`User ${user.email} is in grace period until ${graceEndDate}`);
 
-              // Send grace period notification (only once per day to avoid spam)
+              // Check if we should send grace period notification
               const lastNotificationDate = user.lastLogin?.toDateString();
               const currentDateString = currentDate.toDateString();
 
               if (lastNotificationDate !== currentDateString) {
-                await sendGracePeriodNotificationEmail({
+                gracePeriodEmails.push({
                   email: user.email,
                   first_name: user.first_name,
                   last_name: user.last_name,
                   graceEndDate: graceEndDate,
-                  btnUrl: "", // Add your payment/upgrade URL
+                  btnUrl: "",
                 });
 
                 await createAndSendNotification({
@@ -111,20 +149,20 @@ export const checkPaidSubscriptions = async function () {
           }
         }
 
-        // No grace period or grace period has expired - downgrade to freemium
+        // No grace period or grace period has expired - prepare for downgrade
         const previousTier = user.subscription_tier;
         user.subscription_tier = "Sequential Freemium";
         user.subscription_status = "unpaid";
-        user.grace_period = ""; // Clear grace period
+        user.grace_period = "";
         await user.save();
 
-        // Send subscription expired email
-        await sendSubscriptionExpiredEmail({
+        // Add to subscription expired emails
+        subscriptionExpiredEmails.push({
           email: user.email,
           first_name: user.first_name,
           last_name: user.last_name,
           previousTier: previousTier,
-          btnUrl: "", // Add your upgrade URL
+          btnUrl: "",
         });
 
         // Send notification
@@ -142,6 +180,15 @@ export const checkPaidSubscriptions = async function () {
       })
     );
 
+    // Queue bulk emails
+    if (gracePeriodEmails.length > 0) {
+      await queueBulkEmail(SCHEDULED_JOB_KEY.GRACE_PERIOD_NOTIFICATION, gracePeriodEmails);
+    }
+
+    if (subscriptionExpiredEmails.length > 0) {
+      await queueBulkEmail(SCHEDULED_JOB_KEY.SUBSCRIPTION_EXPIRED, subscriptionExpiredEmails);
+    }
+
     console.log(`Processed ${expiredPaidUsers.length} expired paid subscriptions.`);
   } catch (error) {
     console.error("Error checking paid subscriptions:", error);
@@ -158,17 +205,15 @@ export const sendSubscriptionExpiryWarnings = async function () {
     const soonToExpireUsers = await User.find({
       subscription_status: { $in: ["payment_successful", "trial"] },
       subscription_end: {
-        $gte: new Date(warningDate.toDateString()), // Start of warning day
-        $lt: new Date(warningDate.getTime() + 24 * 60 * 60 * 1000), // End of warning day
+        $gte: new Date(warningDate.toDateString()),
+        $lt: new Date(warningDate.getTime() + 24 * 60 * 60 * 1000),
       },
       subscription_tier: { $ne: "Sequential Freemium" },
     });
 
+    // Send notifications (you could also create an email handler for this if needed)
     await Promise.all(
       soonToExpireUsers.map(async user => {
-        // Send warning email and notification
-        // You'll need to create these email services
-
         await createAndSendNotification({
           recipient: user._id,
           sender: null as any,
@@ -189,20 +234,25 @@ export const sendSubscriptionExpiryWarnings = async function () {
 
 export const RemindJobSeekerToCompleteAcctSetup = async function () {
   try {
-    //* find all job-seekers without resume
+    // Find all job-seekers without resume
     const users = await User.find({ role: "job-seeker", resume: null });
 
+    // Prepare bulk email data
+    const resumeReminderEmails = users.map(user => ({
+      email: user.email,
+      first_name: user.first_name,
+      last_name: user.last_name,
+      btnUrl: "",
+    }));
+
+    // Queue bulk emails
+    if (resumeReminderEmails.length > 0) {
+      await queueBulkEmail(SCHEDULED_JOB_KEY.RESUME_REMINDER, resumeReminderEmails);
+    }
+
+    // Send notifications
     await Promise.all(
       users.map(async user => {
-        //* send email to seeker
-        await sendResumeReminderEmail({
-          email: user.email,
-          first_name: user.first_name,
-          last_name: user.last_name,
-          btnUrl: "",
-        });
-
-        //* send notification to user
         await createAndSendNotification({
           recipient: user._id,
           sender: "system",
@@ -213,31 +263,113 @@ export const RemindJobSeekerToCompleteAcctSetup = async function () {
         });
       })
     );
+
+    console.log(`Sent resume reminders to ${users.length} job seekers.`);
   } catch (error) {
     console.error("Error reminding job seeker to complete account setup", error);
   }
 };
 
-// Set up cron job to run daily at midnight for subscription checks
-export const setupSubscriptionCronJobs = () => {
-  // Run every day at midnight - check for expired subscriptions
-  cron.schedule("0 0 * * *", async () => {
-    console.log("Running daily subscription check...");
-    await checkTrialSubscriptions();
-    await checkPaidSubscriptions();
-  });
+// BullMQ Scheduled Jobs Setup
+export const setupBullMQScheduledJobs = async () => {
+  try {
+    // Daily subscription checks at midnight (00:00)
+    await emailQueue.add(
+      "daily_subscription_check",
+      { jobType: "subscription_check" },
+      {
+        repeat: {
+          pattern: "0 0 * * *", // Every day at midnight
+        },
+        removeOnComplete: 5,
+        removeOnFail: 10,
+      }
+    );
 
-  // Run every day at 9 AM - send expiry warnings
-  cron.schedule("0 9 * * *", async () => {
-    console.log("Running subscription expiry warnings...");
-    await sendSubscriptionExpiryWarnings();
-  });
+    // Daily subscription expiry warnings at 9 AM
+    await emailQueue.add(
+      "daily_expiry_warnings",
+      { jobType: "expiry_warnings" },
+      {
+        repeat: {
+          pattern: "0 9 * * *", // Every day at 9 AM
+        },
+        removeOnComplete: 5,
+        removeOnFail: 10,
+      }
+    );
+
+    // Resume reminders every 3 days at 9 AM
+    await emailQueue.add(
+      "resume_reminders",
+      { jobType: "resume_reminder" },
+      {
+        repeat: {
+          pattern: "0 9 */3 * *", // Every 3 days at 9 AM
+        },
+        removeOnComplete: 5,
+        removeOnFail: 10,
+      }
+    );
+
+    console.log("BullMQ scheduled jobs setup completed");
+  } catch (error) {
+    console.error("Error setting up BullMQ scheduled jobs:", error);
+  }
 };
 
-// Run every 3 days at 9 AM for resume reminders
-export const setupResumeReminder = () => {
-  cron.schedule("0 9 */3 * *", async () => {
-    console.log("Running resume reminder...");
-    await RemindJobSeekerToCompleteAcctSetup();
-  });
-};
+// You'll also need to update your global worker to handle these scheduled job types
+// Add this to your globalEmailQueueHandler.ts worker logic:
+
+/*
+// Update your existing worker in globalEmailQueueHandler.ts to handle scheduled jobs:
+
+const globalEmailWorker = new Worker(
+  "Emails",
+  async job => {
+    const { type, jobType, ...data } = job.data;
+
+    // Handle scheduled jobs
+    if (jobType) {
+      console.log(`Processing scheduled job: ${jobType}`);
+      
+      switch (jobType) {
+        case "subscription_check":
+          await checkTrialSubscriptions();
+          await checkPaidSubscriptions();
+          return { success: true, jobType };
+          
+        case "expiry_warnings":
+          await sendSubscriptionExpiryWarnings();
+          return { success: true, jobType };
+          
+        case "resume_reminder":
+          await RemindJobSeekerToCompleteAcctSetup();
+          return { success: true, jobType };
+          
+        default:
+          throw new Error(`Unknown scheduled job type: ${jobType}`);
+      }
+    }
+
+    // Handle regular email jobs
+    console.log(`Processing ${type} email for: ${data.email}`);
+
+    const handler = jobHandlers[type];
+    if (!handler) {
+      throw new Error(`No handler registered for email type: ${type}`);
+    }
+
+    const result = await handler(data);
+    return { success: true, email: data.email, type, result };
+  },
+  {
+    connection,
+    concurrency: 1,
+    limiter: {
+      max: 2,
+      duration: 1000,
+    },
+  }
+);
+*/
