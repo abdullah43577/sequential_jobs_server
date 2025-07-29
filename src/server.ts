@@ -1,4 +1,8 @@
 import "dotenv/config";
+
+import "./workers/globalEmailQueueHandler";
+import "./workers/registerWorkers";
+
 import express, { Request, Response } from "express";
 import morgan from "morgan";
 import cors from "cors";
@@ -85,10 +89,6 @@ app.use("*", (req: Request, res: Response) => {
 
 const cronJobs = async function () {
   console.log("EXECUTING CRON JOBS....");
-  // Import email handlers FIRST
-  await import("./workers/registerWorkers.js");
-
-  const { setupBullMQScheduledJobs } = await import("./utils/cron-jobs.js");
 
   await setupBullMQScheduledJobs();
 };
