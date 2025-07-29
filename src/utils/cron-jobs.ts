@@ -1,8 +1,15 @@
 import User from "../models/users.model";
 import { createAndSendNotification } from "./services/notifications/sendNotification";
 import { NotificationStatus, NotificationType } from "../models/notifications.model";
-import { SCHEDULED_JOB_KEY } from "../workers/registerWorkers";
 import { emailQueue, queueBulkEmail } from "../workers/globalEmailQueueHandler";
+
+export const SCHEDULED_JOB_KEY = {
+  TRIAL_EXPIRED: "trial_expired_email",
+  GRACE_PERIOD_NOTIFICATION: "grace_period_notification_email",
+  SUBSCRIPTION_EXPIRED: "subscription_expired_email",
+  SUBSCRIPTION_EXPIRY_WARNING: "subscription_expiry_warning",
+  RESUME_REMINDER: "resume_reminder_email",
+};
 
 // Function to check and handle expired trial subscriptions
 export const checkTrialSubscriptions = async function () {

@@ -1,8 +1,4 @@
 import "dotenv/config";
-
-import "./workers/globalEmailQueueHandler";
-import "./workers/registerWorkers";
-
 import express, { Request, Response } from "express";
 import morgan from "morgan";
 import cors from "cors";
