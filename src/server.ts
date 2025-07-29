@@ -1,4 +1,3 @@
-import "./workers/globalEmailQueueHandler";
 import "dotenv/config";
 import express, { Request, Response } from "express";
 import morgan from "morgan";
@@ -84,9 +83,14 @@ app.use("*", (req: Request, res: Response) => {
   });
 });
 
-const cronJobs = function () {
+const cronJobs = async function () {
   console.log("EXECUTING CRON JOBS....");
-  setupBullMQScheduledJobs();
+  // Import email handlers FIRST
+  await import("./workers/registerWorkers.js");
+
+  const { setupBullMQScheduledJobs } = await import("./utils/cron-jobs.js");
+
+  await setupBullMQScheduledJobs();
 };
 
 const server = app.listen(PORT, async () => {
@@ -96,7 +100,7 @@ const server = app.listen(PORT, async () => {
     console.log(`server started on http://localhost:${PORT}`);
 
     //* EXECUTE CRON JOBS
-    cronJobs();
+    await cronJobs();
   } catch (error) {
     console.error("Error starting server and connecting to DB", error);
   }
