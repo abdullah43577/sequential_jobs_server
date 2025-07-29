@@ -25,7 +25,7 @@ const ticketSchema = new Schema<ITicket>(
     comments: [
       {
         sender: { type: Schema.Types.ObjectId, ref: "User", required: true },
-        message: { type: String, required: true },
+        message: { type: String, default: "" },
         createdAt: { type: Date, default: Date.now },
       },
     ],
