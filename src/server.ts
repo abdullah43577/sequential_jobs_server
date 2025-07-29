@@ -1,3 +1,4 @@
+import "./workers/globalEmailQueueHandler";
 import "dotenv/config";
 import express, { Request, Response } from "express";
 import morgan from "morgan";
@@ -19,7 +20,6 @@ import { adminRouter } from "./routes/admin/routes.admin";
 import Stripe from "stripe";
 import { ticketRouter } from "./routes/ticketRoutes";
 import { emailWebhook } from "./routes/emailHookRoutes";
-import "./workers/globalEmailQueueHandler";
 import { setupBullMQScheduledJobs } from "./utils/cron-jobs";
 
 const app = express();
