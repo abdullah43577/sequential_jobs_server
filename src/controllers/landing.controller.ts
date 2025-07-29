@@ -2,13 +2,13 @@ import { Request, Response } from "express";
 import { handleErrors } from "../helper/handleErrors";
 import Job from "../models/jobs/jobs.model";
 import User from "../models/users.model";
+import { hasAccess } from "../utils/subscriptionConfig";
 
 const getLandingJobs = async function (req: Request, res: Response) {
   try {
     const { countryName, job_title, location, date_posted, pay, job_type, employment_type } = req.query;
     const page = parseInt(req.query.page as string) || 1;
     const limit = parseInt(req.query.limit as string) || 10;
-    const skip = (page - 1) * limit;
 
     console.log(countryName, "country name here");
 
@@ -97,16 +97,27 @@ const getLandingJobs = async function (req: Request, res: Response) {
 
     console.log("Final query:", query);
 
-    // Get total job count with filters
-    const totalJobs = await Job.countDocuments(query);
+    // Get ALL jobs that match the query (without pagination first)
+    const allMatchingJobs = await Job.find(query)
+      .populate<{ employer: { _id: string; organisation_name: string; profile_pic: string; subscription_tier: string } }>("employer", "organisation_name profile_pic subscription_tier")
+      .sort({ createdAt: -1 })
+      .lean();
 
-    // Get filtered jobs
-    const jobs = await Job.find(query).populate("employer", "organisation_name profile_pic").sort({ createdAt: -1 }).skip(skip).limit(limit).lean();
+    // Filter out freemium jobs
+    const nonFreemiumJobs = allMatchingJobs.filter(job => job.employer?.subscription_tier !== "Sequential Freemium");
+
+    // Calculate pagination based on filtered results
+    const totalJobs = nonFreemiumJobs.length;
+    const totalPages = Math.ceil(totalJobs / limit);
+    const skip = (page - 1) * limit;
+
+    // Apply pagination to filtered results
+    const jobs = nonFreemiumJobs.slice(skip, skip + limit);
 
     const responseData = {
       jobs,
       totalJobs,
-      totalPages: Math.ceil(totalJobs / limit),
+      totalPages,
       currentPage: page,
     };
 
@@ -132,10 +143,14 @@ const getLandingJobById = async function (req: Request, res: Response) {
 const getCompanyJobs = async function (req: Request, res: Response) {
   try {
     const { username } = req.params;
+
     if (!username) return res.status(400).json({ message: "Company username is required" });
 
     const user = await User.findOne({ username });
     if (!user) return res.status(404).json({ message: "Company Account not found!" });
+
+    // revoke user access if he doesn't have the right to this feature
+    if (!hasAccess("jobPostingBroadcast", user.subscription_tier as any)) return res.status(400).json({ message: "Company is on a Free Tier account and does not have the privilege for this!" });
 
     const { job_title, location, date_posted, pay, job_type, employment_type } = req.query;
     const page = parseInt(req.query.page as string) || 1;

@@ -11,7 +11,6 @@ import JobTest from "../../models/assessment/jobtest.model";
 import User from "../../models/users.model";
 import { createAndSendNotification } from "../../utils/services/notifications/sendNotification";
 import { NotificationStatus, NotificationType } from "../../models/notifications.model";
-import { sendMatchingJobEmail } from "../../utils/services/emails/matchingJobEmailService";
 import MedicalMgmt from "../../models/medicals/medical.model";
 import { queueEmail } from "../../workers/globalEmailQueueHandler";
 import { JOB_KEY } from "../../workers/registerWorkers";
