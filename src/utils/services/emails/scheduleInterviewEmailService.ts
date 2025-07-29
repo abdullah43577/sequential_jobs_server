@@ -73,8 +73,8 @@ const generatePanelistEmailData = (data: InterviewEmailData, panelist: PanelistD
     
 As a panelist, you'll need to evaluate this candidate after the interview. Please keep the following reference information for your records:
 
-Job ID: ${data.job.id}
 Candidate ID: ${data.candidate.id}
+Job ID: ${data.job.id}
 
 You will need these IDs when submitting your candidate evaluation.`,
     buttonText: "Join Interview",

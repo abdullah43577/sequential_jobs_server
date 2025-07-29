@@ -9,8 +9,10 @@ import User from "../../models/users.model";
 import { NotificationStatus, NotificationType } from "../../models/notifications.model";
 import TestSubmission from "../../models/jobs/testsubmission.model";
 import { createAndSendNotification } from "../../utils/services/notifications/sendNotification";
-import { queueEmail } from "../../workers/globalEmailQueueHandler";
+import { queueBulkEmail, queueEmail } from "../../workers/globalEmailQueueHandler";
 import { JOB_KEY } from "../../workers/registerWorkers";
+import { Types } from "mongoose";
+import { TestApplicantsData } from "../../utils/services/emails/testApplicantsEmailInvite";
 
 const { CLIENT_URL } = process.env;
 
@@ -376,39 +378,55 @@ const jobTestApplicantsInvite = async function (req: IUserRequest, res: Response
       expiresAt: expirationDate,
     }));
 
-    for (const invite of newInvites) {
-      try {
+    const result = await Promise.allSettled(
+      newInvites.map(async invite => {
         const user = await User.findById(invite.user);
-        if (!user) continue;
 
         // Generate a unique test link (you might want to generate a more secure token)
         const testLink = `${CLIENT_URL}/dashboard/job-seeker/test-management`;
-
-        await queueEmail(JOB_KEY.JOB_TEST, {
-          email: user.email,
-          first_name: user.first_name,
-          last_name: user.last_name,
-          job_title: test.job?.job_title,
-          invitation_letter: jobTest.invitation_letter,
-          testLink,
-          expirationDate,
-          organisation_name: test.employer?.organisation_name,
-        });
 
         const subject = `Job Assessment Invitation - ${(test.job as any).job_title}`;
 
         const message = `${test.employer.organisation_name} has invited you to take a job test.`;
 
         //* notification
-        await createAndSendNotification({ recipient: user._id, sender: userId as string, type: NotificationType.MESSAGE, title: subject, message, status: NotificationStatus.UNREAD });
+        await createAndSendNotification({ recipient: user?._id as Types.ObjectId, sender: userId as string, type: NotificationType.MESSAGE, title: subject, message, status: NotificationStatus.UNREAD });
 
-        jobTest.stage = "candidate_invite";
-        jobTest.candidates_invited.push(user._id);
-        await jobTest.save();
-        return;
-      } catch (error) {
-        console.error(`Error inviting candidate ${invite.user}:`, error);
+        return {
+          userId: user?._id,
+          email: user?.email,
+          first_name: user?.first_name,
+          last_name: user?.last_name,
+          job_title: test?.job.job_title,
+          invitation_letter: jobTest.invitation_letter,
+          testLink,
+          expirationDate,
+          organisation_name: test.employer.organisation_name,
+        };
+      })
+    );
+
+    const emailsToBeProcessed: TestApplicantsData[] = [];
+    const successfullyInvitedUserIds: Types.ObjectId[] = [];
+
+    result.forEach((d, idx) => {
+      if (d.status === "fulfilled") {
+        emailsToBeProcessed.push(d.value as TestApplicantsData);
+        successfullyInvitedUserIds.push(d.value.userId as Types.ObjectId);
+      } else {
+        console.error(`❌ Error processing candidate [${newInvites[idx].user}]:`, d.reason);
       }
+    });
+
+    if (emailsToBeProcessed.length > 0) {
+      console.log(emailsToBeProcessed, "emails to be processed");
+      await queueBulkEmail(JOB_KEY.JOB_TEST, emailsToBeProcessed);
+    }
+
+    if (successfullyInvitedUserIds.length > 0) {
+      jobTest.stage = "candidate_invite";
+      jobTest.candidates_invited.push(...successfullyInvitedUserIds);
+      await jobTest.save();
     }
 
     return res.status(200).json({

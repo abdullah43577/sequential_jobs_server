@@ -160,7 +160,7 @@ const handleGetPanelistEmails = async function (req: IUserRequest, res: Response
       return res.status(200).json({ success: false, emails: [] });
     }
 
-    const panelistEmails = interview.panelists.map(pan => pan.email);
+    const panelistEmails = interview.panelists.map(email => email);
 
     res.status(200).json({ success: true, emails: panelistEmails });
   } catch (error) {
@@ -189,7 +189,7 @@ const handleInvitePanelists = async function (req: IUserRequest, res: Response) 
       .lean();
 
     const panelistsAlreadyInDB = new Set(existingPanelistsInDB.map(pan => pan.email));
-    const interviewPanelists = new Set(interview.panelists.map(pan => pan.email));
+    const interviewPanelists = new Set(interview.panelists.map(pan => pan));
 
     // Panelists not in DB and haven't been added to this interview before
     const uniquePanelists = panelists.filter(email => !panelistsAlreadyInDB.has(email) && !interviewPanelists.has(email));
@@ -203,12 +203,7 @@ const handleInvitePanelists = async function (req: IUserRequest, res: Response) 
     panelists.forEach(pan => {
       if (panelistsAlreadyInDB.has(pan) && !existingPanelists.includes(pan)) {
         existingDBPanelists.push(pan);
-
-        const rating_scale_keys = Array.from(interview.rating_scale.keys());
-        const newScale = new Map<string, string | number>();
-        rating_scale_keys.forEach(key => newScale.set(key, ""));
-
-        interview.panelists.push({ email: pan, rating_scale: newScale });
+        interview.panelists.push(pan);
       }
     });
 
@@ -239,7 +234,7 @@ const handleInvitePanelists = async function (req: IUserRequest, res: Response) 
 
           return {
             email,
-            interviewPanelistData: { email, rating_scale: newScale },
+            panelistEmail: email,
             emailData: {
               email,
               recipientName: nameGuess.firstName || "Guest",
@@ -255,9 +250,7 @@ const handleInvitePanelists = async function (req: IUserRequest, res: Response) 
       // Process successful user creations
       panelistCreationResults.forEach((result, index) => {
         if (result.status === "fulfilled") {
-          // Add to interview panelists (safe sequential operation)
-          interview.panelists.push(result.value.interviewPanelistData);
-          // Collect email data
+          interview.panelists.push(result.value.panelistEmail);
           newPanelistEmailData.push(result.value.emailData as PanelistInviteData);
         } else {
           console.error(`Error creating panelist ${uniquePanelists[index]}:`, result.reason);
@@ -301,21 +294,11 @@ const handleInvitePanelists = async function (req: IUserRequest, res: Response) 
     const emailPromises: Promise<any>[] = [];
 
     if (newPanelistEmailData.length > 0) {
-      emailPromises.push(
-        queueBulkEmail(
-          JOB_KEY.PANELIST_INVITE,
-          newPanelistEmailData.map(data => ({ type: JOB_KEY.PANELIST_INVITE, ...data }))
-        )
-      );
+      emailPromises.push(queueBulkEmail(JOB_KEY.PANELIST_INVITE, newPanelistEmailData));
     }
 
     if (existingPanelistEmailData.length > 0) {
-      emailPromises.push(
-        queueBulkEmail(
-          JOB_KEY.PANELIST_INVITE,
-          existingPanelistEmailData.map(data => ({ type: JOB_KEY.PANELIST_INVITE, ...data }))
-        )
-      );
+      emailPromises.push(queueBulkEmail(JOB_KEY.PANELIST_INVITE, existingPanelistEmailData));
     }
 
     // Execute bulk email operations concurrently
@@ -449,7 +432,6 @@ const handleInviteCandidates = async function (req: IUserRequest, res: Response)
       actionResult.forEach((result, index) => {
         if (result.status === "fulfilled") {
           interview.candidates.push({ candidate: result.value.candidateId });
-          // Collect email data
           processedCandidateData.push(result.value?.emailData as CandidateInviteData);
         } else {
           console.error(`Error inviting candidate ${uniqueCandidates[index]}:`, result.reason);
@@ -458,13 +440,7 @@ const handleInviteCandidates = async function (req: IUserRequest, res: Response)
     }
 
     if (processedCandidateData.length > 0) {
-      await queueBulkEmail(
-        JOB_KEY.INTERVIEW_CANDIDATE_INVITE,
-        processedCandidateData.map(data => ({
-          type: JOB_KEY.INTERVIEW_CANDIDATE_INVITE,
-          ...data,
-        }))
-      );
+      await queueBulkEmail(JOB_KEY.INTERVIEW_CANDIDATE_INVITE, processedCandidateData);
     }
 
     //* save candidates record
@@ -508,22 +484,28 @@ const handleGradeCandidate = async function (req: IUserRequest, res: Response) {
     const interview = await InterviewMgmt.findOne({ job: job_id });
     if (!interview) return res.status(404).json({ message: "Interview Record not found!" });
 
-    const panelistEntry = interview.panelists.find(panelist => panelist.email === panelist_email);
+    // Verify panelist exists
+    const panelistEntry = interview.panelists.find(email => email === panelist_email);
     if (!panelistEntry) return res.status(400).json({ message: "Panelist Record not found!" });
-
-    // Prevent regrading
-    if ([...panelistEntry.rating_scale.values()].some(v => v !== "" && v !== null && v !== undefined)) {
-      return res.status(400).json({ message: "You have already graded this candidate." });
-    }
-
-    // Assign grades to panelist
-    panelistEntry.rating_scale = new Map(Object.entries(rating_scale));
-    if (remark?.trim().length) panelistEntry.remark = remark;
 
     const candidateEntry = interview.candidates.find(c => c.candidate.toString() === candidate_id);
     if (!candidateEntry) return res.status(400).json({ message: "Candidate Entry not found" });
 
-    // Calculate average per scale key across all panelists
+    // Check if this panelist has already graded this specific candidate
+    const existingRating = candidateEntry.panelist_ratings?.find(rating => rating.panelist_email === panelist_email);
+
+    if (existingRating) {
+      return res.status(400).json({ message: "You have already graded this candidate." });
+    }
+
+    // Add panelist's rating for this candidate
+    candidateEntry.panelist_ratings?.push({
+      panelist_email,
+      rating_scale: new Map(Object.entries(rating_scale)),
+      remark: remark?.trim() || "",
+    });
+
+    // Calculate average per scale key across all panelists who have graded this candidate
     const scaleKeys = Array.from(interview.rating_scale.keys());
 
     const totalScores: Record<string, number> = {};
@@ -534,9 +516,10 @@ const handleGradeCandidate = async function (req: IUserRequest, res: Response) {
       ratingCounts[key] = 0;
     });
 
-    interview.panelists.forEach(p => {
+    // Calculate averages from panelist ratings for this candidate
+    candidateEntry.panelist_ratings?.forEach(pRating => {
       scaleKeys.forEach(key => {
-        const value = p.rating_scale.get(key);
+        const value = pRating.rating_scale.get(key);
         if (value !== "" && !isNaN(Number(value))) {
           totalScores[key] += Number(value);
           ratingCounts[key] += 1;
@@ -552,13 +535,11 @@ const handleGradeCandidate = async function (req: IUserRequest, res: Response) {
 
     candidateEntry.rating_scale = averageRatingScale;
 
-    // Calculate total interview score (optional)
+    // Calculate total interview score
     const totalScore = Array.from(averageRatingScale.values()).reduce((acc, val) => acc + val, 0);
     candidateEntry.interview_score = parseFloat(totalScore.toFixed(1));
 
     await interview.save();
-
-    //* delete panelist account on grade successful
 
     return res.status(200).json({ message: "Candidate graded successfully" });
   } catch (error) {

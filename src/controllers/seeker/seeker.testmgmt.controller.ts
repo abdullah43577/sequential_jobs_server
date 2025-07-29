@@ -109,7 +109,7 @@ const submitJobTest = async function (req: IUserRequest, res: Response) {
       score: totalScore,
     });
 
-    await queueEmail(JOB_KEY.JOB_TEST, {
+    await queueEmail(JOB_KEY.JOB_TEST_SUBMISSION, {
       employer: {
         email: test.employer.email,
         firstName: test.employer.first_name,
@@ -132,31 +132,6 @@ const submitJobTest = async function (req: IUserRequest, res: Response) {
         totalQuestions: test.questions.length,
       },
     });
-
-    // Send email to employer
-    // await sendTestSubmissionNotificationEmail({
-    //   employer: {
-    //     email: test.employer.email,
-    //     firstName: test.employer.first_name,
-    //     lastName: test.employer.last_name,
-    //   },
-    //   candidate: {
-    //     firstName: candidate.first_name,
-    //     lastName: candidate.last_name,
-    //   },
-    //   job: {
-    //     title: test.job.job_title,
-    //   },
-    //   test: {
-    //     title: "Assessment Test",
-    //     type: "job_test",
-    //   },
-    //   submission: {
-    //     id: submission._id.toString(),
-    //     score: totalScore,
-    //     totalQuestions: test.questions.length,
-    //   },
-    // });
 
     return res.status(200).json({ message: "Test submitted successfully", submission });
   } catch (error) {

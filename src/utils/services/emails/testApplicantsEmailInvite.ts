@@ -12,20 +12,24 @@ export interface TestApplicantsData {
   organisation_name: string;
 }
 
-const generateTestApplicantsEmailData = (data: TestApplicantsData) => ({
-  type: "test" as EmailTypes,
-  title: "Job Assessment Invitation",
-  recipientName: `${data.first_name} ${data.last_name}`,
-  message: `You have been invited to complete a job assessment for the ${data.job_title} position. 
-        Please click the button below to start the test. This invitation will expire on ${data.expirationDate.toLocaleDateString()}. \n\n ${data.invitation_letter}`,
-  buttonText: "Start Assessment",
-  buttonAction: data.testLink,
-  additionalDetails: {
-    date: data.expirationDate.toLocaleDateString(),
-    time: "Open Until " + data.expirationDate.toLocaleTimeString(),
-    organizerName: data.organisation_name,
-  },
-});
+const generateTestApplicantsEmailData = (data: TestApplicantsData) => {
+  const expirationDate = new Date(data.expirationDate);
+
+  return {
+    type: "test" as EmailTypes,
+    title: "Job Assessment Invitation",
+    recipientName: `${data.first_name} ${data.last_name}`,
+    message: `You have been invited to complete a job assessment for the ${data.job_title} position. 
+        Please click the button below to start the test. This invitation will expire on ${expirationDate.toLocaleDateString()}. \n\n ${data.invitation_letter}`,
+    buttonText: "Start Assessment",
+    buttonAction: data.testLink,
+    additionalDetails: {
+      date: expirationDate.toLocaleDateString(),
+      time: "Open Until " + expirationDate.toLocaleTimeString(),
+      organizerName: data.organisation_name,
+    },
+  };
+};
 
 export const createTestApplicantsEmail = (data: TestApplicantsData) => {
   const emailData = generateTestApplicantsEmailData(data);

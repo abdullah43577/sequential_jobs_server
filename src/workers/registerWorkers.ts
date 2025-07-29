@@ -1,4 +1,3 @@
-// import { CandidateInviteParams, sendCandidateMedicalInvite } from "../controllers/employer/medicals/sendCandidateMedicalInvite";
 import { CandidateMedicalData, sendCandidateMedicalEmail } from "../utils/services/emails/candidateMedicalEmailInvite";
 import { EmailVerificationSuccessData, sendEmailVerificationSuccessEmail } from "../utils/services/emails/emailVerificationService";
 import { ForgotPasswordData, sendForgotPasswordEmail } from "../utils/services/emails/forgotPasswordEmailService";
@@ -29,6 +28,7 @@ export const JOB_KEY = {
   MATCHING_JOB_DETAIL: "job_match_candidate_email",
   APPLICATION_TEST_SUBMISSION: "application_test_submission",
   JOB_TEST: "job_test_candidate_invite",
+  JOB_TEST_SUBMISSION: "job_test_candidate_submission",
   PANELIST_INVITE: "panelist_invite",
 
   INTERVIEW_CANDIDATE_INVITE: "interview_candidate_invite",
@@ -89,7 +89,7 @@ registerEmailHandler(JOB_KEY.JOB_TEST, async (data: TestApplicantsData) => {
 });
 
 //* send mail to employer once a job test has been taken by a candidate
-registerEmailHandler(JOB_KEY.JOB_TEST, async (data: TestSubmissionNotificationData) => {
+registerEmailHandler(JOB_KEY.JOB_TEST_SUBMISSION, async (data: TestSubmissionNotificationData) => {
   return await sendTestSubmissionNotificationEmail(data);
 });
 
