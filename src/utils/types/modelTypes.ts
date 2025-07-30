@@ -32,6 +32,8 @@ export interface IUser {
   subscription_start: Date;
   subscription_end: Date;
   is_trial: boolean;
+  last_subscription_tier: "Sequential Freemium" | "Sequential Standard" | "Sequential Pro" | "Sequential Super Pro" | null;
+  last_subscription_end: Date | null;
   googleId: string;
   linkedinId: string;
   failedLoginAttempts: number;

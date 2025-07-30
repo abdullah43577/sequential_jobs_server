@@ -5,8 +5,6 @@ import { fullPlanNameToAccess, getUniqueBenefitsForTier } from "../../utils/subs
 import Stripe from "stripe";
 import User from "../../models/users.model";
 import { stripe } from "../../server";
-import { sendUpgradeConfirmationEmail } from "../../utils/services/emails/sendUpgradeConfirmationEmailService";
-import { sendPaymentFailureEmail } from "../../utils/services/emails/sendPaymentFailureEmailService";
 import { queueEmail } from "../../workers/globalEmailQueueHandler";
 import { JOB_KEY } from "../../workers/registerWorkers";
 const { STRIPE_WEBHOOK_SECRET, SEQUENTIAL_FREEMIUM, SEQUENTIAL_STANDARD, SEQUENTIAL_PRO, SEQUENTIAL_SUPER_PRO } = process.env;
@@ -179,6 +177,8 @@ const handleWebhook = async function (req: Request, res: Response) {
           await User.findByIdAndUpdate(userId, {
             stripe_customer_id: customerId,
             subscription_status: "pending",
+            last_subscription_tier: null, // Clear previous plan since user is upgrading
+            last_subscription_end: null,
             subscription_tier: fullPlanName,
           });
 
@@ -234,6 +234,8 @@ const handleWebhook = async function (req: Request, res: Response) {
             user._id,
             {
               subscription_status: "payment_failed",
+              last_subscription_tier: user.subscription_tier,
+              last_subscription_end: user.subscription_end,
             },
             { returnDocument: "after" }
           );

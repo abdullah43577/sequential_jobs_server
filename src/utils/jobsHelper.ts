@@ -49,3 +49,56 @@ export const getCompatibleExperienceLevels = (jobRequiredLevel: string) => {
   // For other levels, include current level and below (overqualified candidates)
   return levels.slice(0, jobIndex + 1);
 };
+
+type SubscriptionTiers = "Sequential Freemium" | "Sequential Standard" | "Sequential Pro" | "Sequential Super Pro";
+
+const getUserJobPostMaxCountPerSubscriptionLevel = (tier: SubscriptionTiers): number | string => {
+  switch (tier) {
+    case "Sequential Freemium":
+      return 5;
+
+    case "Sequential Standard":
+      return 20;
+
+    case "Sequential Pro":
+      return 50;
+
+    case "Sequential Super Pro":
+      return "unlimited";
+
+    default:
+      return 0;
+  }
+};
+
+export const getEffectiveJobSlotCount = ({ currentTier, lastTier, lastSubscriptionEnd }: { currentTier: SubscriptionTiers; lastTier: SubscriptionTiers | null; lastSubscriptionEnd: Date | null }): number | "unlimited" => {
+  const baseLimit = getUserJobPostMaxCountPerSubscriptionLevel(currentTier);
+
+  if (baseLimit === "unlimited") return "unlimited";
+
+  let rolloverBonus = 0;
+
+  // Allow 1-month grace for rollover slot
+  const now = new Date();
+  const lastMonthStart = new Date(now.getFullYear(), now.getMonth() - 1, 1);
+
+  const wasDowngradedRecently = lastTier && lastTier !== currentTier && lastSubscriptionEnd && new Date(lastSubscriptionEnd) >= lastMonthStart;
+
+  if (wasDowngradedRecently) {
+    switch (lastTier) {
+      case "Sequential Standard":
+        rolloverBonus = 1;
+        break;
+      case "Sequential Pro":
+        rolloverBonus = 2;
+        break;
+      case "Sequential Super Pro":
+        rolloverBonus = 3;
+        break;
+      default:
+        rolloverBonus = 0;
+    }
+  }
+
+  return (baseLimit as number) + rolloverBonus;
+};
