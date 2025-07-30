@@ -92,7 +92,20 @@ globalEmailWorker.on("error", err => {
 });
 
 // Helper function to queue any email type
-export const queueEmail = (type: string, data: any) => emailQueue.add("send_email", { type, ...data }, { removeOnComplete: true, removeOnFail: true });
+export const queueEmail = (type: string, data: any) =>
+  emailQueue.add(
+    "send_email",
+    { type, ...data },
+    {
+      removeOnComplete: true,
+      removeOnFail: true,
+      attempts: 3,
+      backoff: {
+        type: "exponential",
+        delay: 2000,
+      },
+    }
+  );
 
 // Helper function to queue emails in bulk
 export const queueBulkEmail = (type: string, emailData: any[]) => {
@@ -103,6 +116,11 @@ export const queueBulkEmail = (type: string, emailData: any[]) => {
       removeOnComplete: 10,
       removeOnFail: 50,
       delay: index * 100, // Optional: stagger jobs by 100ms each
+      attempts: 3,
+      backoff: {
+        type: "exponential",
+        delay: 2000,
+      },
     },
   }));
 
@@ -117,6 +135,11 @@ export const queueScheduledJob = (jobType: string, data: any = {}) =>
     {
       removeOnComplete: 5,
       removeOnFail: 10,
+      attempts: 5,
+      backoff: {
+        type: "exponential",
+        delay: 5000,
+      },
     }
   );
 

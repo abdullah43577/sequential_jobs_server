@@ -22,11 +22,10 @@ const getEmployerEvents = async function (req: IUserRequest, res: Response) {
           duration: `${candidate.scheduled_date_time?.start_time} - ${candidate.scheduled_date_time?.end_time}`,
           organisation_name: interview.employer.organisation_name,
           has_attended_interview: candidate.status === "completed",
+          meetingLink: interview.meetingLink,
         }))
       )
       .filter(event => Object.values(event.scheduled_date_time || {}).length > 0);
-
-    console.log(events, "events here");
 
     res.status(200).json(events);
   } catch (error) {
@@ -59,6 +58,7 @@ const getSeekerEvents = async function (req: IUserRequest, res: Response) {
             duration: `${candidate.scheduled_date_time?.start_time} - ${candidate.scheduled_date_time?.end_time}`,
             organisation_name: interview.employer.organisation_name,
             has_attended: candidate.status === "completed",
+            meetingLink: interview.meetingLink,
           }))
       )
       .filter(event => Object.values(event.scheduled_date_time || {}).length > 0);

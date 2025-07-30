@@ -18,7 +18,7 @@ export const passportSetup = function () {
         try {
           const { id, name, emails, _json } = profile;
 
-          const role = req.query.role as "company" | "job-seeker";
+          const role = req.query.state as "company" | "job-seeker";
 
           let existingUser = await User.findOne({ googleId: id });
           if (existingUser) {
@@ -62,7 +62,7 @@ export const passportSetup = function () {
 
           const newUser = new User({
             first_name: name?.givenName,
-            lastName: name?.familyName,
+            last_name: name?.familyName,
             email: emails?.[0].value,
             profile_pic: _json.picture || null,
             role,

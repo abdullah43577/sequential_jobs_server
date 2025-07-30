@@ -31,7 +31,7 @@ const userSchema = new Schema<IUser>(
     phone_no: {
       type: Number,
       default: null,
-      validate: roleBasedValidation("job-seeker", "Phone Number"),
+      // validate: roleBasedValidation("job-seeker", "Phone Number"),
     },
 
     official_phone: {

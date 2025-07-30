@@ -9,7 +9,7 @@ export interface IUser {
   password: string;
   bio: string;
   role: "job-seeker" | "company" | "panelist" | "medical-expert" | "admin" | "super-admin";
-  phone_no: number;
+  phone_no: number | null;
   profile_pic: string | null;
   official_phone: number;
   organisation_name: string;
