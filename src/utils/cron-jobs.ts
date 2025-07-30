@@ -42,6 +42,8 @@ export const checkTrialSubscriptions = async function () {
         user.subscription_tier = "Sequential Freemium";
         user.subscription_status = "unpaid";
         user.is_trial = false;
+        user.last_subscription_tier = "Sequential Freemium"; // or null if trial doesn’t count
+        user.last_subscription_end = new Date();
         await user.save();
 
         // Send notification
@@ -124,6 +126,8 @@ export const checkPaidSubscriptions = async function () {
 
         // No grace period or grace period has expired - prepare for downgrade
         const previousTier = user.subscription_tier;
+        user.last_subscription_tier = previousTier;
+        user.last_subscription_end = new Date();
         user.subscription_tier = "Sequential Freemium";
         user.subscription_status = "unpaid";
         user.grace_period = "";

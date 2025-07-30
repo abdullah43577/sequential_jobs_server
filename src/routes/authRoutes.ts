@@ -12,24 +12,10 @@ const authRouter = Router();
 authRouter.get("/google", passport.authenticate("google", { scope: ["profile", "email"] }));
 
 //* GOOGLE signup
-authRouter.get(
-  "/google/job-seeker",
-  (req, res, next) => {
-    req.query.role = "job-seeker";
-    next();
-  },
-  passport.authenticate("google", { scope: ["profile", "email"] })
-);
+authRouter.get("/google/job-seeker", passport.authenticate("google", { scope: ["profile", "email"], state: "job-seeker" }));
 
 // Employer signup
-authRouter.get(
-  "/google/employer",
-  (req, res, next) => {
-    req.query.role = "employer";
-    next();
-  },
-  passport.authenticate("google", { scope: ["profile", "email"] })
-);
+authRouter.get("/google/company", passport.authenticate("google", { scope: ["profile", "email"], state: "company" }));
 
 authRouter.get("/google/callback", passport.authenticate("google", { session: false }), async (req: IUserRequest, res) => {
   try {

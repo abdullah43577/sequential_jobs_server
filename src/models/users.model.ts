@@ -31,7 +31,7 @@ const userSchema = new Schema<IUser>(
     phone_no: {
       type: Number,
       default: null,
-      validate: roleBasedValidation("job-seeker", "Phone Number"),
+      // validate: roleBasedValidation("job-seeker", "Phone Number"),
     },
 
     official_phone: {
@@ -125,6 +125,11 @@ const userSchema = new Schema<IUser>(
       type: Boolean,
       default: true,
     },
+
+    last_subscription_tier: { type: String, enum: ["Sequential Freemium", "Sequential Standard", "Sequential Pro", "Sequential Super Pro"], default: null },
+
+    last_subscription_end: { type: Date, default: null },
+
     grace_period: {
       type: String,
       default: "",

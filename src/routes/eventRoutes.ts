@@ -8,5 +8,3 @@ eventsRouter.get("/company_events", validateAccessToken, validateCompanySession,
 eventsRouter.get("/seeker_events", validateAccessToken, validateSeekerSession, getSeekerEvents);
 
 export { eventsRouter };
-
-//* test

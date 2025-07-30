@@ -11,10 +11,10 @@ import JobTest from "../../models/assessment/jobtest.model";
 import User from "../../models/users.model";
 import { createAndSendNotification } from "../../utils/services/notifications/sendNotification";
 import { NotificationStatus, NotificationType } from "../../models/notifications.model";
-import { sendMatchingJobEmail } from "../../utils/services/emails/matchingJobEmailService";
 import MedicalMgmt from "../../models/medicals/medical.model";
 import { queueEmail } from "../../workers/globalEmailQueueHandler";
 import { JOB_KEY } from "../../workers/registerWorkers";
+import { getEffectiveJobSlotCount } from "../../utils/jobsHelper";
 
 //* BULK UPLOAD
 const handleBulkUpload = async function (req: IUserRequest, res: Response) {
@@ -60,9 +60,20 @@ const handleBulkUpload = async function (req: IUserRequest, res: Response) {
 const getJobs = async function (req: IUserRequest, res: Response) {
   try {
     const { userId } = req;
+
+    const user = await User.findById(userId).select("subscription_tier last_subscription_tier last_subscription_end").lean();
+
+    if (!user) return res.status(404).json({ message: "User not found" });
+
     const jobs = await Job.find({ employer: userId }).select("job_title createdAt country job_type employment_type salary currency_type payment_frequency application_test stage is_live").lean();
 
-    res.status(200).json(jobs);
+    const maxJobsCount = getEffectiveJobSlotCount({
+      currentTier: user.subscription_tier,
+      lastTier: user.last_subscription_tier,
+      lastSubscriptionEnd: user.last_subscription_end,
+    });
+
+    res.status(200).json({ jobs, jobLimit: maxJobsCount, currentCount: jobs.length });
   } catch (error) {
     handleErrors({ res, error });
   }
@@ -179,6 +190,25 @@ const jobPostCreation = async function (req: IUserRequest, res: Response) {
 
     //* if user_id is passed in the body use that instead of the user id in the request object as it's used for admins functionality
     const userId = data.user_id?.length ? data.user_id : current_user_id;
+
+    //* limit user job post creation based on subscription_tier
+
+    const user = await User.findById(userId).select("subscription_tier last_subscription_tier last_subscription_end").lean();
+    if (!user) return res.status(404).json({ message: "User not found!" });
+
+    const maxJobsCount = getEffectiveJobSlotCount({
+      currentTier: user.subscription_tier,
+      lastTier: user.last_subscription_tier,
+      lastSubscriptionEnd: user.last_subscription_end,
+    });
+
+    const currentJobCount = await Job.countDocuments({ employer: userId });
+
+    if (typeof maxJobsCount === "number" && currentJobCount >= maxJobsCount) {
+      return res.status(403).json({
+        message: `Job posting limit reached for your current plan (${user.subscription_tier}). Upgrade to post more jobs.`,
+      });
+    }
 
     if (data.job_id) {
       const job = await Job.findByIdAndUpdate(data.job_id, data, { returnDocument: "after", runValidators: true }).lean();
