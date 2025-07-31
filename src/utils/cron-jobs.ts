@@ -292,5 +292,6 @@ export const setupBullMQScheduledJobs = async () => {
     console.log("BullMQ scheduled jobs setup completed");
   } catch (error) {
     console.error("Error setting up BullMQ scheduled jobs:", error);
+    throw error;
   }
 };

@@ -6,12 +6,15 @@ import { HireCandidateEmailData, sendHireCandidateEmail } from "../utils/service
 import { CandidateInviteData, sendCandidateInviteEmail } from "../utils/services/emails/interviewCandidatesEmailService";
 import { MatchingJobEmailData, sendMatchingJobEmail } from "../utils/services/emails/matchingJobEmailService";
 import { MedicalistInviteData, sendMedicalistInviteEmail } from "../utils/services/emails/medicalistInviteEmailService";
+import { OAuthWelcomeEmailData, sendOAuthWelcomeEmail } from "../utils/services/emails/OAuthWelcomeEmailData";
 import { PanelistInviteData, sendPanelistInviteEmail } from "../utils/services/emails/panelistEmailService";
 import { ResetPasswordData, sendResetPasswordEmail } from "../utils/services/emails/resetPasswordEmailService";
 import { sendResumeReminderEmail } from "../utils/services/emails/ResumeReminderEmailService";
 import { ReuploadDocumentData, sendReuploadDocumentEmail } from "../utils/services/emails/reuploadDocumentEmailService";
 import { InterviewEmailData, sendCandidateInterviewEmail, sendEmployerInterviewEmail, sendPanelistInterviewEmail } from "../utils/services/emails/scheduleInterviewEmailService";
 import { MedicalEmailData, sendEmployerMedicalEmail, sendMedicalExpertEmail, sendCandidateMedicalEmail as sendCandidateMedicalEmailData } from "../utils/services/emails/scheduleMedicalEmailService";
+import { SeekerOAuthWelcomeEmailData, sendSeekerOAuthWelcomeEmail } from "../utils/services/emails/SeekerOAuthWelcomeEmailService";
+import { JobSeekerWelcomeEmailData, sendJobSeekerWelcomeEmail } from "../utils/services/emails/SeekerWelcomeEmailService";
 import { PaymentFailureEmailData, sendPaymentFailureEmail } from "../utils/services/emails/sendPaymentFailureEmailService";
 import { sendTicketCreatedEmail, TicketCreatedEmailData } from "../utils/services/emails/sendTicketEmail";
 import { sendTicketUpdateEmail, TicketUpdateEmailData } from "../utils/services/emails/sendTicketUpdateEmail";
@@ -25,6 +28,9 @@ import { registerEmailHandler } from "./globalEmailQueueHandler";
 
 export const JOB_KEY = {
   REGISTRATION: "welcome_email",
+  REGISTRATION_SEEKER: "welcome_email_seeker",
+  REGISTRATION_OAUTH: "welcome_email_oauth_flow",
+  REGISTRATION_OAUTH_SEEKER: "welcome_email_oauth_flow_seeker",
   EMAIL_VERIFICATION: "verification_email",
   FORGOT_PASSWORD: "forgot_password",
   RESET_PASSWORD: "reset_password",
@@ -61,6 +67,18 @@ export const JOB_KEY = {
 //* register welcome email
 registerEmailHandler(JOB_KEY.REGISTRATION, async (data: WelcomeEmailData) => {
   return await sendWelcomeEmail(data);
+});
+
+registerEmailHandler(JOB_KEY.REGISTRATION_SEEKER, async (data: JobSeekerWelcomeEmailData) => {
+  return await sendJobSeekerWelcomeEmail(data);
+});
+
+registerEmailHandler(JOB_KEY.REGISTRATION_OAUTH, async (data: OAuthWelcomeEmailData) => {
+  return await sendOAuthWelcomeEmail(data);
+});
+
+registerEmailHandler(JOB_KEY.REGISTRATION_OAUTH_SEEKER, async (data: SeekerOAuthWelcomeEmailData) => {
+  return await sendSeekerOAuthWelcomeEmail(data);
 });
 
 //* register verification email

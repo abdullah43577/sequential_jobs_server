@@ -33,18 +33,18 @@ const generateTestApplicantsEmailData = (data: TestApplicantsData) => {
 
 export const createTestApplicantsEmail = (data: TestApplicantsData) => {
   const emailData = generateTestApplicantsEmailData(data);
-  const html = generateProfessionalEmail(emailData);
+  const react = generateProfessionalEmail(emailData);
   const subject = `Job Assessment Invitation - ${data.job_title}`;
 
-  return { html: html.html, subject };
+  return { react, subject };
 };
 
 export const sendTestApplicantsEmail = async (data: TestApplicantsData) => {
-  const { html, subject } = createTestApplicantsEmail(data);
+  const { react, subject } = createTestApplicantsEmail(data);
 
   await transportMail({
     email: data.email,
     subject,
-    message: html,
+    message: react,
   });
 };

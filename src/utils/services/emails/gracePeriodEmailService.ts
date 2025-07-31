@@ -28,19 +28,19 @@ const generateGracePeriodEmailData = (data: GracePeriodEmailData) => {
 
 const createGracePeriodEmail = (data: GracePeriodEmailData) => {
   const emailData = generateGracePeriodEmailData(data);
-  const html = generateProfessionalEmail(emailData);
+  const react = generateProfessionalEmail(emailData);
   const daysLeft = Math.ceil((data.graceEndDate.getTime() - new Date().getTime()) / (1000 * 60 * 60 * 24));
   const subject = `⏰ Grace Period: ${daysLeft} ${daysLeft === 1 ? "Day" : "Days"} Left to Renew`;
 
-  return { html: html.html, subject };
+  return { react, subject };
 };
 
 export const sendGracePeriodNotificationEmail = async (data: GracePeriodEmailData) => {
-  const { html, subject } = createGracePeriodEmail(data);
+  const { react, subject } = createGracePeriodEmail(data);
 
   await transportMail({
     email: data.email,
     subject,
-    message: html,
+    message: react,
   });
 };

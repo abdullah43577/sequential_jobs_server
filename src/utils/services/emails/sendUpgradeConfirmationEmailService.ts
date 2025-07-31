@@ -21,18 +21,18 @@ const generateUpgradeConfirmationEmailData = (data: UpgradeConfirmationEmailData
 
 const createUpgradeConfirmationEmail = (data: UpgradeConfirmationEmailData) => {
   const emailData = generateUpgradeConfirmationEmailData(data);
-  const html = generateProfessionalEmail(emailData);
+  const react = generateProfessionalEmail(emailData);
   const subject = `🚀 You're Now on the ${data.plan_name} Plan!`;
 
-  return { html: html.html, subject };
+  return { react, subject };
 };
 
 export const sendUpgradeConfirmationEmail = async (data: UpgradeConfirmationEmailData) => {
-  const { html, subject } = createUpgradeConfirmationEmail(data);
+  const { react, subject } = createUpgradeConfirmationEmail(data);
 
   await transportMail({
     email: data.email,
     subject,
-    message: html,
+    message: react,
   });
 };

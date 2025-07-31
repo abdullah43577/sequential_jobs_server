@@ -28,18 +28,18 @@ const generateReuploadDocumentEmailData = (data: ReuploadDocumentData) => ({
 
 const createReuploadDocumentEmail = (data: ReuploadDocumentData) => {
   const emailData = generateReuploadDocumentEmailData(data);
-  const html = generateProfessionalEmail(emailData);
+  const react = generateProfessionalEmail(emailData);
   const subject = `Action Required: Re-upload Documents for ${data.job_title} Position`;
 
-  return { html: html.html, subject };
+  return { react, subject };
 };
 
 export const sendReuploadDocumentEmail = async (data: ReuploadDocumentData) => {
-  const { html, subject } = createReuploadDocumentEmail(data);
+  const { react, subject } = createReuploadDocumentEmail(data);
 
   await transportMail({
     email: data.email,
     subject,
-    message: html,
+    message: react,
   });
 };

@@ -1,4 +1,8 @@
 import "dotenv/config";
+
+import "./workers/registerWorkers";
+import "./workers/globalEmailQueueHandler";
+
 import express, { Request, Response } from "express";
 import morgan from "morgan";
 import cors from "cors";
@@ -20,6 +24,8 @@ import Stripe from "stripe";
 import { ticketRouter } from "./routes/ticketRoutes";
 import { emailWebhook } from "./routes/emailHookRoutes";
 import { setupBullMQScheduledJobs } from "./utils/cron-jobs";
+import { JOB_KEY } from "./workers/registerWorkers";
+import { queueEmail } from "./workers/globalEmailQueueHandler";
 
 const app = express();
 
@@ -84,9 +90,14 @@ app.use("*", (req: Request, res: Response) => {
 });
 
 const cronJobs = async function () {
-  console.log("EXECUTING CRON JOBS....");
-
-  await setupBullMQScheduledJobs();
+  try {
+    console.log("EXECUTING CRON JOBS....");
+    await setupBullMQScheduledJobs();
+    console.log("✅ Cron jobs initialized successfully");
+  } catch (error) {
+    console.error("❌ Failed to initialize cron jobs:", error);
+    // Decide if this should be fatal or not
+  }
 };
 
 const server = app.listen(PORT, async () => {
@@ -97,6 +108,16 @@ const server = app.listen(PORT, async () => {
 
     //* EXECUTE CRON JOBS
     await cronJobs();
+
+    // for (let i = 0; i <= 10; i++) {
+    //   console.log(i, "time(s)");
+    //   const email = `officialayoola001+${i}@gmail.com`; // Gmail supports aliasing
+    //   queueEmail(JOB_KEY.REGISTRATION_SEEKER, {
+    //     email,
+    //     name: "Abdullah",
+    //     verificationToken: "asdfasd",
+    //   });
+    // }
   } catch (error) {
     console.error("Error starting server and connecting to DB", error);
   }
