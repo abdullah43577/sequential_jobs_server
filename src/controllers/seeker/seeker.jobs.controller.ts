@@ -71,7 +71,7 @@ const getJobDetails = async function (req: IUserRequest, res: Response) {
     const { job_id } = req.params;
 
     const job = await Job.findById(job_id)
-      .select("employer job_title country state city job_type salary currency_type required_experience_level description application_test applicants createdAt")
+      .select("employer job_title country state city job_type salary currency_type required_experience_level payment_frequency description application_test applicants employment_type createdAt")
       .populate({ path: "application_test", select: "instruction questions type" })
       .populate({ path: "employer", select: "organisation_name" })
       .lean();
