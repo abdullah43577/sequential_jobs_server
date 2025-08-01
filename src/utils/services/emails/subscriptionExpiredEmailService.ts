@@ -24,18 +24,18 @@ const generateSubscriptionExpiredEmailData = (data: SubscriptionExpiredEmailData
 
 const createSubscriptionExpiredEmail = (data: SubscriptionExpiredEmailData) => {
   const emailData = generateSubscriptionExpiredEmailData(data);
-  const html = generateProfessionalEmail(emailData);
+  const react = generateProfessionalEmail(emailData);
   const subject = `💳 ${data.previousTier} Subscription Expired – Downgraded to Freemium`;
 
-  return { html: html.html, subject };
+  return { react, subject };
 };
 
 export const sendSubscriptionExpiredEmail = async (data: SubscriptionExpiredEmailData) => {
-  const { html, subject } = createSubscriptionExpiredEmail(data);
+  const { react, subject } = createSubscriptionExpiredEmail(data);
 
   await transportMail({
     email: data.email,
     subject,
-    message: html,
+    message: react,
   });
 };

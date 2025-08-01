@@ -13,7 +13,7 @@ import crypto from "crypto";
 import { hashPassword } from "../../../helper/hashPassword";
 import { guessNameFromEmail } from "../../../utils/guessNameFromEmail";
 import { queueBulkEmail } from "../../../workers/globalEmailQueueHandler";
-import { JOB_KEY } from "../../../workers/registerWorkers";
+import { JOB_KEY } from "../../../workers/jobKeys";
 import { createAndSendNotification } from "../../../utils/services/notifications/sendNotification";
 import { NotificationStatus, NotificationType } from "../../../models/notifications.model";
 import { CandidateMedicalData } from "../../../utils/services/emails/candidateMedicalEmailInvite";

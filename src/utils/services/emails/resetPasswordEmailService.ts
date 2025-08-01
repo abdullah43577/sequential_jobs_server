@@ -1,4 +1,4 @@
-import { registrationEmail } from "../../nodemailer.ts/email-templates/registration-email";
+import { generateProfessionalEmail } from "../../nodemailer.ts/email-templates/generateProfessionalEmail";
 import { transportMail } from "../../nodemailer.ts/transportMail";
 
 export interface ResetPasswordData {
@@ -8,27 +8,27 @@ export interface ResetPasswordData {
 
 const generateResetPasswordEmailData = (data: ResetPasswordData) => ({
   title: "Your Password Has Been Reset",
-  name: data.first_name,
+  recipientName: data.first_name,
   message:
     "Your password for your Sequential Jobs account has been successfully reset. If you made this change, you can safely ignore this message.\n\nIf you did not request this change, please contact our support team immediately at support@sequentialjobs.com.",
-  btnTxt: "Contact Support",
-  btnAction: "mailto:support@sequentialjobs.com",
+  buttonText: "Contact Support",
+  buttonAction: "mailto:support@sequentialjobs.com",
 });
 
 export const createResetPasswordEmail = (data: ResetPasswordData) => {
   const emailData = generateResetPasswordEmailData(data);
-  const html = registrationEmail(emailData);
+  const react = generateProfessionalEmail({ ...emailData, type: "verification" });
   const subject = "Your Password Has Been Reset";
 
-  return { html: html.html, subject };
+  return { react, subject };
 };
 
 export const sendResetPasswordEmail = async (data: ResetPasswordData) => {
-  const { html, subject } = createResetPasswordEmail(data);
+  const { react, subject } = createResetPasswordEmail(data);
 
   await transportMail({
     email: data.email,
     subject,
-    message: html,
+    message: react,
   });
 };

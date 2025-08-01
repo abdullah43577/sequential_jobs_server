@@ -24,18 +24,18 @@ const generateMatchingJobEmailData = (data: MatchingJobEmailData) => ({
 
 const createMatchingJobEmail = (data: MatchingJobEmailData) => {
   const emailData = generateMatchingJobEmailData(data);
-  const html = generateProfessionalEmail(emailData);
+  const react = generateProfessionalEmail(emailData);
   const subject = `🔥 New Job Match: ${data.job_title} at ${data.organisation_name}`;
 
-  return { html: html.html, subject };
+  return { react, subject };
 };
 
 export const sendMatchingJobEmail = async (data: MatchingJobEmailData) => {
-  const { html, subject } = createMatchingJobEmail(data);
+  const { react, subject } = createMatchingJobEmail(data);
 
   await transportMail({
     email: data.email,
     subject,
-    message: html,
+    message: react,
   });
 };

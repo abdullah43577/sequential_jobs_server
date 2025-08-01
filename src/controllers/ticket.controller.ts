@@ -7,7 +7,7 @@ import User from "../models/users.model";
 import { Readable } from "stream";
 import cloudinary from "../utils/cloudinaryConfig";
 import { queueEmail } from "../workers/globalEmailQueueHandler";
-import { JOB_KEY } from "../workers/registerWorkers";
+import { JOB_KEY } from "../workers/jobKeys";
 
 const { CLIENT_URL } = process.env;
 

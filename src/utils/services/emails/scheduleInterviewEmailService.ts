@@ -97,7 +97,7 @@ const generateCandidateEmailData = (data: InterviewEmailData) => {
   const timeSlot = `${data.scheduledDateTime.startTime} - ${data.scheduledDateTime.endTime}`;
 
   return {
-    type: "interview" as EmailTypes,
+    type: "meeting" as EmailTypes,
     title: "Interview Confirmation",
     recipientName: `${data.candidate.firstName} ${data.candidate.lastName}`,
     message: `Your interview for the ${data.job.title} position at ${data.employer.organisationName} has been scheduled. Please find the details below:`,
@@ -117,59 +117,59 @@ const generateCandidateEmailData = (data: InterviewEmailData) => {
 // Create employer email
 const createEmployerEmail = (data: InterviewEmailData) => {
   const emailData = generateEmployerEmailData(data);
-  const { html } = generateProfessionalEmail(emailData);
+  const react = generateProfessionalEmail(emailData);
   const subject = `Interview Scheduled: ${data.candidate.firstName} ${data.candidate.lastName} for ${data.job.title} Position`;
 
-  return { html, subject };
+  return { react, subject };
 };
 
 // Create panelist email
 const createPanelistEmail = (data: InterviewEmailData, panelist: PanelistData) => {
   const emailData = generatePanelistEmailData(data, panelist);
-  const { html } = generateProfessionalEmail(emailData);
+  const react = generateProfessionalEmail(emailData);
   const subject = `Interview Scheduled: ${data.candidate.firstName} ${data.candidate.lastName} for ${data.job.title} Position`;
 
-  return { html, subject };
+  return { react, subject };
 };
 
 // Create candidate email
 const createCandidateEmail = (data: InterviewEmailData) => {
   const emailData = generateCandidateEmailData(data);
-  const { html } = generateProfessionalEmail(emailData);
+  const react = generateProfessionalEmail(emailData);
   const subject = `Interview Confirmation: ${data.job.title} at ${data.employer.organisationName}`;
 
-  return { html, subject };
+  return { react, subject };
 };
 
 // Send employer email
 export const sendEmployerInterviewEmail = async (data: InterviewEmailData) => {
-  const { html, subject } = createEmployerEmail(data);
+  const { react, subject } = createEmployerEmail(data);
 
   await transportMail({
     email: data.employer.email,
     subject,
-    message: html,
+    message: react,
   });
 };
 
 // Send panelist email
 export const sendPanelistInterviewEmail = async (data: InterviewEmailData, panelist: PanelistData) => {
-  const { html, subject } = createPanelistEmail(data, panelist);
+  const { react, subject } = createPanelistEmail(data, panelist);
 
   await transportMail({
     email: panelist.email,
     subject,
-    message: html,
+    message: react,
   });
 };
 
 // Send candidate email
 export const sendCandidateInterviewEmail = async (data: InterviewEmailData) => {
-  const { html, subject } = createCandidateEmail(data);
+  const { react, subject } = createCandidateEmail(data);
 
   await transportMail({
     email: data.candidate.email,
     subject,
-    message: html,
+    message: react,
   });
 };

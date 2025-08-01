@@ -15,17 +15,23 @@ import { guessNameFromEmail } from "../../utils/guessNameFromEmail";
 import { CandidateInviteData } from "../../utils/services/emails/interviewCandidatesEmailService";
 import { createAndSendNotification } from "../../utils/services/notifications/sendNotification";
 import { queueBulkEmail } from "../../workers/globalEmailQueueHandler";
-import { JOB_KEY } from "../../workers/registerWorkers";
+import { JOB_KEY } from "../../workers/jobKeys";
 import { PanelistInviteData } from "../../utils/services/emails/panelistEmailService";
 import { hasAccess } from "../../utils/subscriptionConfig";
 
 //* INTERVIEW MANAGEMENT
 const getJobsForInterviews = async function (req: IUserRequest, res: Response) {
   try {
-    const { userId, role } = req;
+    const { userId } = req;
+
+    const user = await User.findById(userId).select("subscription_tier").lean();
+    if (!user) return res.status(404).json({ message: "User not found!" });
 
     // revoke user access if he doesn't have the right to this feature
-    if (!hasAccess("interviewScheduling", role as any)) return res.status(204).json([]);
+    if (!hasAccess("interviewScheduling", user.subscription_tier as any)) {
+      console.log("no access");
+      return res.status(204).json([]);
+    }
 
     const jobs = await Job.find({ employer: userId, is_live: true }).select("job_title salary job_type createdAt").lean();
 

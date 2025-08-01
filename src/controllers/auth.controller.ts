@@ -10,7 +10,8 @@ import { Readable } from "stream";
 import cloudinary from "../utils/cloudinaryConfig";
 import { cleanObject } from "../utils/cleanedObject";
 import { queueEmail } from "../workers/globalEmailQueueHandler";
-import { JOB_KEY } from "../workers/registerWorkers";
+import { generateUsername } from "../utils/generateUserName";
+import { JOB_KEY } from "../workers/jobKeys";
 const { EMAIL_VERIFICATION_TOKEN, CLIENT_URL } = process.env;
 
 const testApi = async (req: Request, res: Response) => {
@@ -36,24 +37,40 @@ const createUser = async (req: Request, res: Response) => {
     const user = new User({
       ...data,
       password: hashedPassword,
-      subscription_tier: "Sequential Super Pro", // Highest plan
-      subscription_status: "trial",
-      subscription_start: new Date(),
-      subscription_end: trialEndDate,
-      is_trial: true,
     });
+
+    //* include plan if user is a company
+    const generatedUserName = await generateUsername(data.first_name || "", data.last_name || "");
+
+    if (data.role === "company") {
+      user.username = generatedUserName;
+      user.subscription_tier = "Sequential Super Pro";
+      user.subscription_status = "trial";
+      user.subscription_start = new Date();
+      user.subscription_end = trialEndDate;
+      user.is_trial = true;
+    }
     await user.save();
 
     const verificationToken = jwt.sign({ id: user._id }, EMAIL_VERIFICATION_TOKEN as Secret);
 
-    //* send welcome email
-    await queueEmail(JOB_KEY.REGISTRATION, {
-      email: user.email,
-      firstName: user.first_name,
-      verificationToken,
-      subscriptionPlan: "Sequential Super Pro",
-      trialDays: 30,
-    });
+    if (data.role === "company") {
+      await queueEmail(JOB_KEY.REGISTRATION, {
+        email: user.email,
+        firstName: user.first_name,
+        verificationToken,
+        subscriptionPlan: "Sequential Super Pro",
+        trialDays: 30,
+      });
+    }
+
+    if (data.role === "job-seeker") {
+      await queueEmail(JOB_KEY.REGISTRATION_SEEKER, {
+        email: user.email,
+        name: user.first_name,
+        verificationToken,
+      });
+    }
 
     res.status(201).json({ message: "User Account Created Successfully" });
   } catch (error) {

@@ -1,6 +1,7 @@
 {
   "compilerOptions": {
     "target": "es2022",
+    "jsx": "react-jsx",
     "module": "NodeNext",
     "rootDir": "./src",
     "outDir": "./dist",
@@ -12,5 +13,5 @@
     "resolveJsonModule": true
   },
 
-  "include": ["./src/**/*.ts"]
+  "include": ["./src/**/*.ts", "src/utils/nodemailer.ts/email-templates/generateProfessionalEmail.tsx"]
 }

@@ -20,6 +20,11 @@ import Stripe from "stripe";
 import { ticketRouter } from "./routes/ticketRoutes";
 import { emailWebhook } from "./routes/emailHookRoutes";
 import { setupBullMQScheduledJobs } from "./utils/cron-jobs";
+import { getRegisteredHandlersCount, initializeEmailWorker, isWorkerReady, queueEmail } from "./workers/globalEmailQueueHandler";
+import { JOB_KEY } from "./workers/jobKeys";
+import { initializeEmailHandlers } from "./workers/registerWorkers";
+import { transportMail } from "./utils/nodemailer.ts/transportMail";
+import { generateProfessionalEmail } from "./utils/nodemailer.ts/email-templates/generateProfessionalEmail";
 
 const app = express();
 
@@ -83,10 +88,101 @@ app.use("*", (req: Request, res: Response) => {
   });
 });
 
-const cronJobs = async function () {
-  console.log("EXECUTING CRON JOBS....");
+const initializeEmailSystem = async () => {
+  try {
+    console.log("🔧 Initializing email system...");
 
-  await setupBullMQScheduledJobs();
+    // Step 1: Register all email handlers
+    initializeEmailHandlers();
+    console.log(`📝 Registered ${getRegisteredHandlersCount()} email handlers`);
+
+    // Step 2: Initialize the worker
+    initializeEmailWorker();
+
+    // Step 3: Wait for worker to be ready
+    let attempts = 0;
+    const maxAttempts = 10;
+
+    while (!isWorkerReady() && attempts < maxAttempts) {
+      console.log(`⏳ Waiting for email worker... (${attempts + 1}/${maxAttempts})`);
+      await new Promise(resolve => setTimeout(resolve, 1000));
+      attempts++;
+    }
+
+    if (!isWorkerReady()) {
+      throw new Error("Email worker failed to start within timeout");
+    }
+
+    console.log("✅ Email system initialized successfully");
+    return true;
+  } catch (error) {
+    console.error("❌ Failed to initialize email system:", error);
+    throw error;
+  }
+};
+
+const cronJobs = async function () {
+  try {
+    console.log("EXECUTING CRON JOBS....");
+    await setupBullMQScheduledJobs();
+    console.log("✅ Cron jobs initialized successfully");
+  } catch (error) {
+    console.error("❌ Failed to initialize cron jobs:", error);
+  }
+};
+
+const testEmails = async function () {
+  try {
+    console.log("🧪 Starting email test...");
+
+    const emailsToTest = [
+      "tester@yopmail.com",
+      "elitefosa@gmail.com",
+      "sequentialtest1@yopmail.com",
+      "sequentialtest2@yopmail.com",
+      "sequentialtest3@yopmail.com",
+      "sequentialtest4@yopmail.com",
+      "Sequentialtest5@yopmail.com",
+      "sequentialtest6@yopmail.com",
+      "sequentialtest@yopmail.com",
+      "sequentialtest7@yopmail.com",
+      "sequentialtest8@yopmail.com",
+      "sequentialtest9@yopmail.com",
+      "sequentialtest10@yopmail.com",
+      "sequentialtest11@yopmail.com",
+      "officialayo540@gmail.com",
+    ];
+
+    const emailPromises = [];
+
+    for (let i = 0; i < emailsToTest.length; i++) {
+      console.log(`📧 Queueing email ${i + 1}/20`);
+
+      const emailPromise = queueEmail(JOB_KEY.REGISTRATION_SEEKER, {
+        email: emailsToTest[i],
+        name: "Abdullah",
+        verificationToken: "asdfasd",
+      });
+
+      emailPromises.push(emailPromise);
+    }
+
+    const results = await Promise.allSettled(emailPromises);
+
+    const successful = results.filter(r => r.status === "fulfilled").length;
+    const failed = results.filter(r => r.status === "rejected").length;
+
+    console.log(`📊 Email test results: ${successful} successful, ${failed} failed`);
+
+    // Log any failures
+    results.forEach((result, index) => {
+      if (result.status === "rejected") {
+        console.error(`❌ Email ${index + 1} failed:`, result.reason);
+      }
+    });
+  } catch (error) {
+    console.error("❌ Error in test emailss:", error);
+  }
 };
 
 const server = app.listen(PORT, async () => {
@@ -95,11 +191,39 @@ const server = app.listen(PORT, async () => {
     await connectDB();
     console.log(`server started on http://localhost:${PORT}`);
 
-    //* EXECUTE CRON JOBS
+    // Initialize email system FIRST
+    const emailSystemReady = await initializeEmailSystem();
+    if (!emailSystemReady) {
+      console.error("❌ Email system failed to initialize. Continuing without email functionality.");
+      return;
+    }
+
+    // EXECUTE CRON JOBS (only if email system is ready)
+
     await cronJobs();
+    // TEST EMAILS (uncomment when needed)
+    // await testEmails();
   } catch (error) {
     console.error("Error starting server and connecting to DB", error);
+    process.exit(1);
   }
+});
+
+// Graceful shutdown
+process.on("SIGTERM", async () => {
+  console.log("🛑 SIGTERM received, shutting down gracefully");
+  server.close(() => {
+    console.log("✅ HTTP server closed");
+    process.exit(0);
+  });
+});
+
+process.on("SIGINT", async () => {
+  console.log("🛑 SIGINT received, shutting down gracefully");
+  server.close(() => {
+    console.log("✅ HTTP server closed");
+    process.exit(0);
+  });
 });
 
 initializeSocket(server);

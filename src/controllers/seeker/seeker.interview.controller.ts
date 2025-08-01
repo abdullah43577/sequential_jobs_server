@@ -8,7 +8,7 @@ import User from "../../models/users.model";
 import Job from "../../models/jobs/jobs.model";
 import { createAndSendNotification } from "../../utils/services/notifications/sendNotification";
 import { queueBulkEmail } from "../../workers/globalEmailQueueHandler";
-import { JOB_KEY } from "../../workers/registerWorkers";
+import { JOB_KEY } from "../../workers/jobKeys";
 import moment from "moment";
 
 const { CLIENT_URL } = process.env;

@@ -22,18 +22,18 @@ const generateResumeReminderEmailData = (data: ResumeReminderEmailData) => ({
 
 const createResumeReminderEmail = (data: ResumeReminderEmailData) => {
   const emailData = generateResumeReminderEmailData(data);
-  const html = generateProfessionalEmail(emailData);
+  const react = generateProfessionalEmail(emailData);
   const subject = `⏳ Don't Miss Out - Complete Your Profile Today`;
 
-  return { html: html.html, subject };
+  return { react, subject };
 };
 
 export const sendResumeReminderEmail = async (data: ResumeReminderEmailData) => {
-  const { html, subject } = createResumeReminderEmail(data);
+  const { react, subject } = createResumeReminderEmail(data);
 
   await transportMail({
     email: data.email,
     subject,
-    message: html,
+    message: react,
   });
 };
