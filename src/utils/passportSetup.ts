@@ -2,6 +2,8 @@ import passport from "passport";
 import { Strategy as GoogleStrategy } from "passport-google-oauth20";
 import User from "../models/users.model";
 import { generateUsername } from "./generateUserName";
+import { queueEmail } from "../workers/globalEmailQueueHandler";
+import { JOB_KEY } from "../workers/jobKeys";
 
 const { GOOGLE_CLIENT_ID, GOOGLE_CLIENT_SECRET, GOOGLE_CALLBACK_URL } = process.env;
 
@@ -19,6 +21,8 @@ export const passportSetup = function () {
           const { id, name, emails, _json } = profile;
 
           const role = req.query.state as "company" | "job-seeker";
+
+          if (role !== "company" && role !== "job-seeker") return done(null, false, { message: "Only Employers and Job Seekers can either create or login with the Google workflow" });
 
           let existingUser = await User.findOne({ googleId: id });
           if (existingUser) {
@@ -55,11 +59,6 @@ export const passportSetup = function () {
 
           const generatedUserName = await generateUsername(name?.givenName || "", name?.familyName || "");
 
-          // Set up trial period - 30 days from now
-          const currentDate = new Date();
-          const trialEndDate = new Date();
-          trialEndDate.setDate(currentDate.getDate() + 30);
-
           const newUser = new User({
             first_name: name?.givenName,
             last_name: name?.familyName,
@@ -68,20 +67,37 @@ export const passportSetup = function () {
             role,
             googleId: id,
             has_validated_email: true,
-            organisation_name: name?.givenName,
-            // Add trial subscription details
-            subscription_tier: "Sequential Super Pro", // Highest tier
-            subscription_status: "trial",
-            subscription_start: currentDate,
-            subscription_end: trialEndDate,
-            is_trial: true,
           });
+
+          // Set up trial period - 30 days from now
+          const currentDate = new Date();
+          const trialEndDate = new Date();
+          trialEndDate.setDate(currentDate.getDate() + 30);
 
           if (role === "company") {
             newUser.username = generatedUserName;
+            newUser.subscription_tier = "Sequential Super Pro";
+            newUser.subscription_status = "trial";
+            newUser.subscription_start = new Date();
+            newUser.subscription_end = trialEndDate;
+            newUser.is_trial = true;
+            newUser.organisation_name = name?.givenName || "";
           }
 
           await newUser.save();
+
+          const payload = {
+            email: emails?.[0].value,
+            name: name?.givenName,
+            subcriptionPlan: "Sequential Super Pro",
+            trialDays: 30,
+          };
+
+          if (role === "company") {
+            await queueEmail(JOB_KEY.REGISTRATION_OAUTH, payload);
+          } else {
+            await queueEmail(JOB_KEY.REGISTRATION_OAUTH_SEEKER, payload);
+          }
 
           done(null, newUser);
         } catch (error) {

@@ -10,7 +10,7 @@ import { NotificationStatus, NotificationType } from "../../models/notifications
 import TestSubmission from "../../models/jobs/testsubmission.model";
 import { createAndSendNotification } from "../../utils/services/notifications/sendNotification";
 import { queueBulkEmail, queueEmail } from "../../workers/globalEmailQueueHandler";
-import { JOB_KEY } from "../../workers/registerWorkers";
+import { JOB_KEY } from "../../workers/jobKeys";
 import { Types } from "mongoose";
 import { TestApplicantsData } from "../../utils/services/emails/testApplicantsEmailInvite";
 

@@ -13,7 +13,7 @@ import { createAndSendNotification } from "../../utils/services/notifications/se
 import { NotificationStatus, NotificationType } from "../../models/notifications.model";
 import MedicalMgmt from "../../models/medicals/medical.model";
 import { queueEmail } from "../../workers/globalEmailQueueHandler";
-import { JOB_KEY } from "../../workers/registerWorkers";
+import { JOB_KEY } from "../../workers/jobKeys";
 import { getEffectiveJobSlotCount } from "../../utils/jobsHelper";
 
 //* BULK UPLOAD

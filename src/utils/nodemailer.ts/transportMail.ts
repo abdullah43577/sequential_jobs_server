@@ -17,7 +17,8 @@ export async function transportMail(formData: transportMailType) {
       from: SENDER_EMAIL as string,
       to: [formData.email],
       subject: formData.subject,
-      html: formData.message,
+      // html: formData.message,
+      react: formData.message,
       replyTo: REPLYTO_EMAIL,
     });
     return info;

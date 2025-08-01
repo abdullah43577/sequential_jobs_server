@@ -8,7 +8,7 @@ import TestSubmission from "../../models/jobs/testsubmission.model";
 import { Types } from "mongoose";
 import User from "../../models/users.model";
 import { queueEmail } from "../../workers/globalEmailQueueHandler";
-import { JOB_KEY } from "../../workers/registerWorkers";
+import { JOB_KEY } from "../../workers/jobKeys";
 
 //* JOBSs
 const getAllJobs = async function (req: IUserRequest, res: Response) {

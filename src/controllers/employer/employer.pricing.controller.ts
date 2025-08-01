@@ -6,7 +6,7 @@ import Stripe from "stripe";
 import User from "../../models/users.model";
 import { stripe } from "../../server";
 import { queueEmail } from "../../workers/globalEmailQueueHandler";
-import { JOB_KEY } from "../../workers/registerWorkers";
+import { JOB_KEY } from "../../workers/jobKeys";
 const { STRIPE_WEBHOOK_SECRET, SEQUENTIAL_FREEMIUM, SEQUENTIAL_STANDARD, SEQUENTIAL_PRO, SEQUENTIAL_SUPER_PRO } = process.env;
 
 const getPricingInfo = async function (req: IUserRequest, res: Response) {

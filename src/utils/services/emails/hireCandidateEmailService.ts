@@ -11,7 +11,7 @@ export interface HireCandidateEmailData {
 }
 
 interface EmailResult {
-  html: string;
+  react: any;
   subject: string;
 }
 
@@ -29,18 +29,18 @@ const generateHireCandidateEmailData = (data: HireCandidateEmailData) => ({
 
 const createHireCandidateEmail = (data: HireCandidateEmailData): EmailResult => {
   const emailData = generateHireCandidateEmailData(data);
-  const { html } = generateProfessionalEmail(emailData);
+  const react = generateProfessionalEmail(emailData);
   const subject = `You're Hired! - ${data.jobTitle}`;
 
-  return { html, subject };
+  return { react, subject };
 };
 
 export const sendHireCandidateEmail = async (data: HireCandidateEmailData): Promise<void> => {
-  const { html, subject } = createHireCandidateEmail(data);
+  const { react, subject } = createHireCandidateEmail(data);
 
   await transportMail({
     email: data.email,
     subject,
-    message: html,
+    message: react,
   });
 };

@@ -20,18 +20,18 @@ const generateTrialExpiredEmailData = (data: TrialExpiredEmailData) => ({
 
 const createTrialExpiredEmail = (data: TrialExpiredEmailData) => {
   const emailData = generateTrialExpiredEmailData(data);
-  const html = generateProfessionalEmail(emailData);
+  const react = generateProfessionalEmail(emailData);
   const subject = `⏳ Trial Expired – Downgraded to Sequential Freemium`;
 
-  return { html: html.html, subject };
+  return { react, subject };
 };
 
 export const sendTrialExpiredEmail = async (data: TrialExpiredEmailData) => {
-  const { html, subject } = createTrialExpiredEmail(data);
+  const { react, subject } = createTrialExpiredEmail(data);
 
   await transportMail({
     email: data.email,
     subject,
-    message: html,
+    message: react,
   });
 };
