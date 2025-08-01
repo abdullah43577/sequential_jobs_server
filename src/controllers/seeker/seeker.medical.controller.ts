@@ -7,7 +7,7 @@ import User from "../../models/users.model";
 import { NotificationStatus, NotificationType } from "../../models/notifications.model";
 import Job from "../../models/jobs/jobs.model";
 import { createAndSendNotification } from "../../utils/services/notifications/sendNotification";
-import { JOB_KEY } from "../../workers/registerWorkers";
+import { JOB_KEY } from "../../workers/jobKeys";
 import { queueBulkEmail } from "../../workers/globalEmailQueueHandler";
 import moment from "moment";
 

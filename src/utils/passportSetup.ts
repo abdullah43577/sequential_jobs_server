@@ -3,7 +3,7 @@ import { Strategy as GoogleStrategy } from "passport-google-oauth20";
 import User from "../models/users.model";
 import { generateUsername } from "./generateUserName";
 import { queueEmail } from "../workers/globalEmailQueueHandler";
-import { JOB_KEY } from "../workers/registerWorkers";
+import { JOB_KEY } from "../workers/jobKeys";
 
 const { GOOGLE_CLIENT_ID, GOOGLE_CLIENT_SECRET, GOOGLE_CALLBACK_URL } = process.env;
 

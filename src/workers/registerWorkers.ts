@@ -25,231 +25,193 @@ import { sendTestSubmissionNotificationEmail, TestSubmissionNotificationData } f
 import { sendTrialExpiredEmail } from "../utils/services/emails/TrialExpiredEmailService";
 import { sendWelcomeEmail, WelcomeEmailData } from "../utils/services/emails/welcomeEmailService";
 import { registerEmailHandler } from "./globalEmailQueueHandler";
-
-export const JOB_KEY = {
-  REGISTRATION: "welcome_email",
-  REGISTRATION_SEEKER: "welcome_email_seeker",
-  REGISTRATION_OAUTH: "welcome_email_oauth_flow",
-  REGISTRATION_OAUTH_SEEKER: "welcome_email_oauth_flow_seeker",
-  EMAIL_VERIFICATION: "verification_email",
-  FORGOT_PASSWORD: "forgot_password",
-  RESET_PASSWORD: "reset_password",
-
-  MATCHING_JOB_DETAIL: "job_match_candidate_email",
-  APPLICATION_TEST_SUBMISSION: "application_test_submission",
-  JOB_TEST: "job_test_candidate_invite",
-  JOB_TEST_SUBMISSION: "job_test_candidate_submission",
-  PANELIST_INVITE: "panelist_invite",
-
-  INTERVIEW_CANDIDATE_INVITE: "interview_candidate_invite",
-  INTERVIEW_CANDIDATE_SCHEDULE: "interview_candidate_schedule",
-  INTERVIEW_CANDIDATE_SCHEDULE_EMPLOYER_EMAIL: "interview_candidate_schedule_employer_email",
-  INTERVIEW_CANDIDATE_SCHEDULE_PAHELISTS_EMAIL: "interview_candidate_schedule_panelists_email",
-
-  DOCUMENT_SEND_CANDIDATE_OFFER: "document_send_candidate_offer",
-  DOCUMENT_REQUEST_REUPLOAD_DOC: "document_request_reupload_doc",
-
-  MEDICALIST_INVITE: "medicalist_invite",
-  MEDICALIST_CANDIDATE_INVITE: "medicalist_candidate_invite",
-  MEDICALIST_CANDIDATE_SCHEDULE: "medicalist_candidate_schedule",
-  MEDICALIST_CANDIDATE_SCHEDULE_EMPLOYER_EMAIL: "medicalist_candidate_schedule_employer_email",
-  MEDICALIST_CANDIDATE_SCHEDULE_MEDICALISTS_EMAIL: "medicalist_candidate_schedule_medicalists_email",
-
-  UPGRADE_CONFIRMATION_MAIL: "upgrade_confirmation_mail",
-  PAYMENT_FAILURE_MAIL: "payment_failure_mail",
-
-  CREATE_TICKET: "create_ticket",
-  UPDATE_TICKET: "update_ticket",
-};
+import { JOB_KEY, SCHEDULED_JOB_KEY } from "./jobKeys";
 
 /* AUTH FLOW EMAIL REGISTRATION FUNCTIONALITIES */
 
-//* register welcome email
-registerEmailHandler(JOB_KEY.REGISTRATION, async (data: WelcomeEmailData) => {
-  return await sendWelcomeEmail(data);
-});
+export const initializeEmailHandlers = function () {
+  try {
+    //* register welcome email
+    registerEmailHandler(JOB_KEY.REGISTRATION, async (data: WelcomeEmailData) => {
+      return await sendWelcomeEmail(data);
+    });
 
-registerEmailHandler(JOB_KEY.REGISTRATION_SEEKER, async (data: JobSeekerWelcomeEmailData) => {
-  return await sendJobSeekerWelcomeEmail(data);
-});
+    registerEmailHandler(JOB_KEY.REGISTRATION_SEEKER, async (data: JobSeekerWelcomeEmailData) => {
+      return await sendJobSeekerWelcomeEmail(data);
+    });
 
-registerEmailHandler(JOB_KEY.REGISTRATION_OAUTH, async (data: OAuthWelcomeEmailData) => {
-  return await sendOAuthWelcomeEmail(data);
-});
+    registerEmailHandler(JOB_KEY.REGISTRATION_OAUTH, async (data: OAuthWelcomeEmailData) => {
+      return await sendOAuthWelcomeEmail(data);
+    });
 
-registerEmailHandler(JOB_KEY.REGISTRATION_OAUTH_SEEKER, async (data: SeekerOAuthWelcomeEmailData) => {
-  return await sendSeekerOAuthWelcomeEmail(data);
-});
+    registerEmailHandler(JOB_KEY.REGISTRATION_OAUTH_SEEKER, async (data: SeekerOAuthWelcomeEmailData) => {
+      return await sendSeekerOAuthWelcomeEmail(data);
+    });
 
-//* register verification email
-registerEmailHandler(JOB_KEY.EMAIL_VERIFICATION, async (data: EmailVerificationSuccessData) => {
-  return await sendEmailVerificationSuccessEmail(data);
-});
+    //* register verification email
+    registerEmailHandler(JOB_KEY.EMAIL_VERIFICATION, async (data: EmailVerificationSuccessData) => {
+      return await sendEmailVerificationSuccessEmail(data);
+    });
 
-//* register forgot password
-registerEmailHandler(JOB_KEY.FORGOT_PASSWORD, async (data: ForgotPasswordData) => {
-  return await sendForgotPasswordEmail(data);
-});
+    //* register forgot password
+    registerEmailHandler(JOB_KEY.FORGOT_PASSWORD, async (data: ForgotPasswordData) => {
+      return await sendForgotPasswordEmail(data);
+    });
 
-//* register reset password
-registerEmailHandler(JOB_KEY.RESET_PASSWORD, async (data: ResetPasswordData) => {
-  return await sendResetPasswordEmail(data);
-});
+    //* register reset password
+    registerEmailHandler(JOB_KEY.RESET_PASSWORD, async (data: ResetPasswordData) => {
+      return await sendResetPasswordEmail(data);
+    });
 
-/* JOBS WORKFLOW */
-registerEmailHandler(JOB_KEY.MATCHING_JOB_DETAIL, async (data: MatchingJobEmailData) => {
-  return await sendMatchingJobEmail(data);
-});
+    /* JOBS WORKFLOW */
+    registerEmailHandler(JOB_KEY.MATCHING_JOB_DETAIL, async (data: MatchingJobEmailData) => {
+      return await sendMatchingJobEmail(data);
+    });
 
-registerEmailHandler(JOB_KEY.APPLICATION_TEST_SUBMISSION, async (data: TestSubmissionNotificationData) => {
-  return await sendTestSubmissionNotificationEmail(data);
-});
+    registerEmailHandler(JOB_KEY.APPLICATION_TEST_SUBMISSION, async (data: TestSubmissionNotificationData) => {
+      return await sendTestSubmissionNotificationEmail(data);
+    });
 
-//* JOB TEST MANAGEMENT WORKFLOW
-registerEmailHandler(JOB_KEY.JOB_TEST, async (data: TestApplicantsData) => {
-  return await sendTestApplicantsEmail(data);
-});
+    //* JOB TEST MANAGEMENT WORKFLOW
+    registerEmailHandler(JOB_KEY.JOB_TEST, async (data: TestApplicantsData) => {
+      return await sendTestApplicantsEmail(data);
+    });
 
-//* send mail to employer once a job test has been taken by a candidate
-registerEmailHandler(JOB_KEY.JOB_TEST_SUBMISSION, async (data: TestSubmissionNotificationData) => {
-  return await sendTestSubmissionNotificationEmail(data);
-});
+    //* send mail to employer once a job test has been taken by a candidate
+    registerEmailHandler(JOB_KEY.JOB_TEST_SUBMISSION, async (data: TestSubmissionNotificationData) => {
+      return await sendTestSubmissionNotificationEmail(data);
+    });
 
-/* INTERVIEW MANAGEMENT WORKFLOW */
+    /* INTERVIEW MANAGEMENT WORKFLOW */
 
-//* invite panelist for interview
-registerEmailHandler(JOB_KEY.PANELIST_INVITE, async (data: PanelistInviteData) => {
-  return await sendPanelistInviteEmail(data);
-});
+    //* invite panelist for interview
+    registerEmailHandler(JOB_KEY.PANELIST_INVITE, async (data: PanelistInviteData) => {
+      return await sendPanelistInviteEmail(data);
+    });
 
-registerEmailHandler(JOB_KEY.INTERVIEW_CANDIDATE_INVITE, async (data: CandidateInviteData) => {
-  return await sendCandidateInviteEmail(data);
-});
+    registerEmailHandler(JOB_KEY.INTERVIEW_CANDIDATE_INVITE, async (data: CandidateInviteData) => {
+      return await sendCandidateInviteEmail(data);
+    });
 
-// JOB SEEKER STANDPOINT
-// register for employer
-registerEmailHandler(JOB_KEY.INTERVIEW_CANDIDATE_SCHEDULE_EMPLOYER_EMAIL, async (data: InterviewEmailData) => {
-  return await sendEmployerInterviewEmail(data);
-});
+    // JOB SEEKER STANDPOINT
+    // register for employer
+    registerEmailHandler(JOB_KEY.INTERVIEW_CANDIDATE_SCHEDULE_EMPLOYER_EMAIL, async (data: InterviewEmailData) => {
+      return await sendEmployerInterviewEmail(data);
+    });
 
-type PanelistsReformattedInfo = InterviewEmailData & { panelistEmail: string; panelistFirstName: string; panelistLastName: string };
+    type PanelistsReformattedInfo = InterviewEmailData & { panelistEmail: string; panelistFirstName: string; panelistLastName: string };
 
-// register for panelists
-registerEmailHandler(JOB_KEY.INTERVIEW_CANDIDATE_SCHEDULE_PAHELISTS_EMAIL, async (data: PanelistsReformattedInfo) => {
-  // ✅ Extract panelist data and reconstruct the object
-  const { panelistEmail, panelistFirstName, panelistLastName, ...interviewData } = data;
+    // register for panelists
+    registerEmailHandler(JOB_KEY.INTERVIEW_CANDIDATE_SCHEDULE_PAHELISTS_EMAIL, async (data: PanelistsReformattedInfo) => {
+      // ✅ Extract panelist data and reconstruct the object
+      const { panelistEmail, panelistFirstName, panelistLastName, ...interviewData } = data;
 
-  const panelist = {
-    email: panelistEmail,
-    firstName: panelistFirstName,
-    lastName: panelistLastName,
-  };
+      const panelist = {
+        email: panelistEmail,
+        firstName: panelistFirstName,
+        lastName: panelistLastName,
+      };
 
-  // ✅ call with the expected signature
-  return await sendPanelistInterviewEmail(interviewData as InterviewEmailData, panelist);
-});
+      // ✅ call with the expected signature
+      return await sendPanelistInterviewEmail(interviewData as InterviewEmailData, panelist);
+    });
 
-// register for candidate schedule
-registerEmailHandler(JOB_KEY.INTERVIEW_CANDIDATE_SCHEDULE, async (data: InterviewEmailData) => {
-  return await sendCandidateInterviewEmail(data);
-});
+    // register for candidate schedule
+    registerEmailHandler(JOB_KEY.INTERVIEW_CANDIDATE_SCHEDULE, async (data: InterviewEmailData) => {
+      return await sendCandidateInterviewEmail(data);
+    });
 
-/* DOCUMENTATION MANAGEMENT */
-registerEmailHandler(JOB_KEY.DOCUMENT_SEND_CANDIDATE_OFFER, async (data: HireCandidateEmailData) => {
-  return await sendHireCandidateEmail(data);
-});
+    /* DOCUMENTATION MANAGEMENT */
+    registerEmailHandler(JOB_KEY.DOCUMENT_SEND_CANDIDATE_OFFER, async (data: HireCandidateEmailData) => {
+      return await sendHireCandidateEmail(data);
+    });
 
-registerEmailHandler(JOB_KEY.DOCUMENT_REQUEST_REUPLOAD_DOC, async (data: ReuploadDocumentData) => {
-  return await sendReuploadDocumentEmail(data);
-});
+    registerEmailHandler(JOB_KEY.DOCUMENT_REQUEST_REUPLOAD_DOC, async (data: ReuploadDocumentData) => {
+      return await sendReuploadDocumentEmail(data);
+    });
 
-/* MEDICAL MANAGEMENT WORKFLOW */
+    /* MEDICAL MANAGEMENT WORKFLOW */
 
-registerEmailHandler(JOB_KEY.MEDICALIST_INVITE, async (data: MedicalistInviteData) => {
-  return await sendMedicalistInviteEmail(data);
-});
+    registerEmailHandler(JOB_KEY.MEDICALIST_INVITE, async (data: MedicalistInviteData) => {
+      return await sendMedicalistInviteEmail(data);
+    });
 
-registerEmailHandler(JOB_KEY.MEDICALIST_CANDIDATE_INVITE, async (data: CandidateMedicalData) => {
-  return await sendCandidateMedicalEmail(data);
-});
+    registerEmailHandler(JOB_KEY.MEDICALIST_CANDIDATE_INVITE, async (data: CandidateMedicalData) => {
+      return await sendCandidateMedicalEmail(data);
+    });
 
-/* WHEN A CANDIDATE SCHEDULES FOR AN INTERVIEW, NOTIFY EMPLOYER, MEDICALISTS AND THE CANDIDATE HIMSELF */
+    /* WHEN A CANDIDATE SCHEDULES FOR AN INTERVIEW, NOTIFY EMPLOYER, MEDICALISTS AND THE CANDIDATE HIMSELF */
 
-// register for employers
-registerEmailHandler(JOB_KEY.MEDICALIST_CANDIDATE_SCHEDULE_EMPLOYER_EMAIL, async (data: MedicalEmailData) => {
-  return await sendEmployerMedicalEmail(data);
-});
+    // register for employers
+    registerEmailHandler(JOB_KEY.MEDICALIST_CANDIDATE_SCHEDULE_EMPLOYER_EMAIL, async (data: MedicalEmailData) => {
+      return await sendEmployerMedicalEmail(data);
+    });
 
-type MedicalistReformattedInfo = MedicalEmailData & {
-  medicalistEmail: string;
-  medicalistFirstName: string;
-  medicalistLastName: string;
+    type MedicalistReformattedInfo = MedicalEmailData & {
+      medicalistEmail: string;
+      medicalistFirstName: string;
+      medicalistLastName: string;
+    };
+
+    //* register for panelists
+    registerEmailHandler(JOB_KEY.MEDICALIST_CANDIDATE_SCHEDULE_MEDICALISTS_EMAIL, async (data: MedicalistReformattedInfo) => {
+      const { medicalistEmail, medicalistFirstName, medicalistLastName, ...medicalData } = data;
+
+      const medicalist = {
+        email: medicalistEmail,
+        firstName: medicalistFirstName,
+        lastName: medicalistLastName,
+      };
+
+      return await sendMedicalExpertEmail(medicalData, medicalist);
+    });
+
+    registerEmailHandler(JOB_KEY.MEDICALIST_CANDIDATE_SCHEDULE, async (data: MedicalEmailData) => {
+      return await sendCandidateMedicalEmailData(data);
+    });
+
+    /* PRICING MANAGEMENT WORKFLOW */
+    registerEmailHandler(JOB_KEY.UPGRADE_CONFIRMATION_MAIL, async (data: UpgradeConfirmationEmailData) => {
+      return await sendUpgradeConfirmationEmail(data);
+    });
+
+    registerEmailHandler(JOB_KEY.PAYMENT_FAILURE_MAIL, async (data: PaymentFailureEmailData) => {
+      return await sendPaymentFailureEmail(data);
+    });
+
+    /* TICKET SYSTEM */
+    registerEmailHandler(JOB_KEY.CREATE_TICKET, async (data: TicketCreatedEmailData) => {
+      return await sendTicketCreatedEmail(data);
+    });
+
+    registerEmailHandler(JOB_KEY.UPDATE_TICKET, async (data: TicketUpdateEmailData) => {
+      return await sendTicketUpdateEmail(data);
+    });
+
+    /* CRON JOBS HERE */
+
+    // Register email handlers for scheduled jobs (add these to your existing emailHandlers.ts)
+
+    // Trial expired email handler
+    registerEmailHandler(SCHEDULED_JOB_KEY.TRIAL_EXPIRED, async (data: { email: string; first_name: string; last_name: string; btnUrl: string }) => {
+      return await sendTrialExpiredEmail(data);
+    });
+
+    // Grace period notification email handlers
+    registerEmailHandler(SCHEDULED_JOB_KEY.GRACE_PERIOD_NOTIFICATION, async (data: { email: string; first_name: string; last_name: string; graceEndDate: Date; btnUrl: string }) => {
+      return await sendGracePeriodNotificationEmail(data);
+    });
+
+    // Subscription expired email handler
+    registerEmailHandler(SCHEDULED_JOB_KEY.SUBSCRIPTION_EXPIRED, async (data: { email: string; first_name: string; last_name: string; previousTier: string; btnUrl: string }) => {
+      return await sendSubscriptionExpiredEmail(data);
+    });
+
+    // Resume reminder email handler
+    registerEmailHandler(SCHEDULED_JOB_KEY.RESUME_REMINDER, async (data: { email: string; first_name: string; last_name: string; btnUrl: string }) => {
+      return await sendResumeReminderEmail(data);
+    });
+  } catch (error) {
+    throw error;
+  }
 };
-
-//* register for panelists
-registerEmailHandler(JOB_KEY.MEDICALIST_CANDIDATE_SCHEDULE_MEDICALISTS_EMAIL, async (data: MedicalistReformattedInfo) => {
-  const { medicalistEmail, medicalistFirstName, medicalistLastName, ...medicalData } = data;
-
-  const medicalist = {
-    email: medicalistEmail,
-    firstName: medicalistFirstName,
-    lastName: medicalistLastName,
-  };
-
-  return await sendMedicalExpertEmail(medicalData, medicalist);
-});
-
-registerEmailHandler(JOB_KEY.MEDICALIST_CANDIDATE_SCHEDULE, async (data: MedicalEmailData) => {
-  return await sendCandidateMedicalEmailData(data);
-});
-
-/* PRICING MANAGEMENT WORKFLOW */
-registerEmailHandler(JOB_KEY.UPGRADE_CONFIRMATION_MAIL, async (data: UpgradeConfirmationEmailData) => {
-  return await sendUpgradeConfirmationEmail(data);
-});
-
-registerEmailHandler(JOB_KEY.PAYMENT_FAILURE_MAIL, async (data: PaymentFailureEmailData) => {
-  return await sendPaymentFailureEmail(data);
-});
-
-/* TICKET SYSTEM */
-registerEmailHandler(JOB_KEY.CREATE_TICKET, async (data: TicketCreatedEmailData) => {
-  return await sendTicketCreatedEmail(data);
-});
-
-registerEmailHandler(JOB_KEY.UPDATE_TICKET, async (data: TicketUpdateEmailData) => {
-  return await sendTicketUpdateEmail(data);
-});
-
-/* CRON JOBS HERE */
-
-// Add new job keys for scheduled tasks and must conform with the one in the cron-jobs screen
-export const SCHEDULED_JOB_KEY = {
-  TRIAL_EXPIRED: "trial_expired_email",
-  GRACE_PERIOD_NOTIFICATION: "grace_period_notification_email",
-  SUBSCRIPTION_EXPIRED: "subscription_expired_email",
-  SUBSCRIPTION_EXPIRY_WARNING: "subscription_expiry_warning",
-  RESUME_REMINDER: "resume_reminder_email",
-};
-
-// Register email handlers for scheduled jobs (add these to your existing emailHandlers.ts)
-
-// Trial expired email handler
-registerEmailHandler(SCHEDULED_JOB_KEY.TRIAL_EXPIRED, async (data: { email: string; first_name: string; last_name: string; btnUrl: string }) => {
-  return await sendTrialExpiredEmail(data);
-});
-
-// Grace period notification email handlers
-registerEmailHandler(SCHEDULED_JOB_KEY.GRACE_PERIOD_NOTIFICATION, async (data: { email: string; first_name: string; last_name: string; graceEndDate: Date; btnUrl: string }) => {
-  return await sendGracePeriodNotificationEmail(data);
-});
-
-// Subscription expired email handler
-registerEmailHandler(SCHEDULED_JOB_KEY.SUBSCRIPTION_EXPIRED, async (data: { email: string; first_name: string; last_name: string; previousTier: string; btnUrl: string }) => {
-  return await sendSubscriptionExpiredEmail(data);
-});
-
-// Resume reminder email handler
-registerEmailHandler(SCHEDULED_JOB_KEY.RESUME_REMINDER, async (data: { email: string; first_name: string; last_name: string; btnUrl: string }) => {
-  return await sendResumeReminderEmail(data);
-});

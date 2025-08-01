@@ -10,8 +10,8 @@ import { Readable } from "stream";
 import cloudinary from "../utils/cloudinaryConfig";
 import { cleanObject } from "../utils/cleanedObject";
 import { queueEmail } from "../workers/globalEmailQueueHandler";
-import { JOB_KEY } from "../workers/registerWorkers";
 import { generateUsername } from "../utils/generateUserName";
+import { JOB_KEY } from "../workers/jobKeys";
 const { EMAIL_VERIFICATION_TOKEN, CLIENT_URL } = process.env;
 
 const testApi = async (req: Request, res: Response) => {
