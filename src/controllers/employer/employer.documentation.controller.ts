@@ -62,12 +62,19 @@ const getJobsForDocumentation = async function (req: IUserRequest, res: Response
 
 const getQualifiedCandidates = async function (req: IUserRequest, res: Response) {
   try {
-    const { role } = req;
+    const { userId } = req;
 
     const { job_id } = req.query;
 
     // revoke user access if he doesn't have the right to this feature
-    if (!hasAccess("candidatesOfferAndDocumentation", role as any)) return res.status(204).json([]);
+    const user = await User.findById(userId).select("subscription_tier").lean();
+    if (!user) return res.status(404).json({ message: "User not found!" });
+
+    // revoke user access if he doesn't have the right to this feature
+    if (!hasAccess("candidatesOfferAndDocumentation", user.subscription_tier as any)) {
+      console.log("no access");
+      return res.status(204).json([]);
+    }
 
     if (!job_id) return res.status(400).json({ message: "Job ID is required" });
 
@@ -121,7 +128,14 @@ const sendCandidateOffer = async function (req: IUserRequest, res: Response) {
     const { invitation_letter, documents, candidate_id } = req.body;
 
     // revoke user access if he doesn't have the right to this feature
-    if (!hasAccess("candidatesOfferAndDocumentation", role as any)) return res.status(204);
+    const userInfo = await User.findById(userId).select("subscription_tier").lean();
+    if (!userInfo) return res.status(404).json({ message: "User not found!" });
+
+    // revoke user access if he doesn't have the right to this feature
+    if (!hasAccess("candidatesOfferAndDocumentation", userInfo.subscription_tier as any)) {
+      console.log("no access");
+      return res.status(204).json([]);
+    }
 
     const parsedDocuments = JSON.parse(documents) || "{}";
 
@@ -211,11 +225,18 @@ const sendCandidateOffer = async function (req: IUserRequest, res: Response) {
 
 const getCandidatesWithOffers = async function (req: IUserRequest, res: Response) {
   try {
-    const { role } = req;
+    const { userId } = req;
     const { job_id } = req.query;
 
     // revoke user access if he doesn't have the right to this feature
-    if (!hasAccess("candidatesOfferAndDocumentation", role as any)) return res.status(204).json([]);
+    const user = await User.findById(userId).select("subscription_tier").lean();
+    if (!user) return res.status(404).json({ message: "User not found!" });
+
+    // revoke user access if he doesn't have the right to this feature
+    if (!hasAccess("candidatesOfferAndDocumentation", user.subscription_tier as any)) {
+      console.log("no access");
+      return res.status(204).json([]);
+    }
 
     if (!job_id) return res.status(400).json({ message: "Job ID is required!" });
 
@@ -255,11 +276,18 @@ const getCandidatesWithOffers = async function (req: IUserRequest, res: Response
 
 const getCandidatesWithAcceptedOffer = async function (req: IUserRequest, res: Response) {
   try {
-    const { role } = req;
+    const { userId } = req;
     const { job_id } = req.query;
 
     // revoke user access if he doesn't have the right to this feature
-    if (!hasAccess("candidatesOfferAndDocumentation", role as any)) return res.status(204).json([]);
+    const user = await User.findById(userId).select("subscription_tier").lean();
+    if (!user) return res.status(404).json({ message: "User not found!" });
+
+    // revoke user access if he doesn't have the right to this feature
+    if (!hasAccess("candidatesOfferAndDocumentation", user.subscription_tier as any)) {
+      console.log("no access");
+      return res.status(204).json([]);
+    }
 
     if (!job_id) return res.status(400).json({ message: "Job ID is required!" });
 
@@ -304,11 +332,18 @@ const getCandidatesWithAcceptedOffer = async function (req: IUserRequest, res: R
 
 const requestReUploadDocuments = async function (req: IUserRequest, res: Response) {
   try {
-    const { userId, role } = req;
+    const { userId } = req;
     const { candidate_id, job_id, documents, message } = req.body;
 
     // revoke user access if he doesn't have the right to this feature
-    if (!hasAccess("candidatesOfferAndDocumentation", role as any)) return res.status(204).json([]);
+    const user = await User.findById(userId).select("subscription_tier").lean();
+    if (!user) return res.status(404).json({ message: "User not found!" });
+
+    // revoke user access if he doesn't have the right to this feature
+    if (!hasAccess("candidatesOfferAndDocumentation", user.subscription_tier as any)) {
+      console.log("no access");
+      return res.status(204).json([]);
+    }
 
     if (!candidate_id || typeof candidate_id !== "string") return res.status(400).json({ message: "Candidate ID is required and must be a string" });
 

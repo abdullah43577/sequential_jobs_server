@@ -21,10 +21,7 @@ import { ticketRouter } from "./routes/ticketRoutes";
 import { emailWebhook } from "./routes/emailHookRoutes";
 import { setupBullMQScheduledJobs } from "./utils/cron-jobs";
 import { getRegisteredHandlersCount, initializeEmailWorker, isWorkerReady, queueEmail } from "./workers/globalEmailQueueHandler";
-import { JOB_KEY } from "./workers/jobKeys";
 import { initializeEmailHandlers } from "./workers/registerWorkers";
-import { transportMail } from "./utils/nodemailer.ts/transportMail";
-import { generateProfessionalEmail } from "./utils/nodemailer.ts/email-templates/generateProfessionalEmail";
 
 const app = express();
 
@@ -131,59 +128,59 @@ const cronJobs = async function () {
   }
 };
 
-const testEmails = async function () {
-  try {
-    console.log("🧪 Starting email test...");
+// const testEmails = async function () {
+//   try {
+//     console.log("🧪 Starting email test...");
 
-    const emailsToTest = [
-      "tester@yopmail.com",
-      "elitefosa@gmail.com",
-      "sequentialtest1@yopmail.com",
-      "sequentialtest2@yopmail.com",
-      "sequentialtest3@yopmail.com",
-      "sequentialtest4@yopmail.com",
-      "Sequentialtest5@yopmail.com",
-      "sequentialtest6@yopmail.com",
-      "sequentialtest@yopmail.com",
-      "sequentialtest7@yopmail.com",
-      "sequentialtest8@yopmail.com",
-      "sequentialtest9@yopmail.com",
-      "sequentialtest10@yopmail.com",
-      "sequentialtest11@yopmail.com",
-      "officialayo540@gmail.com",
-    ];
+//     const emailsToTest = [
+//       "tester@yopmail.com",
+//       "elitefosa@gmail.com",
+//       "sequentialtest1@yopmail.com",
+//       "sequentialtest2@yopmail.com",
+//       "sequentialtest3@yopmail.com",
+//       "sequentialtest4@yopmail.com",
+//       "Sequentialtest5@yopmail.com",
+//       "sequentialtest6@yopmail.com",
+//       "sequentialtest@yopmail.com",
+//       "sequentialtest7@yopmail.com",
+//       "sequentialtest8@yopmail.com",
+//       "sequentialtest9@yopmail.com",
+//       "sequentialtest10@yopmail.com",
+//       "sequentialtest11@yopmail.com",
+//       "officialayo540@gmail.com",
+//     ];
 
-    const emailPromises = [];
+//     const emailPromises = [];
 
-    for (let i = 0; i < emailsToTest.length; i++) {
-      console.log(`📧 Queueing email ${i + 1}/20`);
+//     for (let i = 0; i < emailsToTest.length; i++) {
+//       console.log(`📧 Queueing email ${i + 1}/20`);
 
-      const emailPromise = queueEmail(JOB_KEY.REGISTRATION_SEEKER, {
-        email: emailsToTest[i],
-        name: "Abdullah",
-        verificationToken: "asdfasd",
-      });
+//       const emailPromise = queueEmail(JOB_KEY.REGISTRATION_SEEKER, {
+//         email: emailsToTest[i],
+//         name: "Abdullah",
+//         verificationToken: "asdfasd",
+//       });
 
-      emailPromises.push(emailPromise);
-    }
+//       emailPromises.push(emailPromise);
+//     }
 
-    const results = await Promise.allSettled(emailPromises);
+//     const results = await Promise.allSettled(emailPromises);
 
-    const successful = results.filter(r => r.status === "fulfilled").length;
-    const failed = results.filter(r => r.status === "rejected").length;
+//     const successful = results.filter(r => r.status === "fulfilled").length;
+//     const failed = results.filter(r => r.status === "rejected").length;
 
-    console.log(`📊 Email test results: ${successful} successful, ${failed} failed`);
+//     console.log(`📊 Email test results: ${successful} successful, ${failed} failed`);
 
-    // Log any failures
-    results.forEach((result, index) => {
-      if (result.status === "rejected") {
-        console.error(`❌ Email ${index + 1} failed:`, result.reason);
-      }
-    });
-  } catch (error) {
-    console.error("❌ Error in test emailss:", error);
-  }
-};
+//     // Log any failures
+//     results.forEach((result, index) => {
+//       if (result.status === "rejected") {
+//         console.error(`❌ Email ${index + 1} failed:`, result.reason);
+//       }
+//     });
+//   } catch (error) {
+//     console.error("❌ Error in test emailss:", error);
+//   }
+// };
 
 const server = app.listen(PORT, async () => {
   try {
@@ -201,8 +198,6 @@ const server = app.listen(PORT, async () => {
     // EXECUTE CRON JOBS (only if email system is ready)
 
     await cronJobs();
-    // TEST EMAILS (uncomment when needed)
-    // await testEmails();
   } catch (error) {
     console.error("Error starting server and connecting to DB", error);
     process.exit(1);
