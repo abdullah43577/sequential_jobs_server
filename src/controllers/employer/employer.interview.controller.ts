@@ -27,7 +27,7 @@ const getJobsForInterviews = async function (req: IUserRequest, res: Response) {
     const user = await User.findById(userId).select("subscription_tier").lean();
     if (!user) return res.status(404).json({ message: "User not found!" });
 
-    // revoke user access if he doesn't have the right to this feature
+    // revoke user access if he doesn't have the right to this features
     if (!hasAccess("interviewScheduling", user.subscription_tier as any)) {
       console.log("no access");
       return res.status(204).json([]);
