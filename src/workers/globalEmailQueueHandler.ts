@@ -83,9 +83,9 @@ export const initializeEmailWorker = function () {
       },
       {
         connection,
-        concurrency: 1, // ✅ GLOBAL rate limiting - only 1 email at a times
+        concurrency: 5, // ✅ GLOBAL rate limiting - only 5 email at a times
         limiter: {
-          max: 2, // ✅ Maximum 2 emails per second across ENTIRE app
+          max: 10, // ✅ Maximum 2 emails per second across ENTIRE app
           duration: 1000,
         },
       }

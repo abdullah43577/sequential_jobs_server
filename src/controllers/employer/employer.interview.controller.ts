@@ -98,7 +98,7 @@ const handleCreateInterview = async function (req: IUserRequest, res: Response) 
     const { userId } = req;
     const { job_id } = req.query;
 
-    // revoke user access if he doesn't have the right to this features
+    // revoke user access if he doesn't have the right to this feature
     const user = await User.findById(userId).select("subscription_tier").lean();
     if (!user) return res.status(404).json({ message: "User not found!" });
 
