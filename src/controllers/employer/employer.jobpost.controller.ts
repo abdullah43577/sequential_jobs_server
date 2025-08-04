@@ -13,7 +13,7 @@ import { createAndSendNotification } from "../../utils/services/notifications/se
 import { NotificationStatus, NotificationType } from "../../models/notifications.model";
 import MedicalMgmt from "../../models/medicals/medical.model";
 import { queueEmail } from "../../workers/globalEmailQueueHandler";
-import { JOB_KEY } from "../../workers/registerWorkers";
+import { JOB_KEY } from "../../workers/jobKeys";
 import { getEffectiveJobSlotCount } from "../../utils/jobsHelper";
 
 //* BULK UPLOAD
@@ -41,6 +41,26 @@ const handleBulkUpload = async function (req: IUserRequest, res: Response) {
     const jobsData = xlsx.utils.sheet_to_json<JobData>(jobsSheet);
     const testQuestionsData = testQuestionsSheet ? xlsx.utils.sheet_to_json<TestQuestionData>(testQuestionsSheet) : [];
     const testCutoffsData = testCutoffsSheet ? xlsx.utils.sheet_to_json<TestCutoffData>(testCutoffsSheet) : [];
+
+    //* throw error if job count exceeds plan threshold
+    const user = await User.findById(userId).select("subscription_tier last_subscription_tier last_subscription_end").lean();
+
+    if (!user) {
+      return res.status(404).json({ message: "User not found" });
+    }
+
+    const currentJobCount = await Job.countDocuments({ employer: userId });
+    const maxAllowedJobs = getEffectiveJobSlotCount({
+      currentTier: user.subscription_tier,
+      lastTier: user.last_subscription_tier,
+      lastSubscriptionEnd: user.last_subscription_end,
+    });
+
+    if (maxAllowedJobs !== "unlimited" && currentJobCount + jobsData.length > maxAllowedJobs) {
+      return res.status(403).json({
+        message: `You are allowed to post only ${maxAllowedJobs} jobs in total. You currently have ${currentJobCount} and you're trying to upload ${jobsData.length} more.`,
+      });
+    }
 
     // Validate and process data
     const result = await processUploadData(jobsData, testQuestionsData, testCutoffsData, userId as string);

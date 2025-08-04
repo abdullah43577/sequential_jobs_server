@@ -24,18 +24,18 @@ const generateTicketUpdateEmailData = (data: TicketUpdateEmailData) => ({
 
 const createTicketUpdateEmail = (data: TicketUpdateEmailData) => {
   const emailData = generateTicketUpdateEmailData(data);
-  const html = generateProfessionalEmail(emailData);
+  const react = generateProfessionalEmail(emailData);
   const subject = `🔔 Ticket Update: ${data.ticket_title} [${data.ticketId}] - ${data.status}`;
 
-  return { html: html.html, subject };
+  return { react, subject };
 };
 
 export const sendTicketUpdateEmail = async (data: TicketUpdateEmailData) => {
-  const { html, subject } = createTicketUpdateEmail(data);
+  const { react, subject } = createTicketUpdateEmail(data);
 
   await transportMail({
     email: data.email,
     subject,
-    message: html,
+    message: react,
   });
 };

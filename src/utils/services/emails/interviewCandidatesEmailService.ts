@@ -11,7 +11,7 @@ export interface CandidateInviteData {
 }
 
 interface EmailResult {
-  html: string;
+  react: any;
   subject: string;
 }
 
@@ -32,18 +32,18 @@ const generateCandidateInviteEmailData = (data: CandidateInviteData) => ({
 
 export const createCandidateInviteEmail = (data: CandidateInviteData): EmailResult => {
   const emailData = generateCandidateInviteEmailData(data);
-  const { html } = generateProfessionalEmail(emailData);
+  const react = generateProfessionalEmail(emailData);
   const subject = `Candidate Interview Invite - ${data.jobTitle}`;
 
-  return { html, subject };
+  return { react, subject };
 };
 
 export const sendCandidateInviteEmail = async (data: CandidateInviteData): Promise<void> => {
-  const { html, subject } = createCandidateInviteEmail(data);
+  const { react, subject } = createCandidateInviteEmail(data);
 
   await transportMail({
     email: data.email,
     subject,
-    message: html,
+    message: react,
   });
 };

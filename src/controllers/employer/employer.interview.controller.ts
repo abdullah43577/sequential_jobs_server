@@ -15,17 +15,23 @@ import { guessNameFromEmail } from "../../utils/guessNameFromEmail";
 import { CandidateInviteData } from "../../utils/services/emails/interviewCandidatesEmailService";
 import { createAndSendNotification } from "../../utils/services/notifications/sendNotification";
 import { queueBulkEmail } from "../../workers/globalEmailQueueHandler";
-import { JOB_KEY } from "../../workers/registerWorkers";
+import { JOB_KEY } from "../../workers/jobKeys";
 import { PanelistInviteData } from "../../utils/services/emails/panelistEmailService";
 import { hasAccess } from "../../utils/subscriptionConfig";
 
 //* INTERVIEW MANAGEMENT
 const getJobsForInterviews = async function (req: IUserRequest, res: Response) {
   try {
-    const { userId, role } = req;
+    const { userId } = req;
 
-    // revoke user access if he doesn't have the right to this feature
-    if (!hasAccess("interviewScheduling", role as any)) return res.status(204).json([]);
+    const user = await User.findById(userId).select("subscription_tier").lean();
+    if (!user) return res.status(404).json({ message: "User not found!" });
+
+    // revoke user access if he doesn't have the right to this features
+    if (!hasAccess("interviewScheduling", user.subscription_tier as any)) {
+      console.log("no access");
+      return res.status(204).json([]);
+    }
 
     const jobs = await Job.find({ employer: userId, is_live: true }).select("job_title salary job_type createdAt").lean();
 
@@ -52,12 +58,19 @@ const getJobsForInterviews = async function (req: IUserRequest, res: Response) {
 
 const getCandidatesInvitedForInterview = async function (req: IUserRequest, res: Response) {
   try {
-    const { role } = req;
+    const { userId } = req;
     const { job_id } = req.query;
     if (!job_id) return res.status(400).json({ message: "Job ID is required" });
 
     // revoke user access if he doesn't have the right to this feature
-    if (!hasAccess("interviewScheduling", role as any)) return res.status(204).json([]);
+    const user = await User.findById(userId).select("subscription_tier").lean();
+    if (!user) return res.status(404).json({ message: "User not found!" });
+
+    // revoke user access if he doesn't have the right to this features
+    if (!hasAccess("interviewScheduling", user.subscription_tier as any)) {
+      console.log("no access");
+      return res.status(204).json([]);
+    }
 
     const interview = await InterviewMgmt.findOne({ job: job_id }).select("candidates").populate<{
       candidates: { candidate: { first_name: string; last_name: string; phone_no: string; resume: string; profile_pic: string; email: string }; interview_score: number }[];
@@ -82,11 +95,18 @@ const getCandidatesInvitedForInterview = async function (req: IUserRequest, res:
 
 const handleCreateInterview = async function (req: IUserRequest, res: Response) {
   try {
-    const { userId, role } = req;
+    const { userId } = req;
     const { job_id } = req.query;
 
     // revoke user access if he doesn't have the right to this feature
-    if (!hasAccess("interviewScheduling", role as any)) return res.status(204);
+    const user = await User.findById(userId).select("subscription_tier").lean();
+    if (!user) return res.status(404).json({ message: "User not found!" });
+
+    // revoke user access if he doesn't have the right to this features
+    if (!hasAccess("interviewScheduling", user.subscription_tier as any)) {
+      console.log("no access");
+      return res.status(204);
+    }
 
     const data = EmployerInterviewManagementSchema.parse(req.body);
 
@@ -122,12 +142,19 @@ const handleCreateInterview = async function (req: IUserRequest, res: Response) 
 
 const handleGetRatingScaleDraft = async function (req: IUserRequest, res: Response) {
   try {
-    const { role } = req;
+    const { userId } = req;
     const { job_id } = req.params;
     if (!job_id) return res.status(400).json({ message: "Job ID is required" });
 
     // revoke user access if he doesn't have the right to this feature
-    if (!hasAccess("interviewScheduling", role as any)) return res.status(204);
+    const user = await User.findById(userId).select("subscription_tier").lean();
+    if (!user) return res.status(404).json({ message: "User not found!" });
+
+    // revoke user access if he doesn't have the right to this features
+    if (!hasAccess("interviewScheduling", user.subscription_tier as any)) {
+      console.log("no access");
+      return res.status(204);
+    }
 
     const interview = await InterviewMgmt.findOne({ job: job_id }).select("rating_scale").lean();
     if (!interview) return res.status(200).json({ success: false, rating_scale: {} });
@@ -140,13 +167,19 @@ const handleGetRatingScaleDraft = async function (req: IUserRequest, res: Respon
 
 const handleGetTimeSlotDrafts = async function (req: IUserRequest, res: Response) {
   try {
-    const { role } = req;
+    const { userId } = req;
     const { job_id } = req.params;
     if (!job_id) return res.status(400).json({ message: "Job ID is required" });
 
     // revoke user access if he doesn't have the right to this feature
-    if (!hasAccess("interviewScheduling", role as any)) return res.status(204);
+    const user = await User.findById(userId).select("subscription_tier").lean();
+    if (!user) return res.status(404).json({ message: "User not found!" });
 
+    // revoke user access if he doesn't have the right to this features
+    if (!hasAccess("interviewScheduling", user.subscription_tier as any)) {
+      console.log("no access");
+      return res.status(204);
+    }
     const interview = await InterviewMgmt.findOne({ job: job_id }).select("interview_time_slot meetingLink").lean();
     if (!interview) return res.status(200).json({ success: false, interview_time_slots: [] });
 
@@ -158,13 +191,21 @@ const handleGetTimeSlotDrafts = async function (req: IUserRequest, res: Response
 
 const handleGetInvitationLetter = async function (req: IUserRequest, res: Response) {
   try {
-    const { role } = req;
+    const { userId } = req;
 
     const { job_id } = req.params;
     if (!job_id) return res.status(400).json({ message: "Job ID is required" });
 
     // revoke user access if he doesn't have the right to this feature
-    if (!hasAccess("interviewScheduling", role as any)) return res.status(204);
+    // revoke user access if he doesn't have the right to this feature
+    const user = await User.findById(userId).select("subscription_tier").lean();
+    if (!user) return res.status(404).json({ message: "User not found!" });
+
+    // revoke user access if he doesn't have the right to this features
+    if (!hasAccess("interviewScheduling", user.subscription_tier as any)) {
+      console.log("no access");
+      return res.status(204);
+    }
 
     const interview = await InterviewMgmt.findOne({ job: job_id }).select("invitation_letter").lean();
     if (!interview) return res.status(200).json({ success: false, invitation_letter: [] });
@@ -177,13 +218,21 @@ const handleGetInvitationLetter = async function (req: IUserRequest, res: Respon
 
 const handleGetPanelistEmails = async function (req: IUserRequest, res: Response) {
   try {
-    const { role } = req;
+    const { userId } = req;
 
     const { job_id } = req.params;
     if (!job_id) return res.status(400).json({ message: "Job ID is required" });
 
     // revoke user access if he doesn't have the right to this feature
-    if (!hasAccess("interviewScheduling", role as any)) return res.status(204).json([]);
+    // revoke user access if he doesn't have the right to this feature
+    const user = await User.findById(userId).select("subscription_tier").lean();
+    if (!user) return res.status(404).json({ message: "User not found!" });
+
+    // revoke user access if he doesn't have the right to this features
+    if (!hasAccess("interviewScheduling", user.subscription_tier as any)) {
+      console.log("no access");
+      return res.status(204);
+    }
 
     const interview = await InterviewMgmt.findOne({ job: job_id }).select("panelists").lean();
     if (!interview || interview?.panelists?.length === 0) {
@@ -200,13 +249,21 @@ const handleGetPanelistEmails = async function (req: IUserRequest, res: Response
 
 const handleInvitePanelists = async function (req: IUserRequest, res: Response) {
   try {
-    const { role } = req;
+    const { userId } = req;
 
     const { job_id } = req.params;
     if (!job_id) return res.status(400).json({ message: "Job ID is required" });
 
     // revoke user access if he doesn't have the right to this feature
-    if (!hasAccess("interviewScheduling", role as any)) return res.status(204);
+    // revoke user access if he doesn't have the right to this feature
+    const user = await User.findById(userId).select("subscription_tier").lean();
+    if (!user) return res.status(404).json({ message: "User not found!" });
+
+    // revoke user access if he doesn't have the right to this features
+    if (!hasAccess("interviewScheduling", user.subscription_tier as any)) {
+      console.log("no access");
+      return res.status(204);
+    }
 
     const panelists = req.body.panelists as string[];
 
@@ -361,14 +418,20 @@ const handleInvitePanelists = async function (req: IUserRequest, res: Response) 
 
 const handleGetCandidates = async function (req: IUserRequest, res: Response) {
   try {
-    const { role } = req;
+    const { userId } = req;
 
     const { job_id } = req.params;
     if (!job_id) return res.status(400).json({ message: "Job ID is required" });
 
     // revoke user access if he doesn't have the right to this feature
-    if (!hasAccess("interviewScheduling", role as any)) return res.status(204).json([]);
+    const user = await User.findById(userId).select("subscription_tier").lean();
+    if (!user) return res.status(404).json({ message: "User not found!" });
 
+    // revoke user access if he doesn't have the right to this features
+    if (!hasAccess("interviewScheduling", user.subscription_tier as any)) {
+      console.log("no access");
+      return res.status(204);
+    }
     const testSubmissions = await TestSubmission.find({ job: job_id })
       .select("test job applicant")
       .populate<{ test: { type: "application_test" | "job_test" } }>({
@@ -417,7 +480,14 @@ const handleInviteCandidates = async function (req: IUserRequest, res: Response)
     if (!job_id) return res.status(400).json({ message: "Job ID is required" });
 
     // revoke user access if he doesn't have the right to this feature
-    if (!hasAccess("interviewScheduling", role as any)) return res.status(204);
+    const user = await User.findById(userId).select("subscription_tier").lean();
+    if (!user) return res.status(404).json({ message: "User not found!" });
+
+    // revoke user access if he doesn't have the right to this features
+    if (!hasAccess("interviewScheduling", user.subscription_tier as any)) {
+      console.log("no access");
+      return res.status(204);
+    }
 
     const { candidate_ids } = req.body;
 

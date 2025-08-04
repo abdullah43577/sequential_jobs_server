@@ -21,18 +21,18 @@ const generatePaymentFailureEmailData = (data: PaymentFailureEmailData) => ({
 
 const createPaymentFailureEmail = (data: PaymentFailureEmailData) => {
   const emailData = generatePaymentFailureEmailData(data);
-  const html = generateProfessionalEmail(emailData);
+  const react = generateProfessionalEmail(emailData);
   const subject = `⚠️ Action Required: Payment for ${data.plan_name} Failed`;
 
-  return { html: html.html, subject };
+  return { react, subject };
 };
 
 export const sendPaymentFailureEmail = async (data: PaymentFailureEmailData) => {
-  const { html, subject } = createPaymentFailureEmail(data);
+  const { react, subject } = createPaymentFailureEmail(data);
 
   await transportMail({
     email: data.email,
     subject,
-    message: html,
+    message: react,
   });
 };

@@ -11,7 +11,7 @@ export interface MedicalistInviteData {
 }
 
 interface EmailResult {
-  html: string;
+  react: any;
   subject: string;
 }
 
@@ -52,19 +52,19 @@ Please use your existing account credentials to access the medical examination p
 export const createMedicalistInviteEmail = (data: MedicalistInviteData): EmailResult => {
   const emailData = data.isNewMedicalist ? generateNewMedicalistEmailData(data) : generateExistingMedicalistEmailData(data);
 
-  const { html } = generateProfessionalEmail(emailData);
+  const react = generateProfessionalEmail(emailData);
 
   const subject = data.isNewMedicalist ? `Medical Examiner Selection - ${data.jobTitle}` : `Medical Assignment - ${data.jobTitle}`;
 
-  return { html, subject };
+  return { react, subject };
 };
 
 export const sendMedicalistInviteEmail = async (data: MedicalistInviteData) => {
-  const { html, subject } = createMedicalistInviteEmail(data);
+  const { react, subject } = createMedicalistInviteEmail(data);
 
   await transportMail({
     email: data.email,
     subject,
-    message: html,
+    message: react,
   });
 };

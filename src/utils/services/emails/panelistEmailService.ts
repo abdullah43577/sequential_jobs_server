@@ -1,4 +1,4 @@
-import { generateProfessionalEmail } from "../../nodemailer.ts/email-templates/generateProfessionalEmail";
+import { EmailTypes, generateProfessionalEmail } from "../../nodemailer.ts/email-templates/generateProfessionalEmail";
 import { transportMail } from "../../nodemailer.ts/transportMail";
 
 export interface PanelistInviteData {
@@ -11,7 +11,7 @@ export interface PanelistInviteData {
 }
 
 interface EmailResult {
-  html: string;
+  react: any;
   subject: string;
 }
 
@@ -33,7 +33,7 @@ const generateNewPanelistEmailData = (data: PanelistInviteData) => ({
 });
 
 const generateExistingPanelistEmailData = (data: PanelistInviteData) => ({
-  type: "invite" as const,
+  type: "invite" as EmailTypes,
   title: "Interview Panel Notification",
   recipientName: data.recipientName,
   message: `You have been added as a panelist for upcoming candidate interviews for the position of ${data.jobTitle}.
@@ -52,19 +52,19 @@ const generateExistingPanelistEmailData = (data: PanelistInviteData) => ({
 export const createPanelistInviteEmail = (data: PanelistInviteData): EmailResult => {
   const emailData = data.isNewPanelist ? generateNewPanelistEmailData(data) : generateExistingPanelistEmailData(data);
 
-  const { html } = generateProfessionalEmail(emailData);
+  const react = generateProfessionalEmail(emailData);
 
   const subject = data.isNewPanelist ? `Panelist Selection - ${data.jobTitle}` : `Panel Notification - ${data.jobTitle}`;
 
-  return { html, subject };
+  return { react, subject };
 };
 
 export const sendPanelistInviteEmail = async (data: PanelistInviteData) => {
-  const { html, subject } = createPanelistInviteEmail(data);
+  const { react, subject } = createPanelistInviteEmail(data);
 
   await transportMail({
     email: data.email,
     subject,
-    message: html,
+    message: react,
   });
 };

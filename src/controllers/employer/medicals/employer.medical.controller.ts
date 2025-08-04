@@ -12,8 +12,8 @@ import { MedicalistInviteData } from "../../../utils/services/emails/medicalistI
 import crypto from "crypto";
 import { hashPassword } from "../../../helper/hashPassword";
 import { guessNameFromEmail } from "../../../utils/guessNameFromEmail";
-import { queueBulkEmail } from "../../../workers/globalEmailQueueHandler";
-import { JOB_KEY } from "../../../workers/registerWorkers";
+import { queueBulkEmail, queueEmail } from "../../../workers/globalEmailQueueHandler";
+import { JOB_KEY } from "../../../workers/jobKeys";
 import { createAndSendNotification } from "../../../utils/services/notifications/sendNotification";
 import { NotificationStatus, NotificationType } from "../../../models/notifications.model";
 import { CandidateMedicalData } from "../../../utils/services/emails/candidateMedicalEmailInvite";
@@ -52,7 +52,7 @@ const getCandidatesInvitedForMedicals = async function (req: IUserRequest, res: 
     if (!job_id) return res.status(400).json({ message: "JOb ID is required" });
 
     const medicals = await MedicalMgmt.findOne({ job: job_id }).select("candidates").populate<{
-      candidates: { candidate: { first_name: string; last_name: string; phone_no: string; resume: string; profile_pic: string; email: string } }[];
+      candidates: { candidate: { first_name: string; last_name: string; phone_no: string; resume: string; profile_pic: string; email: string }; medical_documents: Record<string, string>; scheduled_date_time: Record<string, string> }[];
     }>("candidates.candidate", "first_name last_name phone_no resume profile_pic email");
 
     if (!medicals) return res.status(404).json({ message: "Medical Record not found!" });
@@ -63,6 +63,8 @@ const getCandidatesInvitedForMedicals = async function (req: IUserRequest, res: 
       resume: cd.candidate.resume,
       profile_pic: cd.candidate.profile_pic,
       email: cd.candidate.email,
+      medical_documents: cd.medical_documents,
+      scheduled_date_time: cd.scheduled_date_time,
     }));
 
     res.status(200).json(formattedResponse);
@@ -351,7 +353,11 @@ const handleSubmitMedicalTest = async function (req: IUserRequest, res: Response
     }
 
     // Find the medical record
-    const medicalRecord = await MedicalMgmt.findOne({ job: job_id });
+    const medicalRecord = await MedicalMgmt.findOne({ job: job_id })
+      .populate<{
+        candidates: { candidate: { _id: string; first_name: string; last_name: string; email: string }; medical_documents: Record<string, string>; status: "pending" | "confirmed" | "completed" | "canceled" }[];
+      }>("candidates.candidate", "first_name last_name email")
+      .populate<{ job: { _id: string; job_title: string } }>("job", "job_title");
     if (!medicalRecord) {
       return res.status(404).json({
         message: "Medical record not found for this job",
@@ -414,6 +420,15 @@ const handleSubmitMedicalTest = async function (req: IUserRequest, res: Response
 
     // Save the updated medical record
     await medicalRecord.save();
+
+    //* send email to employer
+    await queueEmail(JOB_KEY.MEDICALIST_CANDIDATE_TEST_SUBMISSION, {
+      email: medicalRecord?.candidates?.[candidateIndex].candidate.email,
+      candidateName: `${medicalRecord?.candidates?.[candidateIndex].candidate.first_name} ${medicalRecord?.candidates?.[candidateIndex].candidate.last_name}`,
+      jobTitle: medicalRecord?.job?.job_title,
+      job_id: medicalRecord?.job?._id,
+      documentLinks: medicalRecord?.candidates?.[candidateIndex].medical_documents,
+    });
 
     res.status(200).json({
       message: "Medical documents uploaded successfully",

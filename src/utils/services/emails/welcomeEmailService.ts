@@ -1,44 +1,44 @@
-import { registrationEmail } from "../../nodemailer.ts/email-templates/registration-email";
+import { EmailTypes, generateProfessionalEmail } from "../../nodemailer.ts/email-templates/generateProfessionalEmail";
 import { transportMail } from "../../nodemailer.ts/transportMail";
 
 export interface WelcomeEmailData {
   email: string;
-  firstName: string;
+  name: string;
   verificationToken: string;
   subscriptionPlan?: string;
   trialDays?: number;
-  verificationUrl?: string;
 }
 
 interface EmailResult {
-  html: string;
+  react: any;
   subject: string;
 }
 
 const generateWelcomeEmailData = (data: WelcomeEmailData) => ({
+  type: "invite" as EmailTypes,
   title: "Welcome to Sequential Jobs!",
-  name: data.firstName,
+  recipientName: data.name,
   message: `Thank you for creating an account with Sequential Jobs. We're excited to help you find your next opportunity in the tech industry.${
     data.subscriptionPlan && data.trialDays ? `\n\nYou've been automatically enrolled in our ${data.subscriptionPlan} plan for the next ${data.trialDays} days.` : ""
   }\n\nTo get started, please verify your email address by clicking the button below. This helps us ensure the security of your account.`,
-  btnTxt: "Verify Email Address",
-  btnAction: data.verificationUrl || `https://node-test.sequentialjobs.watchdoglogisticsng.com/api/auth/verify-email?token=${data.verificationToken}`,
+  buttonText: "Verify Email Address",
+  buttonAction: `https://node-test.sequentialjobs.watchdoglogisticsng.com/api/auth/verify-email?token=${data.verificationToken}`,
 });
 
 export const createWelcomeEmail = (data: WelcomeEmailData): EmailResult => {
   const emailData = generateWelcomeEmailData(data);
-  const html = registrationEmail(emailData);
+  const react = generateProfessionalEmail(emailData);
   const subject = "Welcome to Sequential Jobs - Please Verify Your Email";
 
-  return { html: html.html, subject };
+  return { react, subject };
 };
 
 export const sendWelcomeEmail = async (data: WelcomeEmailData): Promise<void> => {
-  const { html, subject } = createWelcomeEmail(data);
+  const { react, subject } = createWelcomeEmail(data);
 
   await transportMail({
     email: data.email,
     subject,
-    message: html,
+    message: react,
   });
 };

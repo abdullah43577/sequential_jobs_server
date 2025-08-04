@@ -78,7 +78,7 @@ export const getEffectiveJobSlotCount = ({ currentTier, lastTier, lastSubscripti
 
   let rolloverBonus = 0;
 
-  // Allow 1-month grace for rollover slot
+  // Allow 1-month grace for rollover slots
   const now = new Date();
   const lastMonthStart = new Date(now.getFullYear(), now.getMonth() - 1, 1);
 

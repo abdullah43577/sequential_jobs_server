@@ -34,18 +34,18 @@ const generateCandidateMedicalEmailData = (data: CandidateMedicalData) => {
 
 export const createCandidateMedicalEmail = (data: CandidateMedicalData) => {
   const emailData = generateCandidateMedicalEmailData(data);
-  const html = generateProfessionalEmail(emailData);
+  const react = generateProfessionalEmail(emailData);
   const subject = `Medical Assessment Invitation - ${data.jobTitle}`;
 
-  return { html: html.html, subject };
+  return { react, subject };
 };
 
 export const sendCandidateMedicalEmail = async (data: CandidateMedicalData) => {
-  const { html, subject } = createCandidateMedicalEmail(data);
+  const { react, subject } = createCandidateMedicalEmail(data);
 
   await transportMail({
     email: data.email,
     subject,
-    message: html,
+    message: react,
   });
 };

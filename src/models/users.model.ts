@@ -111,15 +111,11 @@ const userSchema = new Schema<IUser>(
     subscription_status: { type: String, enum: ["pending", "payment_successful", "unpaid", "payment_failed", "trial"], default: "trial" },
     subscription_start: {
       type: Date,
-      default: Date.now,
+      default: null,
     },
     subscription_end: {
       type: Date,
-      default: () => {
-        const date = new Date();
-        date.setDate(date.getDate() + 30);
-        return date;
-      },
+      default: null,
     },
     is_trial: {
       type: Boolean,

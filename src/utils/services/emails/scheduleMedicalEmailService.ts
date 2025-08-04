@@ -118,59 +118,59 @@ const generateCandidateMedicalEmailData = (data: MedicalEmailData) => {
 // Create employer email
 const createEmployerMedicalEmail = (data: MedicalEmailData) => {
   const emailData = generateEmployerMedicalEmailData(data);
-  const { html } = generateProfessionalEmail(emailData);
+  const react = generateProfessionalEmail(emailData);
   const subject = `Medical Scheduled: ${data.candidate.firstName} ${data.candidate.lastName} for ${data.job.title} Position`;
 
-  return { html, subject };
+  return { react, subject };
 };
 
 // Create medical expert email
 const createMedicalExpertEmail = (data: MedicalEmailData, expert: MedicalExpertData) => {
   const emailData = generateMedicalExpertEmailData(data, expert);
-  const { html } = generateProfessionalEmail(emailData);
+  const react = generateProfessionalEmail(emailData);
   const subject = `Medical Scheduled: ${data.candidate.firstName} ${data.candidate.lastName} for ${data.job.title} Position`;
 
-  return { html, subject };
+  return { react, subject };
 };
 
 // Create candidate email
 const createCandidateMedicalEmail = (data: MedicalEmailData) => {
   const emailData = generateCandidateMedicalEmailData(data);
-  const { html } = generateProfessionalEmail(emailData);
+  const react = generateProfessionalEmail(emailData);
   const subject = `Medical Appointment Confirmation: ${data.job.title} at ${data.employer.organisationName}`;
 
-  return { html, subject };
+  return { react, subject };
 };
 
 // Send employer email
 export const sendEmployerMedicalEmail = async (data: MedicalEmailData) => {
-  const { html, subject } = createEmployerMedicalEmail(data);
+  const { react, subject } = createEmployerMedicalEmail(data);
 
   await transportMail({
     email: data.employer.email,
     subject,
-    message: html,
+    message: react,
   });
 };
 
 // Send medical expert email
 export const sendMedicalExpertEmail = async (data: MedicalEmailData, expert: MedicalExpertData) => {
-  const { html, subject } = createMedicalExpertEmail(data, expert);
+  const { react, subject } = createMedicalExpertEmail(data, expert);
 
   await transportMail({
     email: expert.email,
     subject,
-    message: html,
+    message: react,
   });
 };
 
 // Send candidate email
 export const sendCandidateMedicalEmail = async (data: MedicalEmailData) => {
-  const { html, subject } = createCandidateMedicalEmail(data);
+  const { react, subject } = createCandidateMedicalEmail(data);
 
   await transportMail({
     email: data.candidate.email,
     subject,
-    message: html,
+    message: react,
   });
 };
