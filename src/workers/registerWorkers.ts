@@ -6,6 +6,7 @@ import { HireCandidateEmailData, sendHireCandidateEmail } from "../utils/service
 import { CandidateInviteData, sendCandidateInviteEmail } from "../utils/services/emails/interviewCandidatesEmailService";
 import { MatchingJobEmailData, sendMatchingJobEmail } from "../utils/services/emails/matchingJobEmailService";
 import { MedicalistInviteData, sendMedicalistInviteEmail } from "../utils/services/emails/medicalistInviteEmailService";
+import { MedicalSubmissionEmailData, sendMedicalSubmissionEmail } from "../utils/services/emails/medicalSubmittedEmailService";
 import { OAuthWelcomeEmailData, sendOAuthWelcomeEmail } from "../utils/services/emails/OAuthWelcomeEmailData";
 import { PanelistInviteData, sendPanelistInviteEmail } from "../utils/services/emails/panelistEmailService";
 import { ResetPasswordData, sendResetPasswordEmail } from "../utils/services/emails/resetPasswordEmailService";
@@ -153,7 +154,7 @@ export const initializeEmailHandlers = function () {
       medicalistLastName: string;
     };
 
-    //* register for panelists
+    //* register for medicalists
     registerEmailHandler(JOB_KEY.MEDICALIST_CANDIDATE_SCHEDULE_MEDICALISTS_EMAIL, async (data: MedicalistReformattedInfo) => {
       const { medicalistEmail, medicalistFirstName, medicalistLastName, ...medicalData } = data;
 
@@ -168,6 +169,10 @@ export const initializeEmailHandlers = function () {
 
     registerEmailHandler(JOB_KEY.MEDICALIST_CANDIDATE_SCHEDULE, async (data: MedicalEmailData) => {
       return await sendCandidateMedicalEmailData(data);
+    });
+
+    registerEmailHandler(JOB_KEY.MEDICALIST_CANDIDATE_TEST_SUBMISSION, async (data: MedicalSubmissionEmailData) => {
+      return await sendMedicalSubmissionEmail(data);
     });
 
     /* PRICING MANAGEMENT WORKFLOW */

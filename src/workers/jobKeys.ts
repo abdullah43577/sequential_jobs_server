@@ -26,6 +26,7 @@ export const JOB_KEY = {
   MEDICALIST_CANDIDATE_SCHEDULE: "medicalist_candidate_schedule",
   MEDICALIST_CANDIDATE_SCHEDULE_EMPLOYER_EMAIL: "medicalist_candidate_schedule_employer_email",
   MEDICALIST_CANDIDATE_SCHEDULE_MEDICALISTS_EMAIL: "medicalist_candidate_schedule_medicalists_email",
+  MEDICALIST_CANDIDATE_TEST_SUBMISSION: "medicalist_candidate_test_submission",
 
   UPGRADE_CONFIRMATION_MAIL: "upgrade_confirmation_mail",
   PAYMENT_FAILURE_MAIL: "payment_failure_mail",

@@ -17,35 +17,38 @@ const getJobsFormatForDocumentation = async function (req: IUserRequest, res: Re
       .select("job_type employment_type employer job_title applicants")
       .populate<{ employer: { organisation_name: string } }>("employer")
       .lean();
+
     if (!jobs) return res.status(404).json({ message: "No Job Applications found" });
 
-    const formattedResponse = await Promise.all(
-      jobs.map(async job => {
-        const dataEntry = job.applicants.find(j => j.applicant.toString() === userId);
+    const formattedResponse = (
+      await Promise.all(
+        jobs.map(async job => {
+          const dataEntry = job.applicants.find(j => j.applicant.toString() === userId);
 
-        const documentation = await Documentation.findOne({ job: job._id }).lean();
+          const documentation = await Documentation.findOne({ job: job._id }).lean();
 
-        const docEntry = documentation?.candidates.find(cd => cd.candidate.toString() === userId);
+          const docEntry = documentation?.candidates.find(cd => cd.candidate.toString() === userId);
 
-        if (!docEntry) return;
+          if (!docEntry) return null;
 
-        const has_submitted_documents = Object.values(docEntry.documents).some(val => val?.trim());
+          const has_submitted_documents = Object.values(docEntry.documents).some(val => val?.trim());
 
-        return {
-          job_id: job._id,
-          job_title: job.job_title,
-          company: job.employer.organisation_name,
-          date_of_application: dataEntry?.date_of_application,
-          job_type: job.job_type,
-          employment_type: job.employment_type,
-          status: dataEntry?.status,
-          offer_letter: docEntry?.invitation_letter,
-          contract_agreement_file: docEntry?.contract_agreement_file,
-          docs_to_be_uploaded: docEntry?.documents,
-          has_submitted_documents,
-        };
-      })
-    );
+          return {
+            job_id: job._id,
+            job_title: job.job_title,
+            company: job.employer.organisation_name,
+            date_of_application: dataEntry?.date_of_application,
+            job_type: job.job_type,
+            employment_type: job.employment_type,
+            status: dataEntry?.status,
+            offer_letter: docEntry?.invitation_letter,
+            contract_agreement_file: docEntry?.contract_agreement_file,
+            docs_to_be_uploaded: docEntry?.documents,
+            has_submitted_documents,
+          };
+        })
+      )
+    ).filter(Boolean);
 
     res.status(200).json(formattedResponse);
   } catch (error) {

@@ -278,7 +278,7 @@ const getJobsWithScheduledInterview = async function (req: IUserRequest, res: Re
       "candidates.candidate": userId,
       "candidates.scheduled_date_time": { $exists: true },
     })
-      .select("job candidates")
+      .select("job candidates meetingLink")
       .populate<{
         job: {
           _id: string;
@@ -308,6 +308,7 @@ const getJobsWithScheduledInterview = async function (req: IUserRequest, res: Re
         job_type: interview?.job?.job_type,
         has_attended_interview: candidate?.status,
         scheduled_date_time: candidate?.scheduled_date_time,
+        meetingLink: interview.meetingLink,
       };
     });
 
