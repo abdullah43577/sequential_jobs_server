@@ -365,7 +365,7 @@ const handleSubmitMedicalTest = async function (req: IUserRequest, res: Response
     }
 
     // Find the candidate in the medical record
-    const candidateIndex = medicalRecord.candidates.findIndex(candidate => candidate.candidate.toString() === candidate_id);
+    const candidateIndex = medicalRecord.candidates.findIndex(cd => cd.candidate.toString() === candidate_id);
 
     if (candidateIndex === -1) {
       return res.status(404).json({
