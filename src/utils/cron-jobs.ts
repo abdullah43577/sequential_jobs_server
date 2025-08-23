@@ -225,7 +225,7 @@ export const RemindJobSeekerToCompleteAcctSetup = async function () {
       users.map(async user => {
         await createAndSendNotification({
           recipient: user._id,
-          sender: "system",
+          sender: null as any,
           title: "📄 Complete Your Profile - Upload Your Resume",
           message: "You're almost there! Uploading your resume will boost your chances of getting hired and help us match you with better opportunities.",
           type: NotificationType.MESSAGE,
