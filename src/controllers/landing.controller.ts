@@ -131,7 +131,7 @@ const getLandingJobById = async function (req: Request, res: Response) {
   try {
     const { job_id } = req.query;
 
-    const job = await Job.findById(job_id).populate("employer", "organisation_name");
+    const job = await Job.findById(job_id).populate("employer", "organisation_name profile_pic");
     if (!job) return res.status(404).json({ message: "Job not found!" });
 
     res.status(200).json(job);

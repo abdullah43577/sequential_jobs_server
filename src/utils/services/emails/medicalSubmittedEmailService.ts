@@ -8,7 +8,7 @@ export interface MedicalSubmissionEmailData {
   candidateName: string;
   jobTitle: string;
   job_id: string;
-  documentLinks: Record<string, string>; // filename: url
+  documentLinks: Record<string, string>;
 }
 
 interface EmailResult {
