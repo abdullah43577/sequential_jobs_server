@@ -182,7 +182,7 @@ const getJobOffers = async function (req: IUserRequest, res: Response) {
   try {
     const { userId } = req;
 
-    const jobs = await Job.find({ "applicants.applicant": userId, "applicants.status": "has_offer" }).select("job_title job_type employment_type country state city currency_type applicants").lean();
+    const jobs = await Job.find({ "applicants.applicant": userId, "applicants.status": "has_offer" }).select("job_title job_type employment_type currency_type applicants").lean();
 
     if (!jobs) return res.status(200).json([]);
 

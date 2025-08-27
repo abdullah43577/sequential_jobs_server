@@ -26,13 +26,13 @@ const getAllJobs = async function (req: IUserRequest, res: Response) {
 
     // Build query with country filter if provided
     const baseQuery = { is_live: true };
-    const query = currentCountry && currentCountry.trim() ? { ...baseQuery, country: new RegExp(`^${currentCountry.trim()}$`, "i") } : baseQuery;
+    const query = currentCountry && currentCountry.trim() ? { ...baseQuery, "locations.country": new RegExp(`^${currentCountry.trim()}$`, "i") } : baseQuery;
 
     // Get total job count with country filter
     const totalJobs = await Job.countDocuments(query);
 
     const jobs = await Job.find(query)
-      .select("employer job_title state city employment_type salary payment_frequency currency_type technical_skills applicants")
+      .select("employer job_title locations employment_type salary payment_frequency currency_type technical_skills applicants")
       .populate("employer", "organisation_name")
       .sort({ createdAt: -1 })
       .skip(skip)
@@ -71,7 +71,7 @@ const getJobDetails = async function (req: IUserRequest, res: Response) {
     const { job_id } = req.params;
 
     const job = await Job.findById(job_id)
-      .select("employer job_title country state city job_type salary currency_type required_experience_level payment_frequency description application_test applicants employment_type createdAt")
+      .select("employer job_title locations job_type salary currency_type required_experience_level payment_frequency description application_test applicants employment_type createdAt generic_skills technical_skills")
       .populate({ path: "application_test", select: "instruction questions type" })
       .populate({ path: "employer", select: "organisation_name" })
       .lean();

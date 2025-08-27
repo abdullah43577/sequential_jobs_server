@@ -52,7 +52,7 @@ const GetAllJobs = async function (req: IUserRequest, res: Response) {
   try {
     const { userId } = req;
 
-    const jobs = await Job.find({ employer: userId }).select("job_title createdAt job_type employment_type country applicants is_live").lean();
+    const jobs = await Job.find({ employer: userId }).select("job_title createdAt job_type employment_type locations applicants is_live").lean();
     if (!jobs) return res.status(200).json([]);
 
     const formattedResponse = jobs.map(job => ({
@@ -60,7 +60,7 @@ const GetAllJobs = async function (req: IUserRequest, res: Response) {
       date_created: (job as any).createdAt,
       job_type: job.job_type,
       employment_type: job.employment_type,
-      country: job.country,
+      locations: job.locations,
       no_of_applicants: job.applicants.length,
       is_active: job.is_live,
     }));
@@ -76,7 +76,7 @@ const GetAllJobsWithCandidatesHires = async function (req: IUserRequest, res: Re
     const { userId } = req;
 
     const jobs = await Job.find({ employer: userId, "applicants.status": "hired" })
-      .select("job_title employment_type country state city salary currency_type payment_frequency applicants")
+      .select("job_title employment_type locations salary currency_type payment_frequency applicants")
       .populate<{ applicants: { applicant: { _id: string; first_name: string; last_name: string; resume: string }; date_of_application: string; status: string }[] }>("applicants.applicant", "first_name last_name resume")
       .lean();
 
@@ -93,7 +93,7 @@ const GetAllJobsWithCandidatesHires = async function (req: IUserRequest, res: Re
           job_id: job._id,
           job_title: job.job_title,
           employment_type: job.employment_type,
-          location: `${job.city}, ${job.state}, ${job.country}`,
+          locations: job.locations,
           salary: job.salary,
           currency: job.currency_type,
           payment_frequency: job.payment_frequency,
@@ -112,7 +112,7 @@ const GetActiveJobs = async function (req: IUserRequest, res: Response) {
   try {
     const { userId } = req;
 
-    const jobs = await Job.find({ employer: userId, is_live: true }).select("job_title createdAt job_type employment_type country applicants").lean();
+    const jobs = await Job.find({ employer: userId, is_live: true }).select("job_title createdAt job_type employment_type locations applicants").lean();
     if (!jobs) return res.status(200).json([]);
 
     const formattedResponse = jobs.map(job => ({
@@ -120,7 +120,7 @@ const GetActiveJobs = async function (req: IUserRequest, res: Response) {
       date_created: (job as any).createdAt,
       job_type: job.job_type,
       employment_type: job.employment_type,
-      country: job.country,
+      locations: job.locations,
       no_of_applicants: job.applicants.length,
     }));
 

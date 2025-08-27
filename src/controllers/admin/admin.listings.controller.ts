@@ -19,9 +19,9 @@ const getListings = async function (req: IUserRequest, res: Response) {
       job_type: job.job_type,
       date_posted: (job as any).createdAt,
       no_of_applicants: job.applicants.length,
-      city: job.city,
-      state: job.state,
-      country: job.country,
+      // city: job.city,
+      // state: job.state,
+      locations: job.locations,
       status: job.status,
     }));
 
