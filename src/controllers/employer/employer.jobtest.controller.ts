@@ -9,7 +9,7 @@ import User from "../../models/users.model";
 import { NotificationStatus, NotificationType } from "../../models/notifications.model";
 import TestSubmission from "../../models/jobs/testsubmission.model";
 import { createAndSendNotification } from "../../utils/services/notifications/sendNotification";
-import { queueBulkEmail, queueEmail } from "../../workers/globalEmailQueueHandler";
+import { queueBulkEmail } from "../../workers/globalEmailQueueHandler";
 import { JOB_KEY } from "../../workers/jobKeys";
 import { Types } from "mongoose";
 import { TestApplicantsData } from "../../utils/services/emails/testApplicantsEmailInvite";
@@ -21,7 +21,7 @@ const getJobsForJobTest = async function (req: IUserRequest, res: Response) {
   try {
     const { userId } = req;
     // Fetch jobs for the employer
-    const jobs = await Job.find({ employer: userId, is_live: true }).select("job_title createdAt country job_type employment_type salary currency_type stage applicants").lean();
+    const jobs = await Job.find({ employer: userId, is_live: true }).select("job_title createdAt locations job_type employment_type salary currency_type stage applicants").lean();
 
     const jobTests = await JobTest.find({ employer: userId }).select("job stage").lean();
 

@@ -5,6 +5,8 @@ import User from "../../models/users.model";
 import { stripe } from "../../server";
 import { createAndSendNotification } from "../../utils/services/notifications/sendNotification";
 import { NotificationStatus, NotificationType } from "../../models/notifications.model";
+import { queueEmail } from "../../workers/globalEmailQueueHandler";
+import { JOB_KEY } from "../../workers/jobKeys";
 
 const createCheckoutSessionAdmin = async function (req: IUserRequest, res: Response) {
   try {
@@ -76,13 +78,40 @@ const changeUserPlan = async function (req: IUserRequest, res: Response) {
     const subscriptionEnd = new Date();
     subscriptionEnd.setDate(subscriptionEnd.getDate() + 30);
 
-    await User.findByIdAndUpdate(userId, {
-      subscription_tier: planName,
-      subscription_status: "payment_successful", // Admin override to marking as successful
-      subscription_start: new Date(),
-      subdscription_end: subscriptionEnd,
-      is_trial: false,
-    });
+    const user = await User.findByIdAndUpdate(
+      userId,
+      {
+        subscription_tier: planName,
+        subscription_status: "payment_successful", // Admin override to marking as successful
+        subscription_start: new Date(),
+        subdscription_end: subscriptionEnd,
+        is_trial: false,
+      },
+      { returnDocument: "after" }
+    );
+
+    // logic to determine if the user is on a lesser plan before
+    const userLastPlan = user?.last_subscription_tier;
+    const downgraded = userLastPlan && (userLastPlan === "Sequential Pro" ? planName !== "Sequential Pro" : planName === "Sequential Freemium");
+
+    if (downgraded) {
+      await queueEmail(JOB_KEY.DOWNGRADE_EMAIL, {
+        email: user?.email,
+        first_name: user?.first_name,
+        last_name: user?.last_name,
+        old_plan: userLastPlan,
+        new_plan: planName,
+      });
+    } else {
+      //send email to end user
+      await queueEmail(JOB_KEY.UPGRADE_CONFIRMATION_MAIL, {
+        email: user?.email,
+        first_name: user?.first_name,
+        last_name: user?.last_name,
+        plan_name: user?.subscription_tier,
+        btnUrl: `${process.env.CLIENT_URL}/dashboard/company/features&pricing/thank-you`,
+      });
+    }
 
     return res.status(200).json({ message: "User Successfully Upgraded" });
   } catch (error) {
@@ -186,6 +215,15 @@ const extendPlanExpiry = async function (req: IUserRequest, res: Response) {
       isSystemGenerated: true,
     });
 
+    //send email to end user
+    await queueEmail(JOB_KEY.PLAN_EXTENSION, {
+      email: user?.email,
+      first_name: user?.first_name,
+      last_name: user?.last_name,
+      plan_name: user?.subscription_tier,
+      new_expiry: newExpiryDate.toDateString(),
+    });
+
     res.status(200).json({
       message: `Subscription expiry ${isExtension ? "extended" : "updated"} successfully`,
     });
@@ -259,6 +297,16 @@ const extendGracePeriod = async function (req: IUserRequest, res: Response) {
       type: NotificationType.MESSAGE,
       status: NotificationStatus.UNREAD,
       isSystemGenerated: true,
+    });
+
+    //send email to end user
+    await queueEmail(JOB_KEY.PLAN_EXTENSION, {
+      email: user?.email,
+      first_name: user?.first_name,
+      last_name: user?.last_name,
+      plan_name: user?.subscription_tier,
+      new_expiry: graceEndDate.toDateString(),
+      grace_period_days: graceDays,
     });
 
     res.status(200).json({
