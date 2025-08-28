@@ -33,6 +33,9 @@ export const JOB_KEY = {
 
   CREATE_TICKET: "create_ticket",
   UPDATE_TICKET: "update_ticket",
+
+  DOWNGRADE_EMAIL: "downgrade_email",
+  PLAN_EXTENSION: "plan_extension",
 };
 
 // Add new job keys for scheduled tasks and must conform with the one in the cron-jobs screen
