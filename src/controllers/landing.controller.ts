@@ -10,14 +10,12 @@ const getLandingJobs = async function (req: Request, res: Response) {
     const page = parseInt(req.query.page as string) || 1;
     const limit = parseInt(req.query.limit as string) || 10;
 
-    console.log(countryName, "country name here");
-
     // Build the base query
     const query: any = { is_live: true };
 
     // Country filter
     if (countryName && typeof countryName === "string") {
-      query.country = new RegExp(`^${countryName}`, "i");
+      query["locations.country"] = new RegExp(`^${countryName}`, "i");
     }
 
     // Job title filter
@@ -28,7 +26,7 @@ const getLandingJobs = async function (req: Request, res: Response) {
     // Location filter - search across city, state, and country
     if (location && typeof location === "string" && location.trim()) {
       const locationRegex = new RegExp(location.trim(), "i");
-      query.$or = [{ city: locationRegex }, { state: locationRegex }, { country: locationRegex }];
+      query.$or = [{ "locations.city": locationRegex }, { "locations.state": locationRegex }, { "locations.country": locationRegex }];
     }
 
     // Date posted filter
@@ -157,8 +155,6 @@ const getCompanyJobs = async function (req: Request, res: Response) {
     const limit = parseInt(req.query.limit as string) || 10;
     const skip = (page - 1) * limit;
 
-    console.log(`Fetching jobs for company: ${username}`);
-
     // Build the base query - jobs by this employer only
     const query: any = {
       employer: user._id,
@@ -173,7 +169,7 @@ const getCompanyJobs = async function (req: Request, res: Response) {
     // Location filter - search across city, state, and country
     if (location && typeof location === "string" && location.trim()) {
       const locationRegex = new RegExp(location.trim(), "i");
-      query.$or = [{ city: locationRegex }, { state: locationRegex }, { country: locationRegex }];
+      query.$or = [{ "locations.city": locationRegex }, { "locations.state": locationRegex }, { "locations.country": locationRegex }];
     }
 
     // Date posted filter

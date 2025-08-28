@@ -5,12 +5,9 @@ import { handleErrors } from "../../helper/handleErrors";
 import { JobTestSubmissionSchema } from "../../utils/types/seekerValidatorSchema";
 import TestSubmission from "../../models/jobs/testsubmission.model";
 import Test from "../../models/jobs/test.model";
-import { sendTestSubmissionNotificationEmail } from "../../utils/services/emails/testSubmissionEmailService";
 import User from "../../models/users.model";
 import { queueEmail } from "../../workers/globalEmailQueueHandler";
 import { JOB_KEY } from "../../workers/jobKeys";
-
-const { CLIENT_URL } = process.env;
 
 //*  TEST MANAGEMENT
 const getAllJobTests = async function (req: IUserRequest, res: Response) {

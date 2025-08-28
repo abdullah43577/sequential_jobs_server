@@ -15,6 +15,7 @@ import MedicalMgmt from "../../models/medicals/medical.model";
 import { queueEmail } from "../../workers/globalEmailQueueHandler";
 import { JOB_KEY } from "../../workers/jobKeys";
 import { getEffectiveJobSlotCount } from "../../utils/jobsHelper";
+import { fullPlanNameToAccess, getMaxLocations } from "../../utils/subscriptionConfig";
 
 //* BULK UPLOAD
 const handleBulkUpload = async function (req: IUserRequest, res: Response) {
@@ -62,6 +63,19 @@ const handleBulkUpload = async function (req: IUserRequest, res: Response) {
       });
     }
 
+    // validate locations length for user
+    const userTier = getMaxLocations(fullPlanNameToAccess[user.subscription_tier]);
+
+    const maxLocationsCount = userTier;
+
+    for (const job of jobsData) {
+      if (job.Locations && job.Locations.length > maxLocationsCount) {
+        return res.status(400).json({
+          message: `Location limit exceeded for your current plan (${user.subscription_tier}). Upgrade to add more locations.`,
+        });
+      }
+    }
+
     // Validate and process data
     const result = await processUploadData(jobsData, testQuestionsData, testCutoffsData, userId as string);
 
@@ -85,7 +99,7 @@ const getJobs = async function (req: IUserRequest, res: Response) {
 
     if (!user) return res.status(404).json({ message: "User not found" });
 
-    const jobs = await Job.find({ employer: userId }).select("job_title createdAt country job_type employment_type salary currency_type payment_frequency application_test stage is_live").lean();
+    const jobs = await Job.find({ employer: userId }).select("job_title createdAt locations job_type employment_type salary currency_type payment_frequency application_test stage is_live").lean();
 
     const maxJobsCount = getEffectiveJobSlotCount({
       currentTier: user.subscription_tier,
@@ -135,7 +149,7 @@ const toggleJobState = async function (req: IUserRequest, res: Response) {
     // Only validate if trying to set status to true (make job live)
     if (status === true) {
       // Step 1: Validate required job fields
-      const requiredJobFields = ["job_title", "country", "state", "city", "job_type", "employment_type", "salary", "currency_type", "required_experience_level", "payment_frequency", "description"];
+      const requiredJobFields = ["job_title", "locations", "state", "city", "job_type", "employment_type", "salary", "currency_type", "required_experience_level", "payment_frequency", "description"];
 
       const missingFields = requiredJobFields.filter(field => !(job as any)[field]);
 
@@ -230,6 +244,17 @@ const jobPostCreation = async function (req: IUserRequest, res: Response) {
       });
     }
 
+    const userTier = getMaxLocations(fullPlanNameToAccess[user.subscription_tier]);
+
+    const maxLocationsCount = userTier;
+
+    if (data.locations && data.locations.length > maxLocationsCount) {
+      return res.status(400).json({
+        message: `Location limit exceeded for your current plan (${user.subscription_tier}). Upgrade to add more locations.`,
+      });
+    }
+
+    // save to DB if all checks pass
     if (data.job_id) {
       const job = await Job.findByIdAndUpdate(data.job_id, data, { returnDocument: "after", runValidators: true }).lean();
 
@@ -251,7 +276,7 @@ const getJobDraft = async function (req: IUserRequest, res: Response) {
     const { job_id } = req.query;
     if (!job_id) return res.status(400).json({ message: "Job ID is required" });
 
-    const job = await Job.findById(job_id).select("job_title country state city job_type employment_type salary currency_type payment_frequency generic_skills technical_skills description job_category required_experience_level").lean();
+    const job = await Job.findById(job_id).select("job_title locations state city job_type employment_type salary currency_type payment_frequency generic_skills technical_skills description job_category required_experience_level").lean();
 
     res.status(200).json({ success: !!job, job });
   } catch (error) {

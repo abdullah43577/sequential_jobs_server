@@ -67,9 +67,20 @@ export interface IJob {
   job_title: string;
   job_category: string;
   required_experience_level: string;
-  country: string;
-  state: string;
-  city: string;
+
+  // previous setup
+  // country: string | null;
+  // state: string | null;
+  // city: string | null;
+
+  // new setup
+  locations: {
+    country: string;
+    state: string;
+    city: string;
+  }[];
+  // end of new setup
+
   job_type: "hybrid" | "on_site" | "remote";
   employment_type: "full_time" | "part_time" | "contract";
   salary: number;

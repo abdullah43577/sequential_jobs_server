@@ -22,6 +22,7 @@ import { emailWebhook } from "./routes/emailHookRoutes";
 import { setupBullMQScheduledJobs } from "./utils/cron-jobs";
 import { getRegisteredHandlersCount, initializeEmailWorker, isWorkerReady, queueEmail } from "./workers/globalEmailQueueHandler";
 import { initializeEmailHandlers } from "./workers/registerWorkers";
+import Job from "./models/jobs/jobs.model";
 
 const app = express();
 
@@ -128,65 +129,43 @@ const cronJobs = async function () {
   }
 };
 
-// const testEmails = async function () {
-//   try {
-//     console.log("🧪 Starting email test...");
+// async function migrateJobLocations() {
+//   const jobs = await Job.find({
+//     $or: [{ country: { $exists: true, $ne: null } }, { state: { $exists: true, $ne: null } }, { city: { $exists: true, $ne: null } }],
+//   });
 
-//     const emailsToTest = [
-//       "tester@yopmail.com",
-//       "elitefosa@gmail.com",
-//       "sequentialtest1@yopmail.com",
-//       "sequentialtest2@yopmail.com",
-//       "sequentialtest3@yopmail.com",
-//       "sequentialtest4@yopmail.com",
-//       "Sequentialtest5@yopmail.com",
-//       "sequentialtest6@yopmail.com",
-//       "sequentialtest@yopmail.com",
-//       "sequentialtest7@yopmail.com",
-//       "sequentialtest8@yopmail.com",
-//       "sequentialtest9@yopmail.com",
-//       "sequentialtest10@yopmail.com",
-//       "sequentialtest11@yopmail.com",
-//       "officialayo540@gmail.com",
-//     ];
+//   let updatedCount = 0;
 
-//     const emailPromises = [];
-
-//     for (let i = 0; i < emailsToTest.length; i++) {
-//       console.log(`📧 Queueing email ${i + 1}/20`);
-
-//       const emailPromise = queueEmail(JOB_KEY.REGISTRATION_SEEKER, {
-//         email: emailsToTest[i],
-//         name: "Abdullah",
-//         verificationToken: "asdfasd",
+//   for (const job of jobs) {
+//     // Only migrate if at least one field exists
+//     if (job.country || job.state || job.city) {
+//       job.locations = job.locations || [];
+//       job.locations.push({
+//         country: job.country || "",
+//         state: job.state || "",
+//         city: job.city || "",
 //       });
 
-//       emailPromises.push(emailPromise);
+//       // Remove old fields
+//       // job.country = null;
+//       // job.state = null;
+//       // job.city = null;
+
+//       await job.save();
+//       updatedCount++;
 //     }
-
-//     const results = await Promise.allSettled(emailPromises);
-
-//     const successful = results.filter(r => r.status === "fulfilled").length;
-//     const failed = results.filter(r => r.status === "rejected").length;
-
-//     console.log(`📊 Email test results: ${successful} successful, ${failed} failed`);
-
-//     // Log any failures
-//     results.forEach((result, index) => {
-//       if (result.status === "rejected") {
-//         console.error(`❌ Email ${index + 1} failed:`, result.reason);
-//       }
-//     });
-//   } catch (error) {
-//     console.error("❌ Error in test emailss:", error);
 //   }
-// };
+
+//   console.log(`Migration complete. Updated ${updatedCount} jobs.`);
+// }
 
 const server = app.listen(PORT, async () => {
   try {
     console.log("Connecting to DB....");
     await connectDB();
     console.log(`server started on http://localhost:${PORT}`);
+
+    // await migrateJobLocations();
 
     // Initialize email system FIRST
     const emailSystemReady = await initializeEmailSystem();

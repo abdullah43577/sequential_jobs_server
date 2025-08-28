@@ -1,4 +1,5 @@
 import { CandidateMedicalData, sendCandidateMedicalEmail } from "../utils/services/emails/candidateMedicalEmailInvite";
+import { DowngradeConfirmationEmailData, sendDowngradeConfirmationEmail } from "../utils/services/emails/downgradeEmailService";
 import { EmailVerificationSuccessData, sendEmailVerificationSuccessEmail } from "../utils/services/emails/emailVerificationService";
 import { ForgotPasswordData, sendForgotPasswordEmail } from "../utils/services/emails/forgotPasswordEmailService";
 import { sendGracePeriodNotificationEmail } from "../utils/services/emails/gracePeriodEmailService";
@@ -9,6 +10,7 @@ import { MedicalistInviteData, sendMedicalistInviteEmail } from "../utils/servic
 import { MedicalSubmissionEmailData, sendMedicalSubmissionEmail } from "../utils/services/emails/medicalSubmittedEmailService";
 import { OAuthWelcomeEmailData, sendOAuthWelcomeEmail } from "../utils/services/emails/OAuthWelcomeEmailData";
 import { PanelistInviteData, sendPanelistInviteEmail } from "../utils/services/emails/panelistEmailService";
+import { ExtensionConfirmationEmailData, sendExtensionConfirmationEmail } from "../utils/services/emails/planExtensionEmailService";
 import { ResetPasswordData, sendResetPasswordEmail } from "../utils/services/emails/resetPasswordEmailService";
 import { sendResumeReminderEmail } from "../utils/services/emails/ResumeReminderEmailService";
 import { ReuploadDocumentData, sendReuploadDocumentEmail } from "../utils/services/emails/reuploadDocumentEmailService";
@@ -192,6 +194,17 @@ export const initializeEmailHandlers = function () {
     registerEmailHandler(JOB_KEY.UPDATE_TICKET, async (data: TicketUpdateEmailData) => {
       return await sendTicketUpdateEmail(data);
     });
+
+    /* ADMIN FUNCTIONALITY HERE */
+    registerEmailHandler(JOB_KEY.DOWNGRADE_EMAIL, async (data: DowngradeConfirmationEmailData) => {
+      return await sendDowngradeConfirmationEmail(data);
+    });
+
+    registerEmailHandler(JOB_KEY.PLAN_EXTENSION, async (data: ExtensionConfirmationEmailData) => {
+      return await sendExtensionConfirmationEmail(data);
+    });
+
+    /* END OF ADMIN EMAIL FUNCTIONALITY REGISTRATION */
 
     /* CRON JOBS HERE */
 
