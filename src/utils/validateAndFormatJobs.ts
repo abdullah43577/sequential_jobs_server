@@ -8,9 +8,7 @@ export interface JobData {
   Title: string;
   JobCategory: string;
   RequiredExperienceLevel: string;
-  Country: string;
-  State: string;
-  City: string;
+  Locations: { country: string; state: string; city: string }[];
   JobType: string;
   EmploymentType: string;
   Salary: number;
@@ -168,9 +166,7 @@ function formatJobData(jobData: JobData, userId: string) {
     job_title: jobData.Title,
     job_category: jobCategory,
     required_experience_level: experienceLevel,
-    country: jobData.Country,
-    state: jobData.State,
-    city: jobData.City,
+    locations: jobData.Locations || [],
     job_type: jobTypeMap[jobData.JobType] || jobData.JobType.toLowerCase(),
     employment_type: employmentTypeMap[jobData.EmploymentType] || jobData.EmploymentType.toLowerCase(),
     salary: Number(jobData.Salary),

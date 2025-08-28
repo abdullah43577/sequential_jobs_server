@@ -105,3 +105,17 @@ export const getUniqueBenefitsForTier = (tier: UserTier): string[] => {
 
   return benefits;
 };
+
+// Plan-based location limits // for job creation
+export const getMaxLocations = (plan: UserTier) => {
+  switch (plan) {
+    case "freemium":
+      return 1;
+    case "standard":
+      return 3;
+    case "pro":
+      return 6;
+    default:
+      return 10;
+  }
+};

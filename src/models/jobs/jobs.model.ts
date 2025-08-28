@@ -13,9 +13,6 @@ const jobSchema = new Schema<IJob>(
       enum: EXPERIENCE_LEVELS,
       required: true,
     },
-    // country: { type: String },
-    // state: { type: String },
-    // city: { type: String },
     locations: [
       {
         country: { type: String },
