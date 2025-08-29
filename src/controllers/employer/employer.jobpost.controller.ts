@@ -149,7 +149,7 @@ const toggleJobState = async function (req: IUserRequest, res: Response) {
     // Only validate if trying to set status to true (make job live)
     if (status === true) {
       // Step 1: Validate required job fields
-      const requiredJobFields = ["job_title", "locations", "state", "city", "job_type", "employment_type", "salary", "currency_type", "required_experience_level", "payment_frequency", "description"];
+      const requiredJobFields = ["job_title", "job_type", "employment_type", "salary", "currency_type", "required_experience_level", "payment_frequency", "description"];
 
       const missingFields = requiredJobFields.filter(field => !(job as any)[field]);
 
@@ -169,6 +169,12 @@ const toggleJobState = async function (req: IUserRequest, res: Response) {
       if (!job.technical_skills || job.technical_skills.length === 0) {
         return res.status(400).json({
           message: "Please add technical skills to complete job creation",
+        });
+      }
+
+      if (!job.locations || job.locations.length === 0) {
+        return res.status(400).json({
+          message: "Please add locations to complete job creation",
         });
       }
 
@@ -203,7 +209,7 @@ const toggleJobState = async function (req: IUserRequest, res: Response) {
     }
 
     // Update the job status
-    const updatedJob = await Job.findByIdAndUpdate(job_id, { is_live: status }, { new: true });
+    const updatedJob = await Job.findByIdAndUpdate(job_id, { is_live: status }, { returnDocument: "after" });
 
     const statusMessage = status ? "Job is now live!" : "Job has been taken offline";
 

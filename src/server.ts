@@ -22,7 +22,6 @@ import { emailWebhook } from "./routes/emailHookRoutes";
 import { setupBullMQScheduledJobs } from "./utils/cron-jobs";
 import { getRegisteredHandlersCount, initializeEmailWorker, isWorkerReady, queueEmail } from "./workers/globalEmailQueueHandler";
 import { initializeEmailHandlers } from "./workers/registerWorkers";
-import Job from "./models/jobs/jobs.model";
 
 const app = express();
 
@@ -51,6 +50,8 @@ app.use(
       "https://tn.sequentialjobs.com",
       "https://dz.sequentialjobs.com",
       "https://zw.sequentialjobs.com",
+      "https://ug.sequentialjobs.com",
+      "https://za.sequentialjobs.com",
       "https://sequential-jobs.vercel.app",
     ],
     credentials: true,
